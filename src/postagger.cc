@@ -13,6 +13,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
+#include <limits>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -137,6 +138,13 @@ struct BILSTMModel4Taging
 	const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
 	Index SOS;
 	Index EOS;
+	struct AccStat
+	{
+		unsigned long correct_tags;
+		unsigned long total_tags;
+		AccStat() :correct_tags(0), total_tags(0) {};
+		float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.; }
+	};
 
 	BILSTMModel4Taging() :
 		m(new Model())
@@ -194,6 +202,152 @@ struct BILSTMModel4Taging
 		// using words_loopup_param.Initialize( word_id , value_vector )
 	}
 
+	Expression build_bilstm4tagging_graph2train(const IndexSeq sent, const IndexSeq tag_seq, ComputationGraph &cg , AccStat *stat=nullptr)
+	{
+		const unsigned sent_len = sent.size();
+		
+		// New graph , ready for new sentence 
+		l2r_builder->new_graph(cg);
+		l2r_builder->start_new_sequence();
+		r2l_builder->new_graph(cg);
+		r2l_builder->start_new_sequence();
+
+		// Add parameters to cg
+		Expression l2r_tag_hidden_w_exp = parameter(cg, l2r_tag_hidden_w_param);
+		Expression r2l_tag_hidden_w_exp = parameter(cg, r2l_tag_hidden_w_param);
+		Expression tag_hidden_b_exp = parameter(cg, tag_hidden_b_param);
+		
+		Expression tag_output_w_exp = parameter(cg, tag_output_w_param);
+		Expression tag_output_b_exp = parameter(cg, tag_output_b_param);
+
+		// Some container
+		vector<Expression> err_exp_cont(sent_len) ; // for storing every error expression in each tag prediction
+		vector<Expression> word_lookup_exp_cont(sent_len); // for storing word lookup(embedding) expression for every word(index) in sentence
+		vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
+		vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
+
+		// build computation graph(also get output expression) for left to right LSTM
+		// 1. get word embeddings for sent 
+		for(unsigned i = 0; i < sent_len; ++i)
+		{
+			Expression word_lookup_exp = lookup(cg, words_lookup_param, sent[i]);
+			word_lookup_exp_cont[i] = noise(word_lookup_exp , 0.1);
+		}
+		Expression SOS_EXP = lookup(cg, words_lookup_param, SOS);
+		Expression EOS_EXP = lookup(cg, words_lookup_param, EOS);
+
+		// 2. left 2 right , calc Expression of every timestep of LSTM
+		l2r_builder->add_input(SOS_EXP);
+		for (unsigned i = 0; i < sent_len; ++i)
+			l2r_lstm_output_exp_cont[i] = l2r_builder->add_input(word_lookup_exp_cont[i]);
+		
+		// 3. right 2 left , calc Expression of every timestep of LSTM
+		r2l_builder->add_input(EOS_EXP);
+		for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) // should be int , or never stop
+			r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
+
+		// build tag network , calc loss Expression of every timestep 
+		for (unsigned i = 0; i < sent_len; ++i)
+		{
+			Expression tag_hidden_layer_output_at_timestep_t = tanh(affine_transform({ tag_hidden_b_exp,
+				l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
+				r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
+			Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
+				tag_output_w_exp , tag_hidden_layer_output_at_timestep_t });
+
+			// if statistic , calc output at timestep t
+			if (stat != nullptr)
+			{
+				vector<float> output_values = as_vector(cg.incremental_forward());
+				float max_value = output_values[0];
+				unsigned tag_id_with_max_value = 0;
+				for (unsigned i = 1; i < TAG_OUTPUT_DIM; ++i)
+				{
+					if (max_value < output_values[i])
+					{
+						max_value = output_values[i];
+						tag_id_with_max_value = i;
+					}
+				}
+				++(stat->total_tags); // == ++stat->total_tags ;
+				if (tag_id_with_max_value == tag_seq[i]) ++(stat->correct_tags);
+			}
+			err_exp_cont[i] = pickneglogsoftmax(tag_output_layer_output_at_timestep_t, tag_seq[i]);
+		}
+
+		// build the finally loss 
+		return sum(err_exp_cont); // in fact , no need to return . just to avoid a warning .
+	}
+
+	Expression build_bilstm4tagging_graph2predict(const IndexSeq &sent, ComputationGraph &cg, IndexSeq &predict_tag_seq)
+	{
+		// The main structure is just a copy from build_bilstm4tagging_graph2train! 
+		const unsigned sent_len = sent.size();
+
+		// New graph , ready for new sentence 
+		l2r_builder->new_graph(cg);
+		l2r_builder->start_new_sequence();
+		r2l_builder->new_graph(cg);
+		r2l_builder->start_new_sequence();
+
+		// Add parameters to cg
+		Expression l2r_tag_hidden_w_exp = parameter(cg, l2r_tag_hidden_w_param);
+		Expression r2l_tag_hidden_w_exp = parameter(cg, r2l_tag_hidden_w_param);
+		Expression tag_hidden_b_exp = parameter(cg, tag_hidden_b_param);
+
+		Expression tag_output_w_exp = parameter(cg, tag_output_w_param);
+		Expression tag_output_b_exp = parameter(cg, tag_output_b_param);
+
+		// Some container
+		vector<Expression> word_lookup_exp_cont(sent_len); // for storing word lookup(embedding) expression for every word(index) in sentence
+		vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
+		vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
+
+		// build computation graph(also get output expression) for left to right LSTM
+		// 1. get word embeddings for sent 
+		for (unsigned i = 0; i < sent_len; ++i)
+		{
+			Expression word_lookup_exp = lookup(cg, words_lookup_param, sent[i]);
+			word_lookup_exp_cont[i] = noise(word_lookup_exp, 0.1);
+		}
+		Expression SOS_EXP = lookup(cg, words_lookup_param, SOS);
+		Expression EOS_EXP = lookup(cg, words_lookup_param, EOS);
+
+		// 2. left 2 right , calc Expression of every timestep of LSTM
+		l2r_builder->add_input(SOS_EXP);
+		for (unsigned i = 0; i < sent_len; ++i)
+			l2r_lstm_output_exp_cont[i] = l2r_builder->add_input(word_lookup_exp_cont[i]);
+
+		// 3. right 2 left , calc Expression of every timestep of LSTM
+		r2l_builder->add_input(EOS_EXP);
+		for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) // should be int , or never stop
+			r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
+
+		// build tag network , calc loss Expression of every timestep 
+		for (unsigned i = 0; i < sent_len; ++i)
+		{
+			Expression tag_hidden_layer_output_at_timestep_t = tanh(affine_transform({ tag_hidden_b_exp,
+				l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
+				r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
+			Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
+				tag_output_w_exp , tag_hidden_layer_output_at_timestep_t });
+
+			vector<float> output_values = as_vector(cg.incremental_forward());
+			float max_value = output_values[0];
+			unsigned tag_id_with_max_value = 0;
+			for (unsigned i = 1; i < TAG_OUTPUT_DIM; ++i)
+			{
+				if (max_value < output_values[i])
+				{
+					max_value = output_values[i];
+					tag_id_with_max_value = i;
+				}
+			}
+			predict_tag_seq.push_back(tag_id_with_max_value);
+		}
+	}
+
+	void train(const vector<InstancePair> *samples, unsigned max_epoch, const vector<InstancePair> *dev_samples = nullptr);
 };
 
 int main(int argc, char *argv[])
