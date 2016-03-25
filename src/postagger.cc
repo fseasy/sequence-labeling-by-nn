@@ -20,9 +20,11 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/program_options.hpp>
 
 using namespace std;
 using namespace cnn;
+namespace po = boost::program_options;
 
 #define EXIT_WITH_INFO(info) do{ std::cerr << __FILE__ << "," <<  __LINE__ \
                                       << "," << __func__  << " : "         \
@@ -105,7 +107,7 @@ void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word
 }
 
 
-struct BILSTMModel4Taging
+struct BILSTMModel4Tagging
 {
 	// model 
 	Model *m;
@@ -123,10 +125,10 @@ struct BILSTMModel4Taging
 
 	// model structure : using const !(in-class initilization)
 
-	const unsigned INPUT_DIM = 50; // word embedding dimension
-	const unsigned LSTM_LAYER = 1;
-	const unsigned LSTM_HIDDEN_DIM = 100;
-	const unsigned TAG_HIDDEN_DIM = 32;
+	unsigned INPUT_DIM; // word embedding dimension
+	unsigned LSTM_LAYER;
+	unsigned LSTM_HIDDEN_DIM;
+	unsigned TAG_HIDDEN_DIM;
 	//--- need to be counted from training data or loaded from model .
 	unsigned TAG_OUTPUT_DIM;
 	unsigned WORD_DICT_SIZE;
@@ -138,6 +140,7 @@ struct BILSTMModel4Taging
 	const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
 	Index SOS;
 	Index EOS;
+
 	struct AccStat
 	{
 		unsigned long correct_tags;
@@ -146,20 +149,27 @@ struct BILSTMModel4Taging
 		float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.; }
 	};
 
-	BILSTMModel4Taging() :
+	BILSTMModel4Tagging(const po::variables_map& conf) :
 		m(new Model())
 	{
+    LSTM_LAYER = conf["lstm_layers"].as<unsigned>();
+    INPUT_DIM = conf["input_dim"].as<unsigned>();
+    LSTM_HIDDEN_DIM = conf["lstm_hidden_dim"].as<unsigned>();
+    TAG_HIDDEN_DIM = conf["tag_dim"].as<unsigned>();
+
 		l2r_builder = new LSTMBuilder(LSTM_LAYER, INPUT_DIM, LSTM_HIDDEN_DIM, m);
 		r2l_builder = new LSTMBuilder(LSTM_LAYER, INPUT_DIM, LSTM_HIDDEN_DIM, m);
 		SOS = word_dict.Convert(SOS_STR);
 		EOS = word_dict.Convert(EOS_STR);
 	}
-	~BILSTMModel4Taging()
+	
+  ~BILSTMModel4Tagging()
 	{
 		delete m;
 		delete l2r_builder;
 		delete r2l_builder;
 	}
+
 	void set_model_structure_after_fill_dict()
 	{
 		TAG_OUTPUT_DIM = tag_dict.size();
@@ -184,8 +194,10 @@ struct BILSTMModel4Taging
 
 	void init_model_params()
 	{
-		if (0 == WORD_DICT_SIZE || 0 == TAG_OUTPUT_DIM) EXIT_WITH_INFO(
-			"call `set_model_structure_after_fill_dict` to set output dim and word dict size")
+    if (0 == WORD_DICT_SIZE || 0 == TAG_OUTPUT_DIM) {
+      BOOST_LOG_TRIVIAL(error) << "call `set_model_structure_after_fill_dict` to set output dim and word dict size";
+      abort();
+    }
 		
 		words_lookup_param = m->add_lookup_parameters(WORD_DICT_SIZE, { INPUT_DIM });
 		l2r_tag_hidden_w_param = m->add_parameters({ TAG_HIDDEN_DIM , LSTM_HIDDEN_DIM });
@@ -202,7 +214,7 @@ struct BILSTMModel4Taging
 		// using words_loopup_param.Initialize( word_id , value_vector )
 	}
 
-	Expression build_bilstm4tagging_graph2train(const IndexSeq sent, const IndexSeq tag_seq, ComputationGraph &cg , AccStat *stat=nullptr)
+	Expression negative_loglikelihood(const IndexSeq sent, const IndexSeq tag_seq, ComputationGraph &cg , AccStat *stat=nullptr)
 	{
 		const unsigned sent_len = sent.size();
 		
@@ -238,18 +250,22 @@ struct BILSTMModel4Taging
 
 		// 2. left 2 right , calc Expression of every timestep of LSTM
 		l2r_builder->add_input(SOS_EXP);
-		for (unsigned i = 0; i < sent_len; ++i)
-			l2r_lstm_output_exp_cont[i] = l2r_builder->add_input(word_lookup_exp_cont[i]);
+    for (unsigned i = 0; i < sent_len; ++i) {
+      l2r_lstm_output_exp_cont[i] = l2r_builder->add_input(word_lookup_exp_cont[i]);
+    }
 		
 		// 3. right 2 left , calc Expression of every timestep of LSTM
 		r2l_builder->add_input(EOS_EXP);
-		for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) // should be int , or never stop
-			r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
+    for (int i = static_cast<int>(sent_len)-1; i >= 0; --i) {
+      // should be int , or never stop
+      r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
+    }
 
 		// build tag network , calc loss Expression of every timestep 
 		for (unsigned i = 0; i < sent_len; ++i)
 		{
-			Expression tag_hidden_layer_output_at_timestep_t = tanh(affine_transform({ tag_hidden_b_exp,
+      // rectify is suggested as activation function
+			Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(affine_transform({ tag_hidden_b_exp,
 				l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
 				r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
 			Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
@@ -279,7 +295,7 @@ struct BILSTMModel4Taging
 		return sum(err_exp_cont); // in fact , no need to return . just to avoid a warning .
 	}
 
-	Expression build_bilstm4tagging_graph2predict(const IndexSeq &sent, ComputationGraph &cg, IndexSeq &predict_tag_seq)
+	Expression predict(const IndexSeq &sent, ComputationGraph &cg, IndexSeq &predict_tag_seq)
 	{
 		// The main structure is just a copy from build_bilstm4tagging_graph2train! 
 		const unsigned sent_len = sent.size();
@@ -350,24 +366,56 @@ struct BILSTMModel4Taging
 	void train(const vector<InstancePair> *samples, unsigned max_epoch, const vector<InstancePair> *dev_samples = nullptr);
 };
 
+void init_command_line_options(int argc, char* argv[], po::variables_map* conf) {
+  po::options_description opts("Configuration");
+  opts.add_options()
+    ("training_data", po::value<std::string>(), "The path to the training data.")
+    ("devel_data", po::value<std::string>(), "The path to the development data.")
+    ("test_data", po::value<std::string>(), "The path to the test data.")
+    ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
+    ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
+    ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
+    ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
+    ("help,h", "Show help information.")
+    ;
+
+  po::store(po::parse_command_line(argc, argv, opts), *conf);
+  if (conf->count("help")) {
+    std::cerr << opts << std::endl;
+    exit(1);
+  }
+
+  if (conf->count("training_data") == 0) {
+    BOOST_LOG_TRIVIAL(error) << "Please specify --training_data : "
+      << "this is required to determine the vocabulary mapping, even if the parser is used in prediction mode.";
+    exit(1);
+  }
+}
+
 int main(int argc, char *argv[])
 {
-	cnn::Initialize(argc, argv); // MUST , or no memory is allocated !
+	cnn::Initialize(argc, argv, 1234); // MUST , or no memory is allocated ! Also the the random seed.
 	// -
 	// BUILD MODEL
 	// -
 	// declare model 
-	BILSTMModel4Taging tagging_model;
+
+  po::variables_map conf;
+  init_command_line_options(argc, argv, &conf);
+
+	BILSTMModel4Tagging tagging_model(conf);
 
 	// Reading Samples
-	ifstream train_is(POS_TRAIN_PATH) ;
-	if(!train_is) EXIT_WITH_INFO( (string("failed to open file" + string(POS_TRAIN_PATH))).c_str()) ;
+	ifstream train_is(conf["training_data"].as<std::string>());
+  if (!train_is) {
+    BOOST_LOG_TRIVIAL(error) << "failed to open: " << conf["training_data"].as<std::string>();
+    abort();
+  }
 	vector<InstancePair> samples ;
-	cnn::Dict &word_dict = tagging_model.word_dict , 
-	            &tag_dict = tagging_model.tag_dict  ;
+	cnn::Dict &word_dict = tagging_model.word_dict,
+    &tag_dict = tagging_model.tag_dict;
 	read_dataset_and_build_dicts(train_is , samples , word_dict , tag_dict) ;
 	train_is.close() ;
-
 
 	// set WORD_DICT_SIZE , TAG_OUTPUT_DIM ,  init params after that
 	tagging_model.set_model_structure_after_fill_dict() ;
