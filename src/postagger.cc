@@ -13,7 +13,7 @@
 #include <sstream>
 #include <vector>
 #include <string>
-#include <limits>
+#include <chrono>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -135,15 +135,29 @@ struct BILSTMModel4Tagging
 	Index SOS;
 	Index EOS;
 
-	struct AccStat
+	struct Stat
 	{
 		unsigned long correct_tags;
 		unsigned long total_tags;
-		AccStat() :correct_tags(0), total_tags(0) {};
+		double loss;
+		chrono::high_resolution_clock::time_point time_start;
+		chrono::high_resolution_clock::time_point time_end;
+		Stat() :correct_tags(0), total_tags(0),loss(0) {};
 		float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.; }
-		void clear() { correct_tags = 0; total_tags = 0;  }
-		AccStat &operator+=(const AccStat &other) { correct_tags += other.correct_tags; total_tags += other.total_tags; return *this; }
-		AccStat operator+(const AccStat &other) { AccStat tmp = *this;  tmp += other; return tmp; }
+		float get_E() { return total_tags != 0 ? loss / total_tags : 0. ; }
+		void clear() { correct_tags = 0; total_tags = 0; loss = 0; }
+		chrono::high_resolution_clock::time_point start_time_stat() { return time_start = chrono::high_resolution_clock::now(); }
+		chrono::high_resolution_clock::time_point end_time_stat() { return time_end = chrono::high_resolution_clock::now(); }
+		double get_time_cost_in_seconds() { return (chrono::duration_cast<chrono::duration<double>>(time_end - time_start)).count(); }
+		Stat &operator+=(const Stat &other) 
+		{ 
+			correct_tags += other.correct_tags; 
+			total_tags += other.total_tags; 
+			loss += other.loss;
+			time_end = other.time_end;
+			return *this; 
+		}
+		Stat operator+(const Stat &other) { Stat tmp = *this;  tmp += other;  return tmp; }
 	};
 
 	BILSTMModel4Tagging(const po::variables_map& conf) :
@@ -211,7 +225,7 @@ struct BILSTMModel4Tagging
 		// using words_loopup_param.Initialize( word_id , value_vector )
 	}
 
-	Expression negative_loglikelihood(const IndexSeq *p_sent, const IndexSeq *p_tag_seq, ComputationGraph *p_cg, AccStat *p_stat=nullptr)
+	Expression negative_loglikelihood(const IndexSeq *p_sent, const IndexSeq *p_tag_seq, ComputationGraph *p_cg, Stat *p_stat=nullptr)
 	{
 		const unsigned sent_len = p_sent->size();
 		ComputationGraph &cg = *p_cg;
@@ -292,7 +306,7 @@ struct BILSTMModel4Tagging
 		return sum(err_exp_cont); // in fact , no need to return . just to avoid a warning .
 	}
 
-	Expression predict(const IndexSeq *p_sent, ComputationGraph *p_cg, IndexSeq *p_predict_tag_seq)
+	void predict(const IndexSeq *p_sent, ComputationGraph *p_cg, IndexSeq *p_predict_tag_seq)
 	{
 		// The main structure is just a copy from build_bilstm4tagging_graph2train! 
 		const unsigned sent_len = p_sent->size();
@@ -320,8 +334,7 @@ struct BILSTMModel4Tagging
 		// 1. get word embeddings for sent 
 		for (unsigned i = 0; i < sent_len; ++i)
 		{
-			Expression word_lookup_exp = lookup(cg, words_lookup_param, p_sent->at(i));
-			word_lookup_exp_cont[i] = noise(word_lookup_exp, 0.1);
+			word_lookup_exp_cont[i] = lookup(cg, words_lookup_param, p_sent->at(i));
 		}
 		Expression SOS_EXP = lookup(cg, words_lookup_param, SOS);
 		Expression EOS_EXP = lookup(cg, words_lookup_param, EOS);
@@ -360,50 +373,99 @@ struct BILSTMModel4Tagging
 		}
 	}
 
-	void train(const vector<InstancePair> *samples, unsigned max_epoch, const vector<InstancePair> *dev_samples = nullptr)
+	void train(const vector<InstancePair> *p_samples, unsigned max_epoch, const vector<InstancePair> *p_dev_samples = nullptr)
 	{
-		unsigned nr_samples = samples->size();
+		unsigned nr_samples = p_samples->size();
+
+		BOOST_LOG_TRIVIAL(info) << "Train at " << nr_samples << " instances .\n";
+
 		vector<unsigned> access_order(nr_samples);
 		for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 		
 		SimpleSGDTrainer sgd = SimpleSGDTrainer(m);
 
-		for (unsigned nr_epoch = 0; 0 < max_epoch; ++nr_epoch)
+		double total_time_cost_in_seconds = 0.;
+		for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
 		{
-			// For loss , accuracy report and 
-			AccStat training_stat_per_report , training_stat_per_epoch;
+			// For loss , accuracy , time cost report
+			Stat training_stat_per_report , training_stat_per_epoch;
 			unsigned report_freq = 10000;
-			double loss_per_report = 0.,
-				loss_per_epoch = 0.;
+
+			// training for an epoch
+			training_stat_per_report.start_time_stat();
+			training_stat_per_epoch.time_start = training_stat_per_epoch.time_start;
 			for (unsigned i = 0; i < nr_samples; ++i)
 			{
-				const InstancePair &instance_pair = samples->at(access_order[i]);
+				const InstancePair &instance_pair = p_samples->at(access_order[i]);
 				// using negative_loglikelihood loss to build model
 				const IndexSeq *p_sent = &instance_pair.first,
 					*p_tag_seq = &instance_pair.second;
 				ComputationGraph cg;
 				negative_loglikelihood(p_sent, p_tag_seq, &cg, &training_stat_per_report);
-				loss_per_report += as_scalar(cg.forward());
+				training_stat_per_report.loss += as_scalar(cg.forward());
 				cg.backward();
 				sgd.update(1.0);
 
-				if (0 == i % report_freq) // Report 
+				if (0 == (i+1) % report_freq) // Report 
 				{
-					BOOST_LOG_TRIVIAL(info) << i << " instances have been trained , with E = "
-						<< loss_per_report / training_stat_per_report.correct_tags 
-						<< " , acc = " << training_stat_per_report.get_acc() * 100 << " % .";
-					loss_per_epoch += loss_per_report;
-					loss_per_report = 0.;
+					training_stat_per_report.end_time_stat();
+					BOOST_LOG_TRIVIAL(info) << i+1 << " instances have been trained , with E = "
+						<< training_stat_per_report.get_E() 
+						<< " , ACC = " << training_stat_per_report.get_acc() * 100 
+						<< " % with time cost " << training_stat_per_report.get_time_cost_in_seconds() 
+						<< " s ." ;
 					training_stat_per_epoch += training_stat_per_report;
 					training_stat_per_report.clear();
+					training_stat_per_report.start_time_stat() ;
 				}
 			}
-			sgd.status();
 
-			loss_per_epoch += loss_per_report;
+			// End of an epoch 
+			sgd.status();
+			sgd.update_epoch();
+
+			training_stat_per_epoch.end_time_stat();
 			training_stat_per_epoch += training_stat_per_report;
-			BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << " has been finished . for this epoch , E = " << ;
+
+			BOOST_LOG_TRIVIAL(info) << "Epoch " << nr_epoch + 1 << " finished . " 
+				<< nr_samples << " instances has been trained ."
+				<< " For this epoch , E = " 
+				<< training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100 
+				<< " % with total time cost " << training_stat_per_epoch.get_time_cost_in_seconds() 
+				<< " s ." ;
+			total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
+
+			// If developing samples is available , do `dev` to get model training effect . 
+			if (p_dev_samples != nullptr) dev(p_dev_samples);
 		}
+		BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
+	}
+
+	double dev(const vector<InstancePair> *dev_samples)
+	{
+		unsigned nr_samples = dev_samples->size();
+		BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
+		Stat acc_stat;
+		acc_stat.start_time_stat();
+		for (const InstancePair &instance_pair : *dev_samples)
+		{
+			ComputationGraph cg;
+			IndexSeq predict_tag_seq ;
+			const IndexSeq &sent = instance_pair.first,
+				&tag_seq = instance_pair.second;
+			predict(&sent , &cg, &predict_tag_seq);
+			assert(predict_tag_seq.size() == tag_seq.size());
+			for (unsigned i = 0; i < tag_seq.size(); ++i)
+			{
+				++acc_stat.total_tags;
+				if (tag_seq[i] == predict_tag_seq[i]) ++acc_stat.correct_tags;
+			}
+		}
+		acc_stat.end_time_stat();
+		BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
+			<< acc_stat.get_acc() * 100 << " % "
+			<< ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s .";
+		return acc_stat.get_acc();
 	}
 };
 
@@ -413,6 +475,7 @@ void init_command_line_options(int argc, char* argv[], po::variables_map* conf) 
 		("training_data", po::value<std::string>(), "The path to the training data.")
 		("devel_data", po::value<std::string>(), "The path to the development data.")
 		("test_data", po::value<std::string>(), "The path to the test data.")
+		("epoch" , po::value<unsigned>()->default_value(4) , "The epoch number for training")
 		("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
 		("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
 		("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
@@ -462,6 +525,10 @@ int main(int argc, char *argv[])
 	tagging_model.set_model_structure_after_fill_dict();
 	tagging_model.init_model_params();
 	tagging_model.print_model_info();
+
+	// Train 
+	unsigned epoch = conf["epoch"].as<unsigned>();
+	tagging_model.train(&samples , epoch , &samples);
 	getchar(); // pause ;
 	return 0;
 }
