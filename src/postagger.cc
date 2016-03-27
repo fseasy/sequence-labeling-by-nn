@@ -40,6 +40,9 @@ const string POS_TRAIN_PATH = "C:/data/ltp-data/ner/pku-weibo-train.pos";
 const string POS_DEV_PATH = "C:/data/ltp-data/ner/pku-weibo-holdout.pos";
 const string POS_TEST_PATH = "C:/data/ltp-data/ner/pku-weibo-test.pos";
 
+const std::string unk_name = "<unk>";
+int unk_id;
+
 template<typename Iterator>
 void print(Iterator begin, Iterator end)
 {
@@ -50,7 +53,7 @@ void print(Iterator begin, Iterator end)
 	cout << endl;
 }
 
-void read_dataset_and_build_dicts(istream &is, vector<InstancePair> & samples, cnn::Dict & word_dict, cnn::Dict & tag_dict)
+void read_dataset_and_build_dicts(istream &is, vector<InstancePair> & samples, cnn::Dict & word_dict, cnn::Dict & tag_dict, bool train = true)
 {
 	BOOST_LOG_TRIVIAL(info) << "reading instance";
 	unsigned line_cnt = 0;
@@ -59,15 +62,19 @@ void read_dataset_and_build_dicts(istream &is, vector<InstancePair> & samples, c
 	vector<int> sent, tag_seq;
 	sent.resize(256);
 	tag_seq.resize(256);
-	while (getline(is, line))
-	{
+
+  // should add a unknown token into the lexicon.
+  if (train) {
+    unk_id = word_dict.Convert(unk_name);
+  }
+
+  while (getline(is, line)) {
 		boost::algorithm::trim(line);
 		vector<string> strpair_cont;
 		boost::algorithm::split(strpair_cont, line, boost::is_any_of("\t"));
 		sent.clear();
 		tag_seq.clear();
-		for (string &strpair : strpair_cont)
-		{
+		for (string &strpair : strpair_cont) {
 			/*word_and_tag.clear();
 			boost::algorithm::split(word_and_tag , strpair , boost::is_any_of("_"));
 			assert(2 == word_and_tag.size());
@@ -75,7 +82,11 @@ void read_dataset_and_build_dicts(istream &is, vector<InstancePair> & samples, c
 			int tag_id = tag_dict.Convert(word_and_tag[1]);*/
 			string::size_type  delim_pos = strpair.find_last_of("_");
 			assert(delim_pos != string::npos);
-			int word_id = word_dict.Convert(strpair.substr(0, delim_pos));
+      std::string word = strpair.substr(0, delim_pos);
+			int word_id = (train ? 
+        word_dict.Convert(word) : 
+        (word_dict.Contains(word) ? word_dict.Convert(word) : word_dict.Convert(unk_name))
+        );
 			int tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
 			sent.push_back(word_id);
 			tag_seq.push_back(tag_id);
@@ -475,7 +486,9 @@ void init_command_line_options(int argc, char* argv[], po::variables_map* conf) 
 		("training_data", po::value<std::string>(), "The path to the training data.")
 		("devel_data", po::value<std::string>(), "The path to the development data.")
 		("test_data", po::value<std::string>(), "The path to the test data.")
-		("epoch" , po::value<unsigned>()->default_value(4) , "The epoch number for training")
+    ("train", "use to specify to perform training process.")
+    ("model", po::value<std::string>(), "use to specify the model name.")
+		("max_epoch" , po::value<unsigned>()->default_value(4) , "The epoch number for training")
 		("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
 		("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
 		("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
@@ -512,14 +525,22 @@ int main(int argc, char *argv[])
 	// Reading Samples
 	ifstream train_is(conf["training_data"].as<std::string>());
 	if (!train_is) {
-		BOOST_LOG_TRIVIAL(error) << "failed to open: " << conf["training_data"].as<std::string>();
+		BOOST_LOG_TRIVIAL(error) << "failed to open training: " << conf["training_data"].as<std::string>();
 		abort();
 	}
-	vector<InstancePair> samples;
+	vector<InstancePair> training_samples;
 	cnn::Dict &word_dict = tagging_model.word_dict,
 		&tag_dict = tagging_model.tag_dict;
-	read_dataset_and_build_dicts(train_is, samples, word_dict, tag_dict);
+	read_dataset_and_build_dicts(train_is, training_samples, word_dict, tag_dict, true);
 	train_is.close();
+
+  std::vector<InstancePair> devel_samples;
+  std::ifstream devel_is(conf["devel_data"].as<std::string>());
+  if (!devel_is) {
+    BOOST_LOG_TRIVIAL(error) << "failed to open devel file: " << conf["devel_data"].as<std::string>();
+    abort();
+  }
+  read_dataset_and_build_dicts(devel_is, devel_samples, word_dict, tag_dict, false);
 
 	// set WORD_DICT_SIZE , TAG_OUTPUT_DIM ,  init params after that
 	tagging_model.set_model_structure_after_fill_dict();
@@ -528,7 +549,7 @@ int main(int argc, char *argv[])
 
 	// Train 
 	unsigned epoch = conf["epoch"].as<unsigned>();
-	tagging_model.train(&samples , epoch , &samples);
+	tagging_model.train(&training_samples, epoch , &devel_samples);
 	getchar(); // pause ;
 	return 0;
 }
