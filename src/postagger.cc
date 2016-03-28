@@ -38,7 +38,7 @@ const string POS_TRAIN_PATH = "C:/data/ltp-data/ner/pku-weibo-train.pos";
 const string POS_DEV_PATH = "C:/data/ltp-data/ner/pku-weibo-holdout.pos";
 const string POS_TEST_PATH = "C:/data/ltp-data/ner/pku-weibo-test.pos";
 
-
+const string PROGRAM_DESCRIPTION = "Postagger based on CNN Library";
 
 template<typename Iterator>
 void print(Iterator begin, Iterator end)
@@ -179,7 +179,7 @@ struct BILSTMModel4Tagging
             }
             tmp_samples.emplace_back(sent, tag_seq); // using `pair` construction pair(first_type , second_type)
             ++line_cnt;
-            if (0 == line_cnt % 4) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << "lines"; break; }
+            if (0 == line_cnt % 10000) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << "lines";  }
         }
         swap(tmp_samples, samples);
     }
@@ -470,7 +470,7 @@ struct BILSTMModel4Tagging
         // build tag network , calc loss Expression of every timestep 
         for (unsigned i = 0; i < sent_len; ++i)
         {
-            Expression tag_hidden_layer_output_at_timestep_t = tanh(affine_transform({ tag_hidden_b_exp,
+            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(affine_transform({ tag_hidden_b_exp,
               l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
               r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
             Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
@@ -492,7 +492,7 @@ struct BILSTMModel4Tagging
     }
 
     void train(const vector<InstancePair> *p_samples, unsigned max_epoch, const vector<InstancePair> *p_dev_samples = nullptr,
-        const unsigned do_devel_freq = 3)
+        const unsigned do_devel_freq=2)
     {
         unsigned nr_samples = p_samples->size();
 
@@ -515,7 +515,7 @@ struct BILSTMModel4Tagging
 
             // training for an epoch
             training_stat_per_report.start_time_stat();
-            training_stat_per_epoch.time_start = training_stat_per_epoch.time_start;
+            training_stat_per_epoch.start_time_stat() ;
             for (unsigned i = 0; i < nr_samples; ++i)
             {
                 const InstancePair &instance_pair = p_samples->at(access_order[i]);
@@ -549,14 +549,18 @@ struct BILSTMModel4Tagging
             training_stat_per_epoch.end_time_stat();
             training_stat_per_epoch += training_stat_per_report;
 
-            BOOST_LOG_TRIVIAL(info) << "Epoch " << nr_epoch + 1 << " finished . "
+            // Output
+            double epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
+            BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << " finished . ----------\n"
                 << nr_samples << " instances has been trained ."
                 << " For this epoch , E = "
                 << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
-                << " % with total time cost " << training_stat_per_epoch.get_time_cost_in_seconds()
-                << " s ."
+                << " % with total time cost " << epoch_time_cost << " s"
+                << "( speed " << epoch_time_cost / (nr_samples / 10000) << " s/10k samples)."
                 << " total tags : " << training_stat_per_epoch.total_tags
-                << " correct tags : " << training_stat_per_epoch.correct_tags;
+                << " correct tags : " << training_stat_per_epoch.correct_tags
+                << "-----------------------------\n";
+
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
 
             // If developing samples is available , do `devel` to get model training effect . 
@@ -568,7 +572,7 @@ struct BILSTMModel4Tagging
     double devel(const vector<InstancePair> *dev_samples)
     {
         unsigned nr_samples = dev_samples->size();
-        BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
+        BOOST_LOG_TRIVIAL(info) << "\nValidation at " << nr_samples << " instances .\n";
         Stat acc_stat;
         acc_stat.start_time_stat();
         for (const InstancePair &instance_pair : *dev_samples)
@@ -588,7 +592,8 @@ struct BILSTMModel4Tagging
         acc_stat.end_time_stat();
         BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
             << acc_stat.get_acc() * 100 << " % "
-            << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s .";
+            << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . " 
+            << "correct tags : " << acc_stat.correct_tags << " , with total tags :" << acc_stat.total_tags ;
         return acc_stat.get_acc();
     }
 
@@ -623,76 +628,79 @@ struct BILSTMModel4Tagging
     }
 };
 
-void init_command_line_options(int argc, char* argv[], po::variables_map* conf) {
-    po::options_description opts("Configuration");
-    opts.add_options()
-        ("training_data", po::value<std::string>(), "The path to the training data.")
-        ("devel_data", po::value<std::string>(), "The path to the development data.")
-        ("test_data", po::value<std::string>(), "The path to the test data.")
-        ("train", "use to specify to perform training process.")
-        ("devel_freq", po::value<unsigned>()->default_value(2), "The frequence for testing model on developing data during traing")
-        ("model", po::value<std::string>(), "use to specify the model name.")
-        ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch number for training")
+
+/********************************Action****************************************/
+
+int train_process(int argc, char *argv[]) 
+{
+    string description = PROGRAM_DESCRIPTION + "\n"
+                         "Training process .";
+    po::options_description op_des = po::options_description(description);
+    op_des.add_options()
+        ("training_data", po::value<string>(), "The path to training data")
+        ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
+        ("devel_freq", po::value<unsigned>()->default_value(2), "The frequent to validate(if set) . validation will be done after every devel-freq training")
+        ("model", po::value<string>(), "Use to specify the model name(path)")
         ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
         ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
         ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
         ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
-        ("help,h", "Show help information.")
-        ;
-
-    po::store(po::parse_command_line(argc, argv, opts), *conf);
-    if (conf->count("help")) {
-        std::cerr << opts << std::endl;
-        exit(1);
+        ("help,h", "Show help information.");
+    po::variables_map var_map;
+    try
+    {
+        po::store(po::parse_command_line(argc, argv, op_des), var_map);
+    }
+    catch (po::error_with_no_option_name e) {}
+    po::notify(var_map);
+    if (var_map.count("help"))
+    {
+        cerr << op_des << endl;
+        return 0;
     }
 
-    if (conf->count("training_data") == 0) {
-        BOOST_LOG_TRIVIAL(error) << "Please specify --training_data : "
-            << "this is required to determine the vocabulary mapping, even if the parser is used in prediction mode.";
-        exit(1);
+    // set params 
+    string training_data_path, devel_data_path;
+    if (0 == var_map.count("training_data"))
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Error : Training data should be specified ! \n"
+            "Exit .";
+        return -1;
     }
-}
-
-int main(int argc, char *argv[])
-{
-    // argv :
-    // --cnn-mem 128 --training_data C:/data/ltp-data/ner/pku-weibo-train.pos --devel_data C:/data/ltp-data/ner/pku-weibo-holdout.pos --test_data test.pos
-    cnn::Initialize(argc, argv, 1234); // MUST , or no memory is allocated ! Also the the random seed.
+    training_data_path = var_map["training_data"].as<string>();
+    if (0 == var_map.count("devel_data_path")) devel_data_path = "";
+    else devel_data_path = var_map["devel_data_path"].as<string>();
+    unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
+    unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
+    // others will be processed flowing 
     
-    po::variables_map conf;
-    init_command_line_options(argc, argv, &conf);
-
-    // -
-    // BUILD MODEL
-    // -
-    // declare model 
+    // Init 
+    cnn::Initialize(argc , argv , 1234);
     BILSTMModel4Tagging tagging_model;
 
-    // Reading training data , build word dict and tag dict 
-    ifstream train_is(conf["training_data"].as<std::string>());
+    // reading traing data , get word dict size and output tag number
+    ifstream train_is(training_data_path);
     if (!train_is) {
-        BOOST_LOG_TRIVIAL(error) << "failed to open training: " << conf["training_data"].as<std::string>();
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open training: `" << training_data_path << "` .\n Exit! \n";
         return -1;
     }
     vector<InstancePair> training_samples;
-    cnn::Dict &word_dict = tagging_model.word_dict,
-        &tag_dict = tagging_model.tag_dict;
     tagging_model.read_training_data_and_build_dicts(train_is, &training_samples);
+    tagging_model.finish_read_training_data();
     train_is.close();
 
-    // After reading training data , call `finish_read_training_data`
-    tagging_model.finish_read_training_data();
+    // build model structure
+    tagging_model.build_model_structure(var_map); // passing the var_map to specify the model structure
 
-    // Build model structure 
-    tagging_model.build_model_structure(conf);
-
-    // Reading developing data .
+    // reading developing data
     std::vector<InstancePair> devel_samples, *p_devel_samples;
-    if (0 != conf.count("devel_data"))
+    if ("" != devel_data_path)
     {
-        std::ifstream devel_is(conf["devel_data"].as<std::string>());
+        std::ifstream devel_is(devel_data_path);
         if (!devel_is) {
-            BOOST_LOG_TRIVIAL(error) << "failed to open devel file: " << conf["devel_data"].as<std::string>();
+            BOOST_LOG_TRIVIAL(error) << "failed to open devel file: `" << devel_data_path << "`\n Exit!";
+            // if set devel data , but open failed , we exit .
             return -1;
         }
         tagging_model.read_devel_data(devel_is, &devel_samples);
@@ -700,56 +708,203 @@ int main(int argc, char *argv[])
         p_devel_samples = &devel_samples;
     }
     else p_devel_samples = nullptr;
-    unsigned devel_freq = conf["devel_freq"].as<unsigned>();
 
     // Train 
-    unsigned epoch = conf["max_epoch"].as<unsigned>();
-    tagging_model.train(&training_samples, epoch, p_devel_samples, devel_freq);
+    tagging_model.train(&training_samples, max_epoch, p_devel_samples, devel_freq);
 
-    // Test 
-    // - Here we use no-tag (has been segmented) text(utf-8 encoded) as the test file .
-    // - such as : 我 是 中国 人 。
-    // For the dataset with tag , just using `devel` !
-    string test_data_path = conf["test_data"].as<string>();
-    ifstream test_is(test_data_path);
-    if (!test_is)
-    {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open test data at '" << test_data_path << "' \n Exit .";
-        return -1;
-    }
-    tagging_model.predict(test_is, cout);
-    test_is.close();
-
-    // Save model
+    // save model
     string model_path;
-    if (0 == conf.count("model"))
+    if (0 == var_map.count("model"))
     {
+        cerr << "no model name specified . using default .\n";
         ostringstream oss;
         oss << "tagging_" << tagging_model.INPUT_DIM << "_" << tagging_model.LSTM_HIDDEN_DIM
             << "_" << tagging_model.TAG_HIDDEN_DIM << ".model";
         model_path = oss.str();
     }
-    else model_path = conf["model"].as<string>();
+    else model_path = var_map["model"].as<string>();
     ofstream os(model_path);
     if (!os)
     {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit .";
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit !";
         return -1;
     }
     tagging_model.save_model(os);
     os.close();
+    return 0;
+}
+int devel_process(int argc, char *argv[]) 
+{
+    string description = PROGRAM_DESCRIPTION + "\n"
+        "Validation(develop) process .";
+    po::options_description op_des = po::options_description(description);
+    op_des.add_options()
+        ("devel_data", po::value<string>(), "The path to validation data .")
+        ("model", po::value<string>(), "Use to specify the model name(path)")
+        ("help,h", "Show help information.");
+    po::variables_map var_map;
+    po::store(po::parse_command_line(argc, argv, op_des), var_map);
+    po::notify(var_map);
+    if (var_map.count("help"))
+    {
+        cerr << op_des << endl;
+        return 0;
+    }
+
+    // set params  
+    string devel_data_path, model_path;
+    if (0 == var_map.count("devel_data"))
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Validation(develop) data should be specified !\n"
+            "Exit!";
+        return -1;
+    }
+    else devel_data_path = var_map["devel_data"].as<string>();
+    if (0 == var_map.count("model"))
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Model path should be specified ! \n"
+            "Exit! ";
+        return -1;
+    }
+    else model_path = var_map["model"].as<string>();
+
+    // Init 
+    cnn::Initialize(argc, argv, 1234);
+    BILSTMModel4Tagging tagging_model;
 
     // Load model 
     ifstream is(model_path);
     if (!is)
     {
-        BOOST_LOG_TRIVIAL(fatal) << "Failed to open model path at '" << model_path << "' . \n Exit .";
+        BOOST_LOG_TRIVIAL(fatal) << "Failed to open model path at '" << model_path << "' . \n"
+            "Exit !";
         return -1;
     }
-    BILSTMModel4Tagging another_model;
-    another_model.load_model(is);
-    another_model.devel(p_devel_samples); // Get the same result , it is OK .
+    tagging_model.load_model(is);
     is.close();
-    getchar(); // pause ;
+
+    // read validation(develop) data
+    std::ifstream devel_is(devel_data_path);
+    if (!devel_is) {
+        BOOST_LOG_TRIVIAL(fatal) << "Failed to open devel file: `" << devel_data_path << "`\n"
+            "Exit! ";
+        return -1;
+    }
+    vector<InstancePair> devel_samples;
+    tagging_model.read_devel_data(devel_is , &devel_samples);
+    devel_is.close();
+
+    // devel
+    tagging_model.devel(&devel_samples); // Get the same result , it is OK .
     return 0;
+}
+
+int predict_process(int argc, char *argv[]) 
+{
+    string description = PROGRAM_DESCRIPTION + "\n"
+        "Predict process .";
+    po::options_description op_des = po::options_description(description);
+    op_des.add_options()
+        ("raw_data", po::value<string>(), "The path to raw data(It should be segmented) .")
+        ("output" , po::value<string>() , "The path to storing result . using `stdout` if not specified ." )
+        ("model", po::value<string>(), "Use to specify the model name(path)")
+        ("help,h", "Show help information.");
+    po::variables_map var_map;
+    po::store(po::parse_command_line(argc, argv, op_des), var_map);
+    po::notify(var_map);
+    if (var_map.count("help"))
+    {
+        cerr << op_des << endl;
+        return 0;
+    }
+
+    //set params 
+    string raw_data_path, output_path, model_path;
+    if (0 == var_map.count("raw_data"))
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "raw_data path should be specified .\n"
+            "Exit!";
+        return -1;
+    }
+    else raw_data_path = var_map["raw_data"].as<string>();
+
+    if (0 == var_map.count("output"))
+    {
+        BOOST_LOG_TRIVIAL(info) << "no output is specified . using stdout .";
+        output_path = "";
+    }
+    else output_path = var_map["output"].as<string>();
+
+    if (0 == var_map.count("model"))
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Model path should be specified ! \n"
+            "Exit! ";
+        return -1;
+    }
+    else model_path = var_map["model"].as<string>();
+
+    // Init 
+    cnn::Initialize(argc, argv, 1234);
+    BILSTMModel4Tagging tagging_model;
+
+    // load model 
+    ifstream is(model_path);
+    if (!is)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Failed to open model path at '" << model_path << "' . \n"
+            "Exit .";
+        return -1;
+    }
+    tagging_model.load_model(is);
+    is.close();
+
+    // open raw_data
+    ifstream raw_is(raw_data_path);
+    if (!raw_is)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Failed to open raw data at '" << raw_data_path << "' \n Exit .";
+        return -1;
+    }
+
+    // open output 
+    if ("" == output_path)
+    {
+        tagging_model.predict(raw_is, cout); // using `cout` as output stream 
+        raw_is.close();
+    }
+    else
+    {
+        ofstream os(output_path);
+        if (!os)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Failed open output file at : `" << output_path << "`\n Exit .";
+            raw_is.close();
+            return -1;
+        }
+        tagging_model.predict(raw_is, os);
+        os.close();
+        is.close();
+    }
+    return 0;
+}
+
+int main(int argc, char *argv[])
+{
+    string usage = PROGRAM_DESCRIPTION + "\n"
+                   "usage : " + string(argv[0]) + " [train|devel|predict] <options> \n"
+                   "using `" + string(argv[0]) + " [train|devel|predict] -h` to see details \n";
+    if (argc <= 1)
+    {
+        cerr << usage;
+        return -1;
+    }
+    else if (string(argv[1]) == "train") return train_process(argc - 1, argv + 1);
+    else if (string(argv[1]) == "devel") return devel_process(argc - 1, argv + 1);
+    else if (string(argv[1]) == "predict") return predict_process(argc - 1, argv + 1);
+    else
+    {
+        cerr << "unknown mode : " << argv[1] << "\n"
+            << usage;
+        return -1;
+    }
 }
