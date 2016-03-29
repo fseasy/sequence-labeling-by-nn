@@ -28,17 +28,9 @@ using Index = int; // cnn::Dict return `int` as index
 using IndexSeq = vector<Index>;
 using InstancePair = pair<IndexSeq, IndexSeq>;
 
-// HPC PATH
-//const string POS_TRAIN_PATH = "/data/ltp/ltp-data/pos/pku-weibo-train.pos" ;
-//const string POS_DEV_PATH = "/data/ltp/ltp-data/pos/pku-weibo-holdout.pos" ;
-//const string POS_TEST_PATH = "/data/ltp/ltp-data/pos/pku-weibo-test.pos" ;
-
-// WINDOWS LOCAL
-const string POS_TRAIN_PATH = "C:/data/ltp-data/ner/pku-weibo-train.pos";
-const string POS_DEV_PATH = "C:/data/ltp-data/ner/pku-weibo-holdout.pos";
-const string POS_TEST_PATH = "C:/data/ltp-data/ner/pku-weibo-test.pos";
-
 const string PROGRAM_DESCRIPTION = "Postagger based on CNN Library";
+
+/********************************DEBUG OUPTUT FUNCTION***********************************/
 
 template<typename Iterator>
 void print(Iterator begin, Iterator end)
@@ -49,8 +41,6 @@ void print(Iterator begin, Iterator end)
     }
     cout << endl;
 }
-
-
 
 void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word_dict, const cnn::Dict &tag_dict)
 {
@@ -65,6 +55,11 @@ void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word
     }
 }
 
+/*************************************
+ * Stat 
+ * for statistics , including loss , acc , time .
+ * 
+ ************************************/
 
 struct Stat
 {
@@ -94,6 +89,11 @@ struct Stat
     Stat operator+(const Stat &other) { Stat tmp = *this;  tmp += other;  return tmp; }
 };
 
+/********************************
+ *BILSTMModel4Tagging (for postagging currently)
+ *tagging model based on CNN library , do as CNN examples `tag-bilstm.cc`
+ *
+ * ******************************/
 
 struct BILSTMModel4Tagging
 {
@@ -122,8 +122,8 @@ struct BILSTMModel4Tagging
     unsigned WORD_DICT_SIZE;
 
     // model saving
-    stringstream best_model_tmp_ss;
     float best_acc;
+    stringstream best_model_tmp_ss;
 
     // others 
     cnn::Dict word_dict;
@@ -303,7 +303,7 @@ struct BILSTMModel4Tagging
         split_cont.reserve(INPUT_DIM + 1); // word + numbers 
         getline(is, line); // first line is the infomation !
         boost::split(split_cont, line, boost::is_any_of(" "));
-        assert(2 == split_cont.size() && stoi(split_cont.at(1)) == INPUT_DIM);
+        assert(2 == split_cont.size() && stoul(split_cont.at(1)) == INPUT_DIM);
         unsigned long long line_cnt = 1 ;
         unsigned long long words_cnt_hit = 0;
         vector<float> embedding_vec(INPUT_DIM , 0.);
@@ -544,7 +544,7 @@ struct BILSTMModel4Tagging
 
         SimpleSGDTrainer sgd = SimpleSGDTrainer(m);
 
-        double total_time_cost_in_seconds = 0.;
+        unsigned long long total_time_cost_in_seconds = 0ULL ;
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
             // shuffle samples by random access order
@@ -597,7 +597,7 @@ struct BILSTMModel4Tagging
                 << " For this epoch , E = "
                 << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
                 << " % with total time cost " << epoch_time_cost << " s"
-                << "( speed " << epoch_time_cost / (nr_samples / 10000.) << " s/10k samples)."
+                << "( speed " << epoch_time_cost / (nr_samples / 10000.L ) << " s/10k samples)."
                 << " total tags : " << training_stat_per_epoch.total_tags
                 << " correct tags : " << training_stat_per_epoch.correct_tags
                 << "\n";
@@ -687,10 +687,10 @@ int train_process(int argc, char *argv[] , const string &program_name)
 {
     string description = PROGRAM_DESCRIPTION + "\n"
         "Training process .\n"
-        "using `" + program_name + " train <options>` to train . Training options as follow";
+        "using `" + program_name + " train <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("training_data", po::value<string>()->required(), "[required] The path to training data")
+        ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
@@ -808,7 +808,8 @@ int train_process(int argc, char *argv[] , const string &program_name)
 int devel_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
-        "Validation(develop) process ";
+        "Validation(develop) process "
+        "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
         ("devel_data", po::value<string>(), "The path to validation data .")
@@ -874,7 +875,8 @@ int devel_process(int argc, char *argv[] , const string &program_name)
 int predict_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
-        "Predict process .";
+        "Predict process ."
+        "using `" + program_name + " predict <options>` to predict . predict options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
         ("raw_data", po::value<string>(), "The path to raw data(It should be segmented) .")
@@ -963,8 +965,8 @@ int predict_process(int argc, char *argv[] , const string &program_name)
 int main(int argc, char *argv[])
 {
     string usage = PROGRAM_DESCRIPTION + "\n"
-                   "usage : " + string(argv[0]) + " [train|devel|predict] <options> \n"
-                   "using `" + string(argv[0]) + " [train|devel|predict] -h` to see details for specify task\n";
+                   "usage : " + string(argv[0]) + " [ train | devel | predict ] <options> \n"
+                   "using  `" + string(argv[0]) + " [ train | devel | predict ] -h` to see details for specify task\n";
     if (argc <= 1)
     {
         cerr << usage;
