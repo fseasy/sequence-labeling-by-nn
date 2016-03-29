@@ -79,13 +79,16 @@ struct Stat
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
     chrono::high_resolution_clock::time_point start_time_stat() { return time_start = chrono::high_resolution_clock::now(); }
     chrono::high_resolution_clock::time_point end_time_stat() { return time_end = chrono::high_resolution_clock::now(); }
-    double get_time_cost_in_seconds() { return (chrono::duration_cast<chrono::duration<double>>(time_end - time_start)).count(); }
+    long long get_time_cost_in_seconds() 
+    { 
+        chrono::seconds du = chrono::duration_cast<chrono::seconds>(time_end - time_start);
+        return du.count(); 
+    }
     Stat &operator+=(const Stat &other)
     {
         correct_tags += other.correct_tags;
         total_tags += other.total_tags;
         loss += other.loss;
-        time_end = other.time_end;
         return *this;
     }
     Stat operator+(const Stat &other) { Stat tmp = *this;  tmp += other;  return tmp; }
@@ -118,6 +121,10 @@ struct BILSTMModel4Tagging
     unsigned TAG_OUTPUT_DIM;
     unsigned WORD_DICT_SIZE;
 
+    // model saving
+    stringstream best_model_tmp_ss;
+    float best_acc;
+
     // others 
     cnn::Dict word_dict;
     cnn::Dict tag_dict;
@@ -129,7 +136,7 @@ struct BILSTMModel4Tagging
     Index UNK;
 
     BILSTMModel4Tagging() :
-        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr)
+        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss()
     {
 
         SOS = word_dict.Convert(SOS_STR);
@@ -242,7 +249,6 @@ struct BILSTMModel4Tagging
         // set unk
         word_dict.SetUnk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
-        tag_dict.SetUnk(UNK_STR); // JUST to TEST the program logic !
         UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
     }
 
@@ -288,10 +294,41 @@ struct BILSTMModel4Tagging
     }
 
 
-    void load_wordembedding_from_word2vec_txt_format(const string &fpath)
+    void load_wordembedding_from_word2vec_txt_format(istream &is)
     {
         // TODO set lookup parameters from outer word embedding
         // using words_loopup_param.Initialize( word_id , value_vector )
+        string line;
+        vector<string> split_cont;
+        split_cont.reserve(INPUT_DIM + 1); // word + numbers 
+        getline(is, line); // first line is the infomation !
+        boost::split(split_cont, line, boost::is_any_of(" "));
+        assert(2 == split_cont.size() && stoi(split_cont.at(1)) == INPUT_DIM);
+        unsigned long long line_cnt = 1 ;
+        unsigned long long words_cnt_hit = 0;
+        vector<float> embedding_vec(INPUT_DIM , 0.);
+        while (getline(is, line))
+        {
+            ++line_cnt;
+            boost::trim_right(line);
+            boost::split(split_cont, line , boost::is_any_of(" "));
+            if (INPUT_DIM + 1 != split_cont.size())
+            {
+                BOOST_LOG_TRIVIAL(info) << "bad word dimension : `" << split_cont.size() - 1 << "` at line " << line_cnt;
+                continue;
+            }
+            string &word = split_cont.at(0);
+            Index word_id = word_dict.Convert(word);
+            if (word_id != UNK)
+            {
+                ++words_cnt_hit;
+                transform(split_cont.cbegin() + 1, split_cont.cend(), embedding_vec.begin(),
+                    [](const string &f_str) { return stof(f_str);});
+                words_lookup_param->Initialize(word_id, embedding_vec);
+            }
+        }
+        BOOST_LOG_TRIVIAL(info) << "Initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE
+            << " words emebdding has been loading .";
     }
 
     void save_model(ostream &os)
@@ -306,8 +343,14 @@ struct BILSTMModel4Tagging
             << TAG_HIDDEN_DIM << TAG_OUTPUT_DIM;
 
         to << word_dict << tag_dict;
-
-        to << *m;
+        if (0 != best_model_tmp_ss.rdbuf()->in_avail())
+        {
+            boost::archive::text_iarchive ti(best_model_tmp_ss);
+            ti >> *m;
+            ; // if best model is not save to the temporary stringstream , we should firstly save it !
+        }
+        
+        to << *m; 
         BOOST_LOG_TRIVIAL(info) << "saving model done .";
     }
 
@@ -405,7 +448,7 @@ struct BILSTMModel4Tagging
             {
                 vector<float> output_values = as_vector(cg.incremental_forward());
                 float max_value = output_values[0];
-                unsigned tag_id_with_max_value = 0;
+                Index tag_id_with_max_value = 0;
                 for (unsigned i = 1; i < TAG_OUTPUT_DIM; ++i)
                 {
                     if (max_value < output_values[i])
@@ -473,9 +516,7 @@ struct BILSTMModel4Tagging
             Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(affine_transform({ tag_hidden_b_exp,
               l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
               r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
-            Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
-              tag_output_w_exp , tag_hidden_layer_output_at_timestep_t });
-
+            affine_transform({ tag_output_b_exp , tag_output_w_exp , tag_hidden_layer_output_at_timestep_t }); // only add to CG
             vector<float> output_values = as_vector(cg.incremental_forward());
             float max_value = output_values[0];
             unsigned tag_id_with_max_value = 0;
@@ -550,29 +591,40 @@ struct BILSTMModel4Tagging
             training_stat_per_epoch += training_stat_per_report;
 
             // Output
-            double epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
+            long long epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
             BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << " finished . ----------\n"
                 << nr_samples << " instances has been trained ."
                 << " For this epoch , E = "
                 << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
                 << " % with total time cost " << epoch_time_cost << " s"
-                << "( speed " << epoch_time_cost / (nr_samples / 10000) << " s/10k samples)."
+                << "( speed " << epoch_time_cost / (nr_samples / 10000.) << " s/10k samples)."
                 << " total tags : " << training_stat_per_epoch.total_tags
                 << " correct tags : " << training_stat_per_epoch.correct_tags
-                << "-----------------------------\n";
+                << "\n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
 
             // If developing samples is available , do `devel` to get model training effect . 
-            if (p_dev_samples != nullptr && 0 == (nr_epoch + 1) % do_devel_freq) devel(p_dev_samples);
+            if (p_dev_samples != nullptr && 0 == (nr_epoch + 1) % do_devel_freq)
+            {
+                float acc = devel(p_dev_samples);
+                if (acc > best_acc)
+                {
+                    BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
+                    best_acc = acc;
+                    best_model_tmp_ss.str(""); // first , clear it's content !
+                    boost::archive::text_oarchive to(best_model_tmp_ss);
+                    to<< *m;
+                }
+            }
         }
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }
 
-    double devel(const vector<InstancePair> *dev_samples)
+    float devel(const vector<InstancePair> *dev_samples)
     {
         unsigned nr_samples = dev_samples->size();
-        BOOST_LOG_TRIVIAL(info) << "\nValidation at " << nr_samples << " instances .\n";
+        BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
         Stat acc_stat;
         acc_stat.start_time_stat();
         for (const InstancePair &instance_pair : *dev_samples)
@@ -593,7 +645,7 @@ struct BILSTMModel4Tagging
         BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
             << acc_stat.get_acc() * 100 << " % "
             << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . " 
-            << "correct tags : " << acc_stat.correct_tags << " , with total tags :" << acc_stat.total_tags ;
+            << "total tags : " << acc_stat.total_tags << " correct tags : " << acc_stat.correct_tags ;
         return acc_stat.get_acc();
     }
 
@@ -631,14 +683,17 @@ struct BILSTMModel4Tagging
 
 /********************************Action****************************************/
 
-int train_process(int argc, char *argv[]) 
+int train_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
-                         "Training process .";
+        "Training process .\n"
+        "using `" + program_name + " train <options>` to train . Training options as follow";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("training_data", po::value<string>(), "The path to training data")
+        ("training_data", po::value<string>()->required(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
+            "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
         ("devel_freq", po::value<unsigned>()->default_value(2), "The frequent to validate(if set) . validation will be done after every devel-freq training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
@@ -648,11 +703,7 @@ int train_process(int argc, char *argv[])
         ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    try
-    {
-        po::store(po::parse_command_line(argc, argv, op_des), var_map);
-    }
-    catch (po::error_with_no_option_name e) {}
+    po::store(po::command_line_parser(argc,argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -665,18 +716,19 @@ int train_process(int argc, char *argv[])
     if (0 == var_map.count("training_data"))
     {
         BOOST_LOG_TRIVIAL(fatal) << "Error : Training data should be specified ! \n"
+            "using `-h` to see detail parameters .\n"
             "Exit .";
         return -1;
     }
     training_data_path = var_map["training_data"].as<string>();
-    if (0 == var_map.count("devel_data_path")) devel_data_path = "";
-    else devel_data_path = var_map["devel_data_path"].as<string>();
+    if (0 == var_map.count("devel_data")) devel_data_path = "";
+    else devel_data_path = var_map["devel_data"].as<string>();
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
     unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
     // others will be processed flowing 
     
     // Init 
-    cnn::Initialize(argc , argv , 1234);
+    cnn::Initialize(argc , argv , 1234); // 
     BILSTMModel4Tagging tagging_model;
 
     // reading traing data , get word dict size and output tag number
@@ -692,6 +744,26 @@ int train_process(int argc, char *argv[])
 
     // build model structure
     tagging_model.build_model_structure(var_map); // passing the var_map to specify the model structure
+
+    // reading word embedding
+    if (0 != var_map.count("word_embedding"))
+    {
+        string word_embedding_path = var_map["word_embedding"].as<string>();
+        ifstream word_embedding_is(word_embedding_path);
+        if (!word_embedding_is)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Failed to open wordEmbedding at : `" << word_embedding_path << "` .\n Exit! \n";
+            return -1;
+        }
+        BOOST_LOG_TRIVIAL(info) << "load word embedding from file `" << word_embedding_path << "`";
+        tagging_model.load_wordembedding_from_word2vec_txt_format(word_embedding_is);
+        word_embedding_is.close();
+    }
+    else
+    {
+        BOOST_LOG_TRIVIAL(info) << "No word embedding is specified . Using randomized initialization .";
+    }
+
 
     // reading developing data
     std::vector<InstancePair> devel_samples, *p_devel_samples;
@@ -733,17 +805,17 @@ int train_process(int argc, char *argv[])
     os.close();
     return 0;
 }
-int devel_process(int argc, char *argv[]) 
+int devel_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
-        "Validation(develop) process .";
+        "Validation(develop) process ";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
         ("devel_data", po::value<string>(), "The path to validation data .")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    po::store(po::parse_command_line(argc, argv, op_des), var_map);
+    po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -799,7 +871,7 @@ int devel_process(int argc, char *argv[])
     return 0;
 }
 
-int predict_process(int argc, char *argv[]) 
+int predict_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
         "Predict process .";
@@ -810,7 +882,7 @@ int predict_process(int argc, char *argv[])
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    po::store(po::parse_command_line(argc, argv, op_des), var_map);
+    po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -892,15 +964,15 @@ int main(int argc, char *argv[])
 {
     string usage = PROGRAM_DESCRIPTION + "\n"
                    "usage : " + string(argv[0]) + " [train|devel|predict] <options> \n"
-                   "using `" + string(argv[0]) + " [train|devel|predict] -h` to see details \n";
+                   "using `" + string(argv[0]) + " [train|devel|predict] -h` to see details for specify task\n";
     if (argc <= 1)
     {
         cerr << usage;
         return -1;
     }
-    else if (string(argv[1]) == "train") return train_process(argc - 1, argv + 1);
-    else if (string(argv[1]) == "devel") return devel_process(argc - 1, argv + 1);
-    else if (string(argv[1]) == "predict") return predict_process(argc - 1, argv + 1);
+    else if (string(argv[1]) == "train") return train_process(argc-1, argv+1 , argv[0]);
+    else if (string(argv[1]) == "devel") return devel_process(argc-1, argv+1 , argv[0]);
+    else if (string(argv[1]) == "predict") return predict_process(argc-1, argv+1 , argv[0]);
     else
     {
         cerr << "unknown mode : " << argv[1] << "\n"
