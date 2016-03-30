@@ -296,7 +296,7 @@ struct BILSTMModel4Tagging
 
     void load_wordembedding_from_word2vec_txt_format(istream &is)
     {
-        // TODO set lookup parameters from outer word embedding
+        // set lookup parameters from outer word embedding
         // using words_loopup_param.Initialize( word_id , value_vector )
         string line;
         vector<string> split_cont;
@@ -306,7 +306,7 @@ struct BILSTMModel4Tagging
         assert(2 == split_cont.size() && stoul(split_cont.at(1)) == INPUT_DIM);
         unsigned long long line_cnt = 1 ;
         unsigned long long words_cnt_hit = 0;
-        vector<float> embedding_vec(INPUT_DIM , 0.);
+        vector<float> embedding_vec(INPUT_DIM , 0.f);
         while (getline(is, line))
         {
             ++line_cnt;
@@ -533,7 +533,7 @@ struct BILSTMModel4Tagging
     }
 
     void train(const vector<InstancePair> *p_samples, unsigned max_epoch, const vector<InstancePair> *p_dev_samples = nullptr,
-        const unsigned do_devel_freq=2)
+        const unsigned long do_devel_freq=50000)
     {
         unsigned nr_samples = p_samples->size();
 
@@ -543,7 +543,7 @@ struct BILSTMModel4Tagging
         for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 
         SimpleSGDTrainer sgd = SimpleSGDTrainer(m);
-
+        unsigned long line_cnt_for_devel = 0;
         unsigned long long total_time_cost_in_seconds = 0ULL ;
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
@@ -581,6 +581,23 @@ struct BILSTMModel4Tagging
                     training_stat_per_report.clear();
                     training_stat_per_report.start_time_stat();
                 }
+
+                // Devel
+                ++line_cnt_for_devel;
+                // If developing samples is available , do `devel` to get model training effect . 
+                if (p_dev_samples != nullptr && 0 == line_cnt_for_devel % do_devel_freq)
+                {
+                    float acc = devel(p_dev_samples);
+                    if (acc > best_acc)
+                    {
+                        BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
+                        best_acc = acc;
+                        best_model_tmp_ss.str(""); // first , clear it's content !
+                        boost::archive::text_oarchive to(best_model_tmp_ss);
+                        to << *m;
+                    }
+                    line_cnt_for_devel = 0; // avoid overflow
+                }
             }
 
             // End of an epoch 
@@ -603,20 +620,6 @@ struct BILSTMModel4Tagging
                 << "\n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
-
-            // If developing samples is available , do `devel` to get model training effect . 
-            if (p_dev_samples != nullptr && 0 == (nr_epoch + 1) % do_devel_freq)
-            {
-                float acc = devel(p_dev_samples);
-                if (acc > best_acc)
-                {
-                    BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
-                    best_acc = acc;
-                    best_model_tmp_ss.str(""); // first , clear it's content !
-                    boost::archive::text_oarchive to(best_model_tmp_ss);
-                    to<< *m;
-                }
-            }
         }
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }
@@ -695,7 +698,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned>()->default_value(2), "The frequent to validate(if set) . validation will be done after every devel-freq training")
+        ("devel_freq", po::value<unsigned long>()->default_value(50000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
         ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
@@ -724,7 +727,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
     if (0 == var_map.count("devel_data")) devel_data_path = "";
     else devel_data_path = var_map["devel_data"].as<string>();
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
-    unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
+    unsigned long devel_freq = var_map["devel_freq"].as<unsigned long>();
     // others will be processed flowing 
     
     // Init 
