@@ -563,11 +563,14 @@ struct BILSTMModel4Tagging
                 // using negative_loglikelihood loss to build model
                 const IndexSeq *p_sent = &instance_pair.first,
                     *p_tag_seq = &instance_pair.second;
-                ComputationGraph cg;
-                negative_loglikelihood(p_sent, p_tag_seq, &cg, &training_stat_per_report);
-                training_stat_per_report.loss += as_scalar(cg.forward());
-                cg.backward();
+                ComputationGraph *cg = new ComputationGraph(); // because at one scope , only one ComputationGraph is permited .
+                                                               // so we have to declaring it as pointer and destroy it handly 
+                                                               // before develing.
+                negative_loglikelihood(p_sent, p_tag_seq, cg, &training_stat_per_report);
+                training_stat_per_report.loss += as_scalar(cg->forward());
+                cg->backward();
                 sgd.update(1.0);
+                delete cg;
 
                 if (0 == (i + 1) % report_freq) // Report 
                 {
