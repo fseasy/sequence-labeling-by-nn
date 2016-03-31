@@ -627,14 +627,17 @@ struct BILSTMModel4Tagging
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }
 
-    float devel(const vector<InstancePair> *dev_samples)
+    float devel(const vector<InstancePair> *dev_samples , ostream *p_error_output_os=nullptr)
     {
         unsigned nr_samples = dev_samples->size();
         BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
+        unsigned long line_cnt4error_output = 0;
+        if (p_error_output_os) *p_error_output_os << "line_nr\tword\tpredict_tag\ttrue_tag\n";
         Stat acc_stat;
         acc_stat.start_time_stat();
         for (const InstancePair &instance_pair : *dev_samples)
         {
+            ++line_cnt4error_output;
             ComputationGraph cg;
             IndexSeq predict_tag_seq;
             const IndexSeq &sent = instance_pair.first,
@@ -645,6 +648,11 @@ struct BILSTMModel4Tagging
             {
                 ++acc_stat.total_tags;
                 if (tag_seq[i] == predict_tag_seq[i]) ++acc_stat.correct_tags;
+                else if (p_error_output_os)
+                {
+                    *p_error_output_os << line_cnt4error_output << "\t" << word_dict.Convert(sent[i])
+                        << "\t" << tag_dict.Convert(predict_tag_seq[i]) << "\t" << tag_dict.Convert(tag_seq[i]) << "\n" ;
+                }
             }
         }
         acc_stat.end_time_stat();
@@ -817,9 +825,12 @@ int devel_process(int argc, char *argv[] , const string &program_name)
         "Validation(develop) process "
         "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
+    // set params to receive the arguments 
+    string devel_data_path , model_path, error_output_path;
     op_des.add_options()
-        ("devel_data", po::value<string>(), "The path to validation data .")
-        ("model", po::value<string>(), "Use to specify the model name(path)")
+        ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
+        ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
+        ("error_output", po::value<string>(&error_output_path), "Specify the file path to storing the predict error infomation . Empty to discard.")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
@@ -830,23 +841,19 @@ int devel_process(int argc, char *argv[] , const string &program_name)
         return 0;
     }
 
-    // set params  
-    string devel_data_path, model_path;
-    if (0 == var_map.count("devel_data"))
+    if ("" == devel_data_path)
     {
         BOOST_LOG_TRIVIAL(fatal) << "Validation(develop) data should be specified !\n"
             "Exit!";
         return -1;
     }
-    else devel_data_path = var_map["devel_data"].as<string>();
-    if (0 == var_map.count("model"))
+    if ("" == model_path)
     {
         BOOST_LOG_TRIVIAL(fatal) << "Model path should be specified ! \n"
             "Exit! ";
         return -1;
     }
-    else model_path = var_map["model"].as<string>();
-
+  
     // Init 
     cnn::Initialize(argc, argv, 1234);
     BILSTMModel4Tagging tagging_model;
@@ -869,12 +876,30 @@ int devel_process(int argc, char *argv[] , const string &program_name)
             "Exit! ";
         return -1;
     }
+
+    // ready error output file
+    ofstream *p_error_output_os = nullptr;
+    if (0U != error_output_path.size())
+    {
+        p_error_output_os = new ofstream(error_output_path);
+        if (!p_error_output_os)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Failed to open error output file : `" << error_output_path << "`\nExit!";
+            return -1;
+        }
+    }
+
     vector<InstancePair> devel_samples;
     tagging_model.read_devel_data(devel_is , &devel_samples);
     devel_is.close();
 
     // devel
-    tagging_model.devel(&devel_samples); // Get the same result , it is OK .
+    tagging_model.devel(&devel_samples , p_error_output_os); // Get the same result , it is OK .
+    if (p_error_output_os)
+    {
+        p_error_output_os->close();
+        delete p_error_output_os;
+    }
     return 0;
 }
 
