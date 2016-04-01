@@ -632,7 +632,7 @@ struct BILSTMModel4Tagging
         unsigned nr_samples = dev_samples->size();
         BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
         unsigned long line_cnt4error_output = 0;
-        if (p_error_output_os) *p_error_output_os << "line_nr\tword\tpredict_tag\ttrue_tag\n";
+        if (p_error_output_os) *p_error_output_os << "line_nr\tword_index\tword_at_dict\tpredict_tag\ttrue_tag\n";
         Stat acc_stat;
         acc_stat.start_time_stat();
         for (const InstancePair &instance_pair : *dev_samples)
@@ -650,7 +650,7 @@ struct BILSTMModel4Tagging
                 if (tag_seq[i] == predict_tag_seq[i]) ++acc_stat.correct_tags;
                 else if (p_error_output_os)
                 {
-                    *p_error_output_os << line_cnt4error_output << "\t" << word_dict.Convert(sent[i])
+                    *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << word_dict.Convert(sent[i])
                         << "\t" << tag_dict.Convert(predict_tag_seq[i]) << "\t" << tag_dict.Convert(tag_seq[i]) << "\n" ;
                 }
             }
