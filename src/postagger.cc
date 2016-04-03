@@ -104,8 +104,10 @@ struct BILSTMModel4Tagging
 
     // paramerters
     LookupParameters *words_lookup_param;
+    LookupParameters *tags_lookup_param;
     Parameters *l2r_tag_hidden_w_param;
     Parameters *r2l_tag_hidden_w_param;
+    Parameters *pretag_tag_hidden_w_param;
     Parameters *tag_hidden_b_param;
 
     Parameters *tag_output_w_param;
@@ -114,11 +116,13 @@ struct BILSTMModel4Tagging
     // model structure : using const !(in-class initilization)
 
     unsigned INPUT_DIM; // word embedding dimension
+    unsigned TAG_EMBEDDING_DIM;
     unsigned LSTM_LAYER;
     unsigned LSTM_HIDDEN_DIM;
     unsigned TAG_HIDDEN_DIM;
     //--- need to be counted from training data or loaded from model .
-    unsigned TAG_OUTPUT_DIM;
+    unsigned TAG_DICT_SIZE; 
+    unsigned TAG_OUTPUT_DIM; // it my be not equal to TAG_DICT_SIZE
     unsigned WORD_DICT_SIZE;
 
     // model saving
@@ -130,19 +134,16 @@ struct BILSTMModel4Tagging
     cnn::Dict tag_dict;
     const string SOS_STR = "<START_OF_SEQUENCE_REPR>";
     const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
+    const string SOS_TAG_STR = "<STAET_OF_TAG_SEQUENCE_REPR>";
     const string UNK_STR = "<UNK_REPR>"; // should add a unknown token into the lexicon. 
     Index SOS;
     Index EOS;
+    Index SOS_TAG;
     Index UNK;
 
     BILSTMModel4Tagging() :
         m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss()
-    {
-
-        SOS = word_dict.Convert(SOS_STR);
-        EOS = word_dict.Convert(EOS_STR);
-        // UNK is set after word dict is freezen
-    }
+    {}
 
     ~BILSTMModel4Tagging()
     {
@@ -204,7 +205,7 @@ struct BILSTMModel4Tagging
 
     void read_devel_data(istream &is, vector<InstancePair> *samples)
     {
-        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) freeze_dict_and_set_unk();
+        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) add_special_flag_and_freeze_dict();
         BOOST_LOG_TRIVIAL(info) << "reading developing data .";
         do_read_dataset(is, *samples);
     }
@@ -215,7 +216,7 @@ struct BILSTMModel4Tagging
         // Test data format :
         // Each line is combined with words and delimeters , delimeters can be TAB or SPACE 
         // - Attation : Empty line is also reserved .
-        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) freeze_dict_and_set_unk();
+        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) add_special_flag_and_freeze_dict();
         BOOST_LOG_TRIVIAL(info) << "reading test data .";
         vector<IndexSeq> tmp_sents;
         vector<vector<string>> tmp_raw_sents;
@@ -238,12 +239,17 @@ struct BILSTMModel4Tagging
 
     /*************************MODEL HANDLER***********************************/
 
-    /* Function : freeze_dict_and_set_unk_and_model_parameters
+    /* Function : add_special_flag_and_freeze_dict_and_model_parameters
     ** This should be call before reading developing data or test data (just once at first time ).
     **/
-    void freeze_dict_and_set_unk()
+    void add_special_flag_and_freeze_dict()
     {
         if (word_dict.is_frozen() && tag_dict.is_frozen()) return; // has been frozen
+        // First , add flag for start , end of word sequence and start of tag sequence  
+        SOS = word_dict.Convert(SOS_STR);
+        EOS = word_dict.Convert(EOS_STR);
+        SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
+        // Freeze
         tag_dict.Freeze();
         word_dict.Freeze();
         // set unk
@@ -252,12 +258,13 @@ struct BILSTMModel4Tagging
         UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
     }
 
-    void finish_read_training_data() { freeze_dict_and_set_unk(); }
+    void finish_read_training_data() { add_special_flag_and_freeze_dict(); }
 
     void print_model_info()
     {
         cout << "------------Model structure info-----------\n"
             << "vocabulary(word dict) size : " << WORD_DICT_SIZE << " with dimension : " << INPUT_DIM << "\n"
+            << "tag lookup dimension : " << TAG_EMBEDDING_DIM << "\n"
             << "LSTM hidden layer dimension : " << LSTM_HIDDEN_DIM << " , has " << LSTM_LAYER << " layers\n"
             << "TAG hidden layer dimension : " << TAG_HIDDEN_DIM << "\n"
             << "output dimention(tags number) : " << TAG_OUTPUT_DIM << "\n"
@@ -268,10 +275,12 @@ struct BILSTMModel4Tagging
     {
         LSTM_LAYER = conf["lstm_layers"].as<unsigned>();
         INPUT_DIM = conf["input_dim"].as<unsigned>();
+        TAG_EMBEDDING_DIM = conf["tag_embedding_dim"].as<unsigned>();
         LSTM_HIDDEN_DIM = conf["lstm_hidden_dim"].as<unsigned>();
         TAG_HIDDEN_DIM = conf["tag_dim"].as<unsigned>();
         // TAG_OUTPUT_DIM and WORD_DICT_SIZE is according to the dict size .
-        TAG_OUTPUT_DIM = tag_dict.size();
+        TAG_DICT_SIZE = tag_dict.size();
+        TAG_OUTPUT_DIM = TAG_DICT_SIZE - 1 ;
         WORD_DICT_SIZE = word_dict.size();
         if (0 == TAG_OUTPUT_DIM || !tag_dict.is_frozen() || !word_dict.is_frozen()) {
             BOOST_LOG_TRIVIAL(error) << "`finish_read_training_data` should be call before build model structure \n Exit!";
@@ -282,12 +291,14 @@ struct BILSTMModel4Tagging
         l2r_builder = new LSTMBuilder(LSTM_LAYER, INPUT_DIM, LSTM_HIDDEN_DIM, m);
         r2l_builder = new LSTMBuilder(LSTM_LAYER, INPUT_DIM, LSTM_HIDDEN_DIM, m);
 
-        words_lookup_param = m->add_lookup_parameters(WORD_DICT_SIZE, { INPUT_DIM });
+        words_lookup_param = m->add_lookup_parameters(WORD_DICT_SIZE, { INPUT_DIM }); // ADD for PRE_TAG
+        tags_lookup_param = m->add_lookup_parameters(TAG_DICT_SIZE, { TAG_EMBEDDING_DIM }); // having `SOS_TAG`
         l2r_tag_hidden_w_param = m->add_parameters({ TAG_HIDDEN_DIM , LSTM_HIDDEN_DIM });
         r2l_tag_hidden_w_param = m->add_parameters({ TAG_HIDDEN_DIM , LSTM_HIDDEN_DIM });
+        pretag_tag_hidden_w_param = m->add_parameters({ TAG_HIDDEN_DIM , TAG_EMBEDDING_DIM }); // ADD for PRE_TAG
         tag_hidden_b_param = m->add_parameters({ TAG_HIDDEN_DIM });
 
-        tag_output_w_param = m->add_parameters({ TAG_OUTPUT_DIM , TAG_HIDDEN_DIM });
+        tag_output_w_param = m->add_parameters({ TAG_OUTPUT_DIM , TAG_HIDDEN_DIM }); // no `SOS_TAG`
         tag_output_b_param = m->add_parameters({ TAG_OUTPUT_DIM });
 
         if (is_print_model_info) print_model_info();
@@ -399,6 +410,7 @@ struct BILSTMModel4Tagging
         // Add parameters to cg
         Expression l2r_tag_hidden_w_exp = parameter(cg, l2r_tag_hidden_w_param);
         Expression r2l_tag_hidden_w_exp = parameter(cg, r2l_tag_hidden_w_param);
+        Expression pretag_tag_hidden_w_exp = parameter(cg, pretag_tag_hidden_w_param);
         Expression tag_hidden_b_exp = parameter(cg, tag_hidden_b_param);
 
         Expression tag_output_w_exp = parameter(cg, tag_output_w_param);
@@ -409,6 +421,7 @@ struct BILSTMModel4Tagging
         vector<Expression> word_lookup_exp_cont(sent_len); // for storing word lookup(embedding) expression for every word(index) in sentence
         vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
         vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
+        vector<Expression> pretag_lookup_exp_cont(sent_len); // ADD for PRE_TAG
 
         // build computation graph(also get output expression) for left to right LSTM
         // 1. get word embeddings for sent 
@@ -422,15 +435,25 @@ struct BILSTMModel4Tagging
 
         // 2. left 2 right , calc Expression of every timestep of LSTM
         l2r_builder->add_input(SOS_EXP);
-        for (unsigned i = 0; i < sent_len; ++i) {
+        for (unsigned i = 0; i < sent_len; ++i) 
+        {
             l2r_lstm_output_exp_cont[i] = l2r_builder->add_input(word_lookup_exp_cont[i]);
         }
 
         // 3. right 2 left , calc Expression of every timestep of LSTM
         r2l_builder->add_input(EOS_EXP);
-        for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) {
+        for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) 
+        {
             // should be int , or never stop
             r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
+        }
+
+        // 4. prepare for PRE_TAG embedding
+        Expression SOS_TAG_EXP = lookup(cg, tags_lookup_param, SOS_TAG);
+        pretag_lookup_exp_cont[0] = SOS_TAG_EXP ;
+        for (unsigned i = 1; i < sent_len ; ++i)
+        {
+            pretag_lookup_exp_cont[i] = lookup(cg, tags_lookup_param, p_tag_seq->at(i - 1));
         }
 
         // build tag network , calc loss Expression of every timestep 
@@ -439,7 +462,8 @@ struct BILSTMModel4Tagging
             // rectify is suggested as activation function
             Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(affine_transform({ tag_hidden_b_exp,
               l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
-              r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
+              r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i],
+              pretag_tag_hidden_w_exp , pretag_lookup_exp_cont[i]})); // ADD for PRE_TAG
             Expression tag_output_layer_output_at_timestep_t = affine_transform({ tag_output_b_exp ,
               tag_output_w_exp , tag_hidden_layer_output_at_timestep_t });
 
@@ -481,6 +505,7 @@ struct BILSTMModel4Tagging
         // Add parameters to cg
         Expression l2r_tag_hidden_w_exp = parameter(cg, l2r_tag_hidden_w_param);
         Expression r2l_tag_hidden_w_exp = parameter(cg, r2l_tag_hidden_w_param);
+        Expression pretag_tag_hidden_w_exp = parameter(cg, pretag_tag_hidden_w_param);
         Expression tag_hidden_b_exp = parameter(cg, tag_hidden_b_param);
 
         Expression tag_output_w_exp = parameter(cg, tag_output_w_param);
@@ -510,12 +535,17 @@ struct BILSTMModel4Tagging
         for (int i = static_cast<int>(sent_len) - 1; i >= 0; --i) // should be int , or never stop
             r2l_lstm_output_exp_cont[i] = r2l_builder->add_input(word_lookup_exp_cont[i]);
 
+        // 4. set previous tag lookup expression
+
+        Expression pretag_lookup_exp = lookup(cg, tags_lookup_param, SOS_TAG);
+
         // build tag network , calc loss Expression of every timestep 
         for (unsigned i = 0; i < sent_len; ++i)
         {
             Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(affine_transform({ tag_hidden_b_exp,
               l2r_tag_hidden_w_exp, l2r_lstm_output_exp_cont[i],
-              r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i] }));
+              r2l_tag_hidden_w_exp, r2l_lstm_output_exp_cont[i],
+              pretag_tag_hidden_w_exp , pretag_lookup_exp})); // Add for PRE_TAG
             affine_transform({ tag_output_b_exp , tag_output_w_exp , tag_hidden_layer_output_at_timestep_t }); // only add to CG
             vector<float> output_values = as_vector(cg.incremental_forward());
             float max_value = output_values[0];
@@ -529,6 +559,8 @@ struct BILSTMModel4Tagging
                 }
             }
             p_predict_tag_seq->push_back(tag_id_with_max_value);
+            // set pretag_lookup_exp for next timestep 
+            pretag_lookup_exp = lookup(cg, tags_lookup_param, tag_id_with_max_value);
         }
     }
 
@@ -709,9 +741,10 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned long>()->default_value(50000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
+        ("tag_embedding_dim" , po::value<unsigned>()->default_value(5) , "The dimension for tag embedding.")
         ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
         ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
         ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
