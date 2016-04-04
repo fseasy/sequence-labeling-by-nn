@@ -18,6 +18,8 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
 using namespace std;
@@ -78,6 +80,10 @@ struct Stat
     { 
         chrono::seconds du = chrono::duration_cast<chrono::seconds>(time_end - time_start);
         return du.count(); 
+    }
+    float get_speed_as_kilo_tokens_per_sencond()
+    {
+        return (long double)(correct_tags) / 1000. / get_time_cost_in_seconds();
     }
     Stat &operator+=(const Stat &other)
     {
@@ -617,7 +623,7 @@ struct BILSTMModel4Tagging
                 if (0 == (i + 1) % report_freq) // Report 
                 {
                     training_stat_per_report.end_time_stat();
-                    BOOST_LOG_TRIVIAL(info) << i + 1 << " instances have been trained , with E = "
+                    BOOST_LOG_TRIVIAL(trace) << i + 1 << " instances have been trained , with E = "
                         << training_stat_per_report.get_E()
                         << " , ACC = " << training_stat_per_report.get_acc() * 100
                         << " % with time cost " << training_stat_per_report.get_time_cost_in_seconds()
@@ -659,7 +665,7 @@ struct BILSTMModel4Tagging
                 << " For this epoch , E = "
                 << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
                 << " % with total time cost " << epoch_time_cost << " s"
-                << "( speed " << epoch_time_cost / (nr_samples / 10000.L ) << " s/10k samples)."
+                << "( speed " << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens)."
                 << " total tags : " << training_stat_per_epoch.total_tags
                 << " correct tags : " << training_stat_per_epoch.correct_tags
                 << "\n";
@@ -701,6 +707,7 @@ struct BILSTMModel4Tagging
         BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
             << acc_stat.get_acc() * 100 << " % "
             << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . " 
+            << "(speed " << acc_stat.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens) "
             << "total tags : " << acc_stat.total_tags << " correct tags : " << acc_stat.correct_tags ;
         return acc_stat.get_acc();
     }
@@ -754,10 +761,12 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
-        ("tag_embedding_dim" , po::value<unsigned>()->default_value(5) , "The dimension for tag embedding.")
+        ("tag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for tag embedding.")
         ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
         ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
         ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
+        ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,\
+                                                                 else value leads to output trace info.")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc,argv).options(op_des).allow_unregistered().run(), var_map);
@@ -767,7 +776,13 @@ int train_process(int argc, char *argv[] , const string &program_name)
         cerr << op_des << endl;
         return 0;
     }
-
+    // trace switch
+    if (0 == var_map.count("logging_verbose") || 0 == var_map["logging_verbose"].as<int>())
+    {
+        boost::log::core::get()->set_filter(
+            boost::log::trivial::severity >= boost::log::trivial::debug
+            );
+    }
     // set params 
     string training_data_path, devel_data_path;
     if (0 == var_map.count("training_data"))
