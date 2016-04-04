@@ -346,12 +346,14 @@ struct BILSTMModel4Tagging
     {
         // This saving order is important !
         // 1. model structure parameters : WORD_DICT_SIZE , INPUT_DIM , LSTM_LAYER , LSTM_HIDDEN_DIM , TAG_HIDDEN_DIM , TAG_OUTPUT_DIM
+        //                                 TAG_EMBEDDING_DIM , TAG_DICT_SIZE
         // 2. Dict : word_dict , tag_dict 
         // 3. Model of cnn
         boost::archive::text_oarchive to(os);
         to << WORD_DICT_SIZE << INPUT_DIM
             << LSTM_LAYER << LSTM_HIDDEN_DIM
-            << TAG_HIDDEN_DIM << TAG_OUTPUT_DIM;
+            << TAG_HIDDEN_DIM << TAG_OUTPUT_DIM
+            << TAG_EMBEDDING_DIM << TAG_DICT_SIZE ; // ADD for PRE_TAG
 
         to << word_dict << tag_dict;
         if (0 != best_model_tmp_ss.rdbuf()->in_avail())
@@ -373,18 +375,26 @@ struct BILSTMModel4Tagging
         // 1. load structure data and dict 
         ti >> WORD_DICT_SIZE >> INPUT_DIM
             >> LSTM_LAYER >> LSTM_HIDDEN_DIM
-            >> TAG_HIDDEN_DIM >> TAG_OUTPUT_DIM;
+            >> TAG_HIDDEN_DIM >> TAG_OUTPUT_DIM 
+            >> TAG_EMBEDDING_DIM >> TAG_DICT_SIZE ; // ADD for PRE_TAG
 
         ti >> word_dict >> tag_dict;
 
-        assert(WORD_DICT_SIZE == word_dict.size() && TAG_OUTPUT_DIM == tag_dict.size());
+        assert(WORD_DICT_SIZE == word_dict.size() && TAG_DICT_SIZE == tag_dict.size());
+       
+        // SET VALUE for special flag
+        SOS = word_dict.Convert(SOS_STR);
+        EOS = word_dict.Convert(EOS_STR);
+        SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
+        UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
 
         // 2. build model structure 
         po::variables_map var;
         var.insert({ make_pair(string("lstm_layers") , po::variable_value(boost::any(LSTM_LAYER) , false))  ,
           make_pair(string("input_dim") , po::variable_value(boost::any(INPUT_DIM) , false)) ,
           make_pair(string("lstm_hidden_dim") , po::variable_value(boost::any(LSTM_HIDDEN_DIM) ,false)) ,
-          make_pair(string("tag_dim") , po::variable_value(boost::any(TAG_HIDDEN_DIM) , false))
+          make_pair(string("tag_dim") , po::variable_value(boost::any(TAG_HIDDEN_DIM) , false)) ,
+          make_pair(string("tag_embedding_dim") , po::variable_value(boost::any(TAG_EMBEDDING_DIM) , false ))
         });
         build_model_structure(var);
 
