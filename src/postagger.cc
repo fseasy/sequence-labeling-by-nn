@@ -22,6 +22,8 @@
 #include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
+#include "utf8processing.hpp"
+
 using namespace std;
 using namespace cnn;
 namespace po = boost::program_options;
@@ -147,6 +149,9 @@ struct BILSTMModel4Tagging
     Index SOS_TAG;
     Index UNK;
 
+    static const string number_transform_str;
+    static const size_t length_transform_str;
+
     BILSTMModel4Tagging() :
         m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss()
     {}
@@ -159,6 +164,32 @@ struct BILSTMModel4Tagging
     }
 
     /*************************READING DATA **********************************/
+
+    string replace_number(const string &str)
+    {
+        string tmp_str = str;
+        size_t start_pos = 0;
+        while (start_pos < tmp_str.length())
+        {
+            size_t end_pos = start_pos;
+
+            while (true)
+            {
+                size_t byte_len = UTF8Processing::get_number_byte_width(tmp_str, end_pos);
+                if (0 == byte_len) break;
+                else end_pos += byte_len;
+            }
+            size_t number_byte_len = end_pos - start_pos;
+            if (0 != number_byte_len)
+            {
+                // replace
+                tmp_str.replace(start_pos, number_byte_len, number_transform_str);
+                start_pos += length_transform_str;
+            }
+            else ++start_pos;
+        }
+        return tmp_str;
+    }
 
     void do_read_dataset(istream &is, vector<InstancePair> &samples)
     {
@@ -174,7 +205,6 @@ struct BILSTMModel4Tagging
         sent.reserve(256);
         tag_seq.reserve(256);
 
-
         while (getline(is, line)) {
             boost::algorithm::trim(line);
             if (0 == line.size()) continue;
@@ -186,6 +216,8 @@ struct BILSTMModel4Tagging
                 string::size_type  delim_pos = strpair.rfind("_");
                 assert(delim_pos != string::npos);
                 std::string word = strpair.substr(0, delim_pos);
+                // Parse Number to specific string
+                word = replace_number(word);
                 Index word_id = word_dict.Convert(word);
                 Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
                 sent.push_back(word_id);
@@ -743,6 +775,9 @@ struct BILSTMModel4Tagging
     }
 };
 
+
+const string BILSTMModel4Tagging::number_transform_str = "##";
+const size_t BILSTMModel4Tagging::length_transform_str = number_transform_str.length();
 
 /********************************Action****************************************/
 
