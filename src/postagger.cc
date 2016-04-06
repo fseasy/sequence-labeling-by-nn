@@ -269,7 +269,12 @@ struct BILSTMModel4Tagging
             unsigned seq_len = words_seq.size();
             tmp_sents.emplace_back(seq_len); // using constructor `vector(nr_num)` => push_back(vector<int>(nr_words)) 
             IndexSeq &words_index_seq = tmp_sents.back();
-            for (unsigned i = 0; i < seq_len; ++i) words_index_seq[i] = word_dict.Convert(words_seq[i]);
+            for (unsigned i = 0; i < seq_len; ++i)
+            {
+                string number_transed_word = replace_number(words_seq[i]);
+                words_index_seq[i] = word_dict.Convert(number_transed_word);
+            }
+                
         }
         swap(*test_sents, tmp_sents);
         swap(*raw_test_sents, tmp_raw_sents);
