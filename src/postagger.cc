@@ -12,6 +12,8 @@
 #include <vector>
 #include <string>
 #include <chrono>
+#include <functional>
+#include <algorithm>
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
@@ -58,6 +60,60 @@ void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word
         cout << "\n" << endl;
     }
 }
+
+
+/**************************
+ * DictWrapper
+ * for record words frequency . 
+ */
+
+struct DictWrapper
+{
+    DictWrapper(cnn::Dict &d) : rd(d) , freq_threshold(1) , prob_threshold(0.2),prob_rand(bind(uniform_real_distribution<float>(0,1) , *rndeng))
+    {
+        freq_records.reserve(0xFFFF); // 60K space
+    }
+
+    inline int Convert(const std::string& word) 
+    {
+        Index word_idx = rd.Convert(word);
+        if (!rd.is_frozen())
+        {
+            if (word_idx + 1> freq_records.size())
+            {
+                // new words has been pushed to the dict !
+                freq_records.push_back(1); // add word frequency record
+            }
+            else ++freq_records[word_idx]; // update word_frequency record
+        }
+        return word_idx;
+    }
+    void SetUnk(const std::string& word)
+    {
+        rd.SetUnk(word);
+        UNK = rd.Convert(word);
+    }
+    void Freeze() { rd.Freeze(); }
+    int ConvertProbability(Index word_idx)
+    {
+        if (word_idx == UNK) return UNK; // UNK is not in freq_records
+        assert(word_idx < freq_records.size());
+        if (freq_records[word_idx] <= freq_threshold && prob_rand() <= prob_threshold) return UNK;
+        return word_idx;
+    }
+    void set_threshold(int freq_threshold, float prob_threshold)
+    {
+        this->freq_threshold = freq_threshold;
+        this->prob_threshold = prob_threshold;
+    }
+    cnn::Dict &rd;
+    vector<int> freq_records;
+    Index UNK;
+    int freq_threshold;
+    float prob_threshold;
+    function<float()> prob_rand;
+};
+
 
 /*************************************
  * Stat 
@@ -140,6 +196,7 @@ struct BILSTMModel4Tagging
     // others 
     cnn::Dict word_dict;
     cnn::Dict tag_dict;
+    DictWrapper word_dict_wrapper;
     const string SOS_STR = "<START_OF_SEQUENCE_REPR>";
     const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
     const string SOS_TAG_STR = "<STAET_OF_TAG_SEQUENCE_REPR>";
@@ -153,7 +210,8 @@ struct BILSTMModel4Tagging
     static const size_t length_transform_str;
 
     BILSTMModel4Tagging() :
-        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss()
+        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss() ,
+        word_dict_wrapper(word_dict)
     {}
 
     ~BILSTMModel4Tagging()
@@ -218,7 +276,7 @@ struct BILSTMModel4Tagging
                 std::string word = strpair.substr(0, delim_pos);
                 // Parse Number to specific string
                 word = replace_number(word);
-                Index word_id = word_dict.Convert(word);
+                Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
                 Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
                 sent.push_back(word_id);
                 tag_seq.push_back(tag_id);
@@ -289,16 +347,16 @@ struct BILSTMModel4Tagging
     {
         if (word_dict.is_frozen() && tag_dict.is_frozen()) return; // has been frozen
         // First , add flag for start , end of word sequence and start of tag sequence  
-        SOS = word_dict.Convert(SOS_STR);
-        EOS = word_dict.Convert(EOS_STR);
+        SOS = word_dict_wrapper.Convert(SOS_STR);
+        EOS = word_dict_wrapper.Convert(EOS_STR);
         SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
         // Freeze
         tag_dict.Freeze();
-        word_dict.Freeze();
+        word_dict_wrapper.Freeze();
         // set unk
-        word_dict.SetUnk(UNK_STR);
+        word_dict_wrapper.SetUnk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
-        UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+        UNK = word_dict_wrapper.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
     }
 
     void finish_read_training_data() { add_special_flag_and_freeze_dict(); }
@@ -646,11 +704,14 @@ struct BILSTMModel4Tagging
             {
                 const InstancePair &instance_pair = p_samples->at(access_order[i]);
                 // using negative_loglikelihood loss to build model
-                const IndexSeq *p_sent = &instance_pair.first,
-                    *p_tag_seq = &instance_pair.second;
+                IndexSeq *p_sent = const_cast<IndexSeq *>(&instance_pair.first);
+                const IndexSeq *p_tag_seq = &instance_pair.second;
                 ComputationGraph *cg = new ComputationGraph(); // because at one scope , only one ComputationGraph is permited .
                                                                // so we have to declaring it as pointer and destroy it handly 
                                                                // before develing.
+                // transform low-frequent words to UNK according to the probability
+                transform(p_sent->begin(), p_sent->end(), p_sent->begin(),
+                    [this](Index word_idx)->Index {return this->word_dict_wrapper.ConvertProbability(word_idx); }) ; // TRANS
                 negative_loglikelihood(p_sent, p_tag_seq, cg, &training_stat_per_report);
                 training_stat_per_report.loss += as_scalar(cg->forward());
                 cg->backward();
@@ -805,6 +866,12 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
         ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
         ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
+        ("replace_freq_threshold" , po::value<unsigned>()->default_value(1) , "The frequency threshold to replace the word to UNK in probability"
+                                                                               "(eg , if set 1, the words of training data which frequency <= 1 may be "
+                                                                               " replaced in probability)")
+        ("replace_prob_threshold" , po::value<float>()->default_value(0.2) , "The probability threshold to replace the word to UNK ."
+                                                                             " if words frequency <= replace_freq_threshold , the word will "
+                                                                             "be replace in this probability")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,\
                                                                  else value leads to output trace info.")
         ("help,h", "Show help information.");
@@ -837,6 +904,8 @@ int train_process(int argc, char *argv[] , const string &program_name)
     else devel_data_path = var_map["devel_data"].as<string>();
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
     unsigned long devel_freq = var_map["devel_freq"].as<unsigned long>();
+    unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
+    float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     // others will be processed flowing 
     
     // Init 
@@ -844,6 +913,8 @@ int train_process(int argc, char *argv[] , const string &program_name)
     BILSTMModel4Tagging tagging_model;
 
     // reading traing data , get word dict size and output tag number
+    // -> set replace frequency for word_dict_wrapper
+    tagging_model.word_dict_wrapper.set_threshold(replace_freq_threshold, replace_prob_threshold);
     ifstream train_is(training_data_path);
     if (!train_is) {
         BOOST_LOG_TRIVIAL(fatal) << "failed to open training: `" << training_data_path << "` .\n Exit! \n";
