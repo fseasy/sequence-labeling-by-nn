@@ -152,7 +152,7 @@ struct BILSTMModel4NER
         return tmp_str;
     }
 
-    void do_read_dataset(istream &is, vector<InstancePair> &samples)
+    void do_read_dataset(istream &is, vector<IndexSeq> &sents , vector<IndexSeq> &postag_seqs , vector<IndexSeq> &nertag_seqs)
     {
         // read training data or developing data .
         // data format :
@@ -160,86 +160,127 @@ struct BILSTMModel4NER
         // Attention : empty line will be skipped 
         unsigned line_cnt = 0;
         string line;
-        vector<InstancePair> tmp_samples;
-        IndexSeq sent, tag_seq;
-        tmp_samples.reserve(0x8FFFF); // 2^19 =  480k pairs 
+        vector<IndexSeq> tmp_sents;
+        vector<IndexSeq> tmp_postag_seqs;
+        vector<IndexSeq> tmp_nertag_seqs;
+        IndexSeq sent,
+            postag_seq , 
+            nertag_seq;
+
+        tmp_sents.reserve(0x8000); // 2^15 =  32k pairs 
+        tmp_postag_seqs.reserve(0x8000); 
+        tmp_nertag_seqs.reserve(0x8000); 
         sent.reserve(256);
-        tag_seq.reserve(256);
+        postag_seq.reserve(256);
+        nertag_seq.reserve(256);
 
         while (getline(is, line)) {
             boost::algorithm::trim(line);
             if (0 == line.size()) continue;
-            vector<string> strpair_cont;
-            boost::algorithm::split(strpair_cont, line, boost::is_any_of("\t"));
+            vector<string> parts ;
+            boost::algorithm::split(parts, line, boost::is_any_of("\t"));
             sent.clear();
-            tag_seq.clear();
-            for (string &strpair : strpair_cont) {
-                string::size_type  delim_pos = strpair.rfind("_");
-                assert(delim_pos != string::npos);
-                std::string word = strpair.substr(0, delim_pos);
+            postag_seq.clear();
+            nertag_seq.clear();
+            for (string &part : parts) {
+                string::size_type postag_pos = part.rfind("/");
+                string::size_type nertag_pos = part.rfind("#");
+                assert(postag_pos != string::npos && nertag_pos != string::npos);
+                string word = part.substr(0, postag_pos);
+                string postag = part.substr(postag_pos + 1, nertag_pos - postag_pos - 1);
+                string nertag = part.substr(nertag_pos + 1);
                 // Parse Number to specific string
                 word = replace_number(word);
                 Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-                Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
+                Index postag_id = postag_dict.Convert(postag);
+                Index nertag_id = ner_dict.Convert(nertag);
                 sent.push_back(word_id);
-                tag_seq.push_back(tag_id);
+                postag_seq.push_back(postag_id);
+                nertag_seq.push_back(nertag_id);
             }
-            tmp_samples.emplace_back(sent, tag_seq); // using `pair` construction pair(first_type , second_type)
+            tmp_sents.push_back(sent);
+            tmp_postag_seqs.push_back(postag_seq);
+            tmp_nertag_seqs.push_back(nertag_seq);
             ++line_cnt;
             if (0 == line_cnt % 10000) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << "lines";  }
         }
-        swap(tmp_samples, samples);
+        swap(tmp_sents, sents);
+        swap(tmp_postag_seqs, postag_seqs);
+        swap(tmp_nertag_seqs, nertag_seqs);
     }
 
-    void read_training_data_and_build_dicts(istream &is, vector<InstancePair> *samples)
+    void read_training_data_and_build_dicts(istream &is, vector<IndexSeq> *p_sent_seqs , vector<IndexSeq> *p_postag_seqs , 
+        vector<IndexSeq> *p_nertag_seqs)
     {
-        assert(!word_dict.is_frozen() && !tag_dict.is_frozen());
+        assert(!word_dict.is_frozen() && !postag_dict.is_frozen() && !ner_dict.is_frozen());
         BOOST_LOG_TRIVIAL(info) << "reading training data .";
-        do_read_dataset(is, *samples);
+        do_read_dataset(is, *p_sent_seqs , *p_postag_seqs , *p_nertag_seqs);
         // Actually , we should set `TAG_OUTPUT_DIM` and `WORD_DICT_SIZE` at here , but unfortunately ,
         // an special key `UNK` has not been add to the word_dict , and we have to add it after the dict is frozen .
         // What's more , we want frozen the dict only before reading the dev data or testing data .
         // The `Dict` can not set frozen state ! we'd better fix it in the future .
     }
 
-    void read_devel_data(istream &is, vector<InstancePair> *samples)
+    void read_devel_data(istream &is, vector<IndexSeq> *p_dev_sents , vector<IndexSeq> *p_dev_postag_seqs , 
+        vector<IndexSeq> *p_dev_nertag_seqs)
     {
-        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) add_special_flag_and_freeze_dict();
+        if (!word_dict.is_frozen() && !postag_dict.is_frozen() && !ner_dict.is_frozen()) add_special_flag_and_freeze_dict();
         BOOST_LOG_TRIVIAL(info) << "reading developing data .";
-        do_read_dataset(is, *samples);
+        do_read_dataset(is, *p_dev_sents , *p_dev_postag_seqs , *p_dev_nertag_seqs);
     }
 
-    void read_test_data(istream &is, vector<vector<string>> *raw_test_sents, vector<IndexSeq> *test_sents)
+    void read_test_data(istream &is, vector<vector<string>> *p_raw_test_sents, vector<IndexSeq> *p_test_sents ,
+        vector<IndexSeq> *p_test_postag_seqs)
     {
         // Read Test data , raw data is also been stored for outputing (because we may get an UNK word and can't can't convert it to origin text )
         // Test data format :
-        // Each line is combined with words and delimeters , delimeters can be TAB or SPACE 
+        // Each line is combined with WORD_POSTAG and delimeters , delimeters can be TAB or SPACE 
         // - Attation : Empty line is also reserved .
-        if (!word_dict.is_frozen() && !tag_dict.is_frozen()) add_special_flag_and_freeze_dict();
+        if (!word_dict.is_frozen() && !postag_dict.is_frozen() && !ner_dict.is_frozen()) add_special_flag_and_freeze_dict();
         BOOST_LOG_TRIVIAL(info) << "reading test data .";
-        vector<IndexSeq> tmp_sents;
         vector<vector<string>> tmp_raw_sents;
-        tmp_sents.reserve(0xFFFF); // 60k sents 
-        tmp_raw_sents.reserve(0xFFFF);
+        vector<IndexSeq> tmp_sents;
+        vector<IndexSeq> tmp_postag_seqs;
+        vector<string> raw_sent;
+        IndexSeq sent,
+            postag_seq;
+
+        tmp_raw_sents.reserve(0x4FFF);
+        tmp_sents.reserve(0x4FFF); // 16k sents 
+        tmp_postag_seqs.reserve(0x4FFF);
+        raw_sent.reserve(256);
+        sent.reserve(256);
+        postag_seq.reserve(256);
+        
         string line;
         while (getline(is, line))
         {
             boost::trim(line);
-            vector<string> words_seq;
-            boost::split(words_seq, line, boost::is_any_of("\t"));
-            tmp_raw_sents.push_back(words_seq);
-            unsigned seq_len = words_seq.size();
-            tmp_sents.emplace_back(seq_len); // using constructor `vector(nr_num)` => push_back(vector<int>(nr_words)) 
-            IndexSeq &words_index_seq = tmp_sents.back();
-            for (unsigned i = 0; i < seq_len; ++i)
+            vector<string> parts;
+            boost::split(parts , line, boost::is_any_of("\t"));
+            
+            raw_sent.resize(0);
+            sent.resize(0);
+            postag_seq.resize(0);
+
+            for (string &part : parts)
             {
-                string number_transed_word = replace_number(words_seq[i]);
-                words_index_seq[i] = word_dict.Convert(number_transed_word);
+                string::size_type delim_pos = part.rfind("_");
+                string raw_word = part.substr(0, delim_pos);
+                string postag = part.substr(delim_pos + 1);
+                raw_sent.push_back(raw_word);
+                string word = replace_number(raw_word);
+                sent.push_back(word_dict.Convert(word));
+                postag_seq.push_back(postag_dict.Convert(postag));
             }
+            tmp_raw_sents.push_back(raw_sent);
+            tmp_sents.push_back(sent);
+            tmp_postag_seqs.push_back(postag_seq);
                 
         }
-        swap(*test_sents, tmp_sents);
-        swap(*raw_test_sents, tmp_raw_sents);
+        swap(*p_raw_test_sents, tmp_raw_sents);
+        swap(*p_test_sents, tmp_sents);
+        swap(*p_test_postag_seqs, tmp_postag_seqs);
     }
 
     /*************************MODEL HANDLER***********************************/
@@ -249,14 +290,15 @@ struct BILSTMModel4NER
     **/
     void add_special_flag_and_freeze_dict()
     {
-        if (word_dict.is_frozen() && tag_dict.is_frozen()) return; // has been frozen
+        if (word_dict.is_frozen() && postag_dict.is_frozen() && ner_dict.is_frozen()) return; // has been frozen
         // First , add flag for start , end of word sequence and start of tag sequence  
-        SOS = word_dict_wrapper.Convert(SOS_STR);
-        EOS = word_dict_wrapper.Convert(EOS_STR);
-        SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
+        //SOS = word_dict_wrapper.Convert(SOS_STR);
+        //EOS = word_dict_wrapper.Convert(EOS_STR);
+        //SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
         // Freeze
-        tag_dict.Freeze();
         word_dict_wrapper.Freeze();
+        postag_dict.Freeze();
+        ner_dict.Freeze();
         // set unk
         word_dict_wrapper.SetUnk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
@@ -629,7 +671,7 @@ struct BILSTMModel4NER
         unsigned long line_cnt_for_devel = 0;
         unsigned long long total_time_cost_in_seconds = 0ULL ;
         IndexSeq sent_unk_replace;
-        sent_unk_replace.reserve(512);
+        sent_unk_replace.reserve(256);
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
             // shuffle samples by random access order
@@ -720,33 +762,39 @@ struct BILSTMModel4NER
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }
 
-    float devel(const vector<InstancePair> *dev_samples , ostream *p_error_output_os=nullptr)
+    float devel(const vector<IndexSeq> *p_dev_sents , const vector<IndexSeq> *p_dev_postag_seqs , 
+        const vector<IndexSeq> *p_dev_ner_seqs , ostream *p_error_output_os=nullptr)
     {
-        unsigned nr_samples = dev_samples->size();
+        unsigned nr_samples = p_dev_sents->size();
         BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
         unsigned long line_cnt4error_output = 0;
         if (p_error_output_os) *p_error_output_os << "line_nr\tword_index\tword_at_dict\tpredict_tag\ttrue_tag\n";
         Stat acc_stat;
         acc_stat.start_time_stat();
-        for (const InstancePair &instance_pair : *dev_samples)
+        vector<IndexSeq> predict_ner_seqs(*p_dev_ner_seqs); // copy
+        for (size_t idx = 0; idx < nr_samples; ++idx )
         {
+
             ++line_cnt4error_output;
             ComputationGraph cg;
-            IndexSeq predict_tag_seq;
-            const IndexSeq &sent = instance_pair.first,
-                &tag_seq = instance_pair.second;
-            do_predict(&sent, &cg, &predict_tag_seq);
-            assert(predict_tag_seq.size() == tag_seq.size());
-            for (unsigned i = 0; i < tag_seq.size(); ++i)
+            IndexSeq predict_ner_seq;
+            const IndexSeq &sent = p_dev_sents->at(idx),
+                &postag_seq = p_dev_postag_seqs->at(idx) ,
+                &ner_seq = p_dev_ner_seqs->at(idx);
+            do_predict(&sent, &postag_seq, &predict_ner_seq, &cg);
+            assert(predict_ner_seq.size() == ner_seq.size());
+            for (unsigned i = 0; i < ner_seq.size(); ++i)
             {
                 ++acc_stat.total_tags;
-                if (tag_seq[i] == predict_tag_seq[i]) ++acc_stat.correct_tags;
+                if (ner_seq[i] == predict_ner_seq[i]) ++acc_stat.correct_tags;
                 else if (p_error_output_os)
                 {
                     *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << word_dict.Convert(sent[i])
-                        << "\t" << tag_dict.Convert(predict_tag_seq[i]) << "\t" << tag_dict.Convert(tag_seq[i]) << "\n" ;
+                        << "\t" << postag_dict.Convert(postag_seq[i])
+                        << "\t" << ner_dict.Convert(predict_ner_seq[i]) << "\t" << ner_dict.Convert(ner_seq[i]) << "\n" ;
                 }
             }
+            predict_ner_seqs[idx] = predict_ner_seq;
         }
         acc_stat.end_time_stat();
         BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
