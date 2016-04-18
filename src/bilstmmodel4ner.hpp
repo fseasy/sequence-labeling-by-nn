@@ -664,7 +664,7 @@ struct BILSTMModel4NER
         unsigned max_epoch, const vector<IndexSeq> *p_dev_sents = nullptr, const vector<IndexSeq> *p_dev_postag_seqs = nullptr ,
         const vector<IndexSeq> *p_dev_ner_seqs = nullptr ,
         const string conlleval_script_path="./ner_eval.sh" ,
-        const unsigned long do_devel_freq=50000)
+        const unsigned long do_devel_freq=10000)
     {
         unsigned nr_samples = p_sents->size();
 
@@ -685,7 +685,7 @@ struct BILSTMModel4NER
 
             // For loss , accuracy , time cost report
             Stat training_stat_per_report, training_stat_per_epoch;
-            unsigned report_freq = 10000;
+            unsigned report_freq = 5000;
 
             // training for an epoch
             training_stat_per_report.start_time_stat();
@@ -764,6 +764,16 @@ struct BILSTMModel4NER
                 << "\n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
+            // do devel at every end of Epoch
+            float F1 = devel(p_dev_sents , p_dev_ner_seqs , p_dev_ner_seqs , conlleval_script_path);
+            if (F1 > best_F1)
+            {
+                BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
+                best_F1 = F1;
+                best_model_tmp_ss.str(""); // first , clear it's content !
+                boost::archive::text_oarchive to(best_model_tmp_ss);
+                to << *m;
+            }
         }
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }

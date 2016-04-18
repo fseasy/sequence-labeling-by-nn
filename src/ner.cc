@@ -141,8 +141,25 @@ int train_process(int argc, char *argv[] , const string &program_name)
     vector<IndexSeq> dev_sents, *p_dev_sents = nullptr,
         dev_postag_seqs, *p_dev_postag_seqs = nullptr,
         dev_ner_seqs, *p_dev_ner_seqs = nullptr;
+    string conlleval_script_path = "";
     if ("" != devel_data_path)
     {
+        if(0 == var_map.count("conlleval_script_path"))
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Eval script path should be specified when doing validation ." 
+                << "\nExit!"  ;
+            return -1 ;
+        }
+        conlleval_script_path = var_map["conlleval_script_path"].as<string>();
+        // Check is evaluation scripts exists 
+        ifstream tmpis_for_check(conlleval_script_path);
+        if (!tmpis_for_check)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << conlleval_script_path << "`\n"
+                "Exit! ";
+            return -1;
+        }
+        tmpis_for_check.close();
         std::ifstream devel_is(devel_data_path);
         if (!devel_is) {
             BOOST_LOG_TRIVIAL(error) << "failed to open devel file: `" << devel_data_path << "`\n Exit!";
@@ -156,23 +173,6 @@ int train_process(int argc, char *argv[] , const string &program_name)
         p_dev_ner_seqs = &dev_ner_seqs;
     }
     
-    string conlleval_script_path = "";
-    if (0 != var_map.count("conlleval_script_path")) 
-    {
-        conlleval_script_path = var_map["conlleval_script_path"].as<string>();
-        // Check is evaluation scripts exists 
-        ifstream tmpis_for_check(conlleval_script_path);
-        if (!tmpis_for_check)
-        {
-            BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << conlleval_script_path << "`\n"
-                "Exit! ";
-            return -1;
-        }
-        tmpis_for_check.close();
-    }
-    
-
-
     // Train 
     ner_model.train(&sents , &postag_seqs , &ner_seqs , max_epoch,
         p_dev_sents , p_dev_postag_seqs , p_dev_ner_seqs , conlleval_script_path , devel_freq);

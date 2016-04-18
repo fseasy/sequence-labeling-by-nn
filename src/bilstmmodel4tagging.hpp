@@ -569,8 +569,7 @@ struct BILSTMModel4Tagging
         SimpleSGDTrainer sgd = SimpleSGDTrainer(m);
         unsigned long line_cnt_for_devel = 0;
         unsigned long long total_time_cost_in_seconds = 0ULL ;
-        IndexSeq sent_after_replace_unk;
-        sent_after_replace_unk.reserve(256);
+        IndexSeq sent_after_replace_unk(256 , 0) ;
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
             // shuffle samples by random access order
@@ -596,9 +595,9 @@ struct BILSTMModel4Tagging
                 sent_after_replace_unk.resize(p_sent->size());
                 for (size_t word_idx = 0; word_idx < p_sent->size(); ++word_idx)
                 {
-                    sent_after_replace_unk[i] = word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
+                    sent_after_replace_unk[word_idx] = word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
                 }
-                negative_loglikelihood(&sent_after_replace_unk, p_tag_seq, cg, &training_stat_per_report);
+                negative_loglikelihood(p_sent, p_tag_seq, cg, &training_stat_per_report);
                 training_stat_per_report.loss += as_scalar(cg->forward());
                 cg->backward();
                 sgd.update(1.0);

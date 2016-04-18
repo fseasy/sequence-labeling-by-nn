@@ -116,6 +116,7 @@ struct NerStat : BasicStat
 #else
         return 1.f ;
 #endif
+        return 0.f ;
     }
 
 };
