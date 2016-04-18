@@ -26,7 +26,7 @@
 
 #include "utf8processing.hpp"
 #include "dict_wrapper.hpp"
-#include "stat4postagger.hpp"
+#include "stat.hpp"
 
 using namespace std;
 using namespace cnn;
@@ -569,6 +569,8 @@ struct BILSTMModel4Tagging
         SimpleSGDTrainer sgd = SimpleSGDTrainer(m);
         unsigned long line_cnt_for_devel = 0;
         unsigned long long total_time_cost_in_seconds = 0ULL ;
+        IndexSeq sent_after_replace_unk;
+        sent_after_replace_unk.reserve(256);
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
             // shuffle samples by random access order
@@ -585,15 +587,18 @@ struct BILSTMModel4Tagging
             {
                 const InstancePair &instance_pair = p_samples->at(access_order[i]);
                 // using negative_loglikelihood loss to build model
-                IndexSeq *p_sent = const_cast<IndexSeq *>(&instance_pair.first);
-                const IndexSeq *p_tag_seq = &instance_pair.second;
+                const IndexSeq *p_sent = &instance_pair.first , 
+                    *p_tag_seq = &instance_pair.second;
                 ComputationGraph *cg = new ComputationGraph(); // because at one scope , only one ComputationGraph is permited .
                                                                // so we have to declaring it as pointer and destroy it handly 
                                                                // before develing.
                 // transform low-frequent words to UNK according to the probability
-                transform(p_sent->begin(), p_sent->end(), p_sent->begin(),
-                    [this](Index word_idx)->Index {return this->word_dict_wrapper.ConvertProbability(word_idx); }) ; // TRANS
-                negative_loglikelihood(p_sent, p_tag_seq, cg, &training_stat_per_report);
+                sent_after_replace_unk.resize(p_sent->size());
+                for (size_t word_idx = 0; word_idx < p_sent->size(); ++word_idx)
+                {
+                    sent_after_replace_unk[i] = word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
+                }
+                negative_loglikelihood(&sent_after_replace_unk, p_tag_seq, cg, &training_stat_per_report);
                 training_stat_per_report.loss += as_scalar(cg->forward());
                 cg->backward();
                 sgd.update(1.0);

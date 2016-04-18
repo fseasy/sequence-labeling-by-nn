@@ -26,7 +26,7 @@
 
 #include "utf8processing.hpp"
 #include "dict_wrapper.hpp"
-#include "stat4postagger.hpp"
+#include "stat.hpp"
 
 using namespace std;
 using namespace cnn;
@@ -84,7 +84,7 @@ struct BILSTMModel4NER
     unsigned LSTM_LAYER;
     
     
-    unsigned NER_TAG_DICT_SIZE;
+    unsigned NER_DICT_SIZE;
     unsigned NER_TAG_EMBEDDING_DIM; // using for previous-tag
 
     unsigned NER_LAYER_HIDDEN_DIM;
@@ -92,7 +92,7 @@ struct BILSTMModel4NER
     
 
     // model saving
-    float best_acc;
+    float best_F1;
     stringstream best_model_tmp_ss;
 
     // others 
@@ -113,7 +113,7 @@ struct BILSTMModel4NER
     static const size_t length_transform_str;
 
     BILSTMModel4NER() :
-        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_acc(0.), best_model_tmp_ss() ,
+        m(nullptr), l2r_builder(nullptr), r2l_builder(nullptr) , best_F1(0.f), best_model_tmp_ss() ,
         word_dict_wrapper(word_dict)
     {}
 
@@ -303,6 +303,11 @@ struct BILSTMModel4NER
         word_dict_wrapper.SetUnk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
         UNK = word_dict_wrapper.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+
+        WORD_DICT_SIZE = word_dict.size();
+        POSTAG_DICT_SIZE = postag_dict.size();
+        NER_DICT_SIZE = ner_dict.size();
+        NER_LAYER_OUTPUT_DIM = ner_dict.size();
     }
 
     void finish_read_training_data() { add_special_flag_and_freeze_dict(); }
@@ -312,7 +317,7 @@ struct BILSTMModel4NER
         cout << "------------Model structure info-----------\n"
             << "vocabulary size : " << WORD_DICT_SIZE << " with dimension : " << WORD_EMBEDDING_DIM << "\n"
             << "postag dict size : " << POSTAG_DICT_SIZE << " with dimension : " << POSTAG_EMBEDDING_DIM << "\n"
-            << "ner dict size : " << NER_TAG_DICT_SIZE << " with dimension : " << NER_TAG_EMBEDDING_DIM << "\n"
+            << "ner dict size : " << NER_DICT_SIZE << " with dimension : " << NER_TAG_EMBEDDING_DIM << "\n"
             << "LSTM has layer : " << LSTM_LAYER << " , with x dimension : " << LSTM_X_DIM << " , h dim : " << LSTM_H_DIM << "\n" 
             << "ner tag hidden dim : " << NER_LAYER_HIDDEN_DIM << "\n"
             << "ner tag output dim : " << NER_LAYER_OUTPUT_DIM << "\n"
@@ -326,7 +331,7 @@ struct BILSTMModel4NER
         LSTM_X_DIM = conf["lstm_x_dim"].as<unsigned>();
         LSTM_H_DIM = conf["lstm_h_dim"].as<unsigned>();
         LSTM_LAYER = conf["lstm_layer"].as<unsigned>();
-        NER_TAG_EMBEDDING_DIM = conf["ner_tag_embedding_dim"].as<unsigned>();
+        NER_TAG_EMBEDDING_DIM = conf["ner_embedding_dim"].as<unsigned>();
         NER_LAYER_HIDDEN_DIM = conf["ner_hidden_dim"].as<unsigned>();
     }
 
@@ -343,7 +348,7 @@ struct BILSTMModel4NER
 
         words_lookup_param = m->add_lookup_parameters(WORD_DICT_SIZE, { WORD_EMBEDDING_DIM }); // ADD for PRE_TAG
         postags_lookup_param = m->add_lookup_parameters(POSTAG_DICT_SIZE , { POSTAG_EMBEDDING_DIM }); // having `SOS_TAG`
-        nertags_lookup_param = m->add_lookup_parameters(NER_TAG_DICT_SIZE, { NER_TAG_EMBEDDING_DIM });
+        nertags_lookup_param = m->add_lookup_parameters(NER_DICT_SIZE, { NER_TAG_EMBEDDING_DIM });
         
         input_affine_word_w_param = m->add_parameters({ LSTM_X_DIM , WORD_EMBEDDING_DIM });
         input_affine_postag_w_param = m->add_parameters({ LSTM_X_DIM , POSTAG_EMBEDDING_DIM });
@@ -411,7 +416,7 @@ struct BILSTMModel4NER
         boost::archive::text_oarchive to(os);
         to << WORD_EMBEDDING_DIM << WORD_DICT_SIZE
             << POSTAG_EMBEDDING_DIM << POSTAG_DICT_SIZE
-            << NER_TAG_EMBEDDING_DIM << NER_TAG_DICT_SIZE
+            << NER_TAG_EMBEDDING_DIM << NER_DICT_SIZE
             << LSTM_X_DIM << LSTM_H_DIM << LSTM_LAYER
             << NER_LAYER_HIDDEN_DIM << NER_LAYER_OUTPUT_DIM;
 
@@ -435,14 +440,14 @@ struct BILSTMModel4NER
         // 1. load structure data and dict 
         ti >> WORD_EMBEDDING_DIM >> WORD_DICT_SIZE
             >> POSTAG_EMBEDDING_DIM >> POSTAG_DICT_SIZE
-            >> NER_TAG_EMBEDDING_DIM >> NER_TAG_DICT_SIZE
+            >> NER_TAG_EMBEDDING_DIM >> NER_DICT_SIZE
             >> LSTM_X_DIM >> LSTM_H_DIM >> LSTM_LAYER
             >> NER_LAYER_HIDDEN_DIM >> NER_LAYER_OUTPUT_DIM;
 
         ti >> word_dict >> postag_dict >> ner_dict ;
 
         assert(WORD_DICT_SIZE == word_dict.size() && POSTAG_DICT_SIZE == postag_dict.size()
-               && NER_TAG_DICT_SIZE == ner_dict.size());
+               && NER_DICT_SIZE == ner_dict.size());
        
         // SET VALUE for special flag
         //SOS = word_dict.Convert(SOS_STR);
@@ -658,6 +663,7 @@ struct BILSTMModel4NER
     void train(const vector<IndexSeq> *p_sents, const vector<IndexSeq> *p_postag_seqs , const vector<IndexSeq> *p_ner_seqs ,
         unsigned max_epoch, const vector<IndexSeq> *p_dev_sents = nullptr, const vector<IndexSeq> *p_dev_postag_seqs = nullptr ,
         const vector<IndexSeq> *p_dev_ner_seqs = nullptr ,
+        const string conlleval_script_path="./ner_eval.sh" ,
         const unsigned long do_devel_freq=50000)
     {
         unsigned nr_samples = p_sents->size();
@@ -725,11 +731,11 @@ struct BILSTMModel4NER
                 // If developing samples is available , do `devel` to get model training effect . 
                 if (p_dev_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq)
                 {
-                    float acc = devel(p_dev_sents , p_dev_ner_seqs , p_dev_ner_seqs);
-                    if (acc > best_acc)
+                    float F1 = devel(p_dev_sents , p_dev_ner_seqs , p_dev_ner_seqs , conlleval_script_path);
+                    if (F1 > best_F1)
                     {
                         BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
-                        best_acc = acc;
+                        best_F1 = F1;
                         best_model_tmp_ss.str(""); // first , clear it's content !
                         boost::archive::text_oarchive to(best_model_tmp_ss);
                         to << *m;
@@ -752,9 +758,9 @@ struct BILSTMModel4NER
                 << " For this epoch , E = "
                 << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
                 << " % with total time cost " << epoch_time_cost << " s"
-                << "( speed " << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens)."
                 << " total tags : " << training_stat_per_epoch.total_tags
                 << " correct tags : " << training_stat_per_epoch.correct_tags
+                << " current best F1 score " << best_F1 
                 << "\n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
@@ -763,14 +769,13 @@ struct BILSTMModel4NER
     }
 
     float devel(const vector<IndexSeq> *p_dev_sents , const vector<IndexSeq> *p_dev_postag_seqs , 
-        const vector<IndexSeq> *p_dev_ner_seqs , ostream *p_error_output_os=nullptr)
+        const vector<IndexSeq> *p_dev_ner_seqs , const string conlleval_script_path="./ner_eval.sh" )
     {
         unsigned nr_samples = p_dev_sents->size();
         BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
         unsigned long line_cnt4error_output = 0;
-        if (p_error_output_os) *p_error_output_os << "line_nr\tword_index\tword_at_dict\tpredict_tag\ttrue_tag\n";
-        Stat acc_stat;
-        acc_stat.start_time_stat();
+        NerStat stat(conlleval_script_path);
+        stat.start_time_stat();
         vector<IndexSeq> predict_ner_seqs(*p_dev_ner_seqs); // copy
         for (size_t idx = 0; idx < nr_samples; ++idx )
         {
@@ -783,53 +788,47 @@ struct BILSTMModel4NER
                 &ner_seq = p_dev_ner_seqs->at(idx);
             do_predict(&sent, &postag_seq, &predict_ner_seq, &cg);
             assert(predict_ner_seq.size() == ner_seq.size());
-            for (unsigned i = 0; i < ner_seq.size(); ++i)
-            {
-                ++acc_stat.total_tags;
-                if (ner_seq[i] == predict_ner_seq[i]) ++acc_stat.correct_tags;
-                else if (p_error_output_os)
-                {
-                    *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << word_dict.Convert(sent[i])
-                        << "\t" << postag_dict.Convert(postag_seq[i])
-                        << "\t" << ner_dict.Convert(predict_ner_seq[i]) << "\t" << ner_dict.Convert(ner_seq[i]) << "\n" ;
-                }
-            }
             predict_ner_seqs[idx] = predict_ner_seq;
         }
-        acc_stat.end_time_stat();
-        BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
-            << acc_stat.get_acc() * 100 << " % "
-            << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . " 
-            << "(speed " << acc_stat.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens) "
-            << "total tags : " << acc_stat.total_tags << " correct tags : " << acc_stat.correct_tags ;
-        return acc_stat.get_acc();
+        stat.end_time_stat();
+        float F1 = stat.conlleval(*p_dev_ner_seqs , predict_ner_seqs , ner_dict);
+        BOOST_LOG_TRIVIAL(info) << "Validation finished . F1 = "
+            << F1
+            << ", with time cosing " << stat.get_time_cost_in_seconds() << " s . ";
+        return F1 ;
     }
 
     void predict(istream &is, ostream &os)
     {
         const string SPLIT_DELIMITER = "\t";
-        vector<vector<string>> raw_instances;
-        vector<IndexSeq> index_instances;
-        read_test_data(is, &raw_instances, &index_instances);
-        assert(raw_instances.size() == index_instances.size());
-        for (unsigned int i = 0; i < raw_instances.size(); ++i)
+        vector<vector<string>> raw_sents;
+        vector<IndexSeq> sents,
+            postag_seqs;
+        read_test_data(is, &raw_sents, &sents , &postag_seqs);
+        assert(raw_sents.size() == sents.size());
+        for (unsigned int i = 0; i < raw_sents.size(); ++i)
         {
-            vector<string> *p_raw_sent = &raw_instances.at(i);
+            vector<string> *p_raw_sent = &raw_sents.at(i);
             if (0 == p_raw_sent->size())
             {
                 os << "\n";
                 continue;
             }
-            IndexSeq *p_sent = &index_instances.at(i);
-            IndexSeq predict_seq;
+            IndexSeq *p_sent = &sents.at(i);
+            IndexSeq *p_postag_seq = &postag_seqs.at(i);
+            IndexSeq predict_ner_seq;
             ComputationGraph cg;
-            do_predict(p_sent, &cg, &predict_seq);
+            do_predict(p_sent, p_postag_seq , &predict_ner_seq , &cg);
             // output the result directly
-            os << p_raw_sent->at(0) << "_" << tag_dict.Convert(predict_seq.at(0));
+            os << p_raw_sent->at(0) 
+                << "/" << postag_dict.Convert(p_postag_seq->at(0)) 
+                << "#" << ner_dict.Convert(predict_ner_seq.at(0));
             for (unsigned k = 1; k < p_raw_sent->size(); ++k)
             {
                 os << SPLIT_DELIMITER
-                    << p_raw_sent->at(k) << "_" << tag_dict.Convert(predict_seq.at(k));
+                    << p_raw_sent->at(k) 
+                    << "/" << postag_dict.Convert(p_postag_seq->at(k)) 
+                    << "#" << ner_dict.Convert(predict_ner_seq.at(k));
             }
             os << "\n";
         }

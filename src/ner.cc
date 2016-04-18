@@ -1,26 +1,10 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <string>
-#include <chrono>
-#include <functional>
-#include <algorithm>
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
@@ -72,20 +56,26 @@ int train_process(int argc, char *argv[] , const string &program_name)
     op_des.add_options()
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
-        ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
-            "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
+        
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("devel_freq", po::value<unsigned long>()->default_value(10000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
-        ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
-        ("tag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for tag embedding.")
-        ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
-        ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
-        ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
+        ("conlleval_script_path" , po::value<string>() , "Use to specify the conll evaluation script path")
+
+        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for word embedding.")
+        ("postag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for tag embedding.")
+        
+        ("lstm_x_dim" , po::value<unsigned>()->default_value(50) , "The dimension for BI-LISTM x.")
+        ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for BI-LSTM h.")
+        ("lstm_layer", po::value<unsigned>()->default_value(1), "The number of layers in BI-LSTM.")
+        
+        ("ner_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for ner tag embedding")
+        ("ner_hidden_dim", po::value<unsigned>()->default_value(26) , "The dimension for ner hidden layer size")
+
         ("replace_freq_threshold" , po::value<unsigned>()->default_value(1) , "The frequency threshold to replace the word to UNK in probability"
                                                                                "(eg , if set 1, the words of training data which frequency <= 1 may be "
                                                                                " replaced in probability)")
-        ("replace_prob_threshold" , po::value<float>()->default_value(0.2) , "The probability threshold to replace the word to UNK ."
+        ("replace_prob_threshold" , po::value<float>()->default_value(0.2f) , "The probability threshold to replace the word to UNK ."
                                                                              " if words frequency <= replace_freq_threshold , the word will "
                                                                              "be replace in this probability")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,\
@@ -136,36 +126,21 @@ int train_process(int argc, char *argv[] , const string &program_name)
         BOOST_LOG_TRIVIAL(fatal) << "failed to open training: `" << training_data_path << "` .\n Exit! \n";
         return -1;
     }
-    vector<InstancePair> training_samples;
-    ner_model.read_training_data_and_build_dicts(train_is, &training_samples);
+    vector<IndexSeq> sents,
+        postag_seqs,
+        ner_seqs;
+    ner_model.read_training_data_and_build_dicts(train_is, &sents , &postag_seqs , &ner_seqs);
     ner_model.finish_read_training_data();
     train_is.close();
 
     // build model structure
-    ner_model.build_model_structure(var_map); // passing the var_map to specify the model structure
-
-    // reading word embedding
-    if (0 != var_map.count("word_embedding"))
-    {
-        string word_embedding_path = var_map["word_embedding"].as<string>();
-        ifstream word_embedding_is(word_embedding_path);
-        if (!word_embedding_is)
-        {
-            BOOST_LOG_TRIVIAL(fatal) << "Failed to open wordEmbedding at : `" << word_embedding_path << "` .\n Exit! \n";
-            return -1;
-        }
-        BOOST_LOG_TRIVIAL(info) << "load word embedding from file `" << word_embedding_path << "`";
-        ner_model.load_wordembedding_from_word2vec_txt_format(word_embedding_is);
-        word_embedding_is.close();
-    }
-    else
-    {
-        BOOST_LOG_TRIVIAL(info) << "No word embedding is specified . Using randomized initialization .";
-    }
-
+    ner_model.set_model_param_from_varmap(var_map);
+    ner_model.build_model_structure(); // passing the var_map to specify the model structure
 
     // reading developing data
-    std::vector<InstancePair> devel_samples, *p_devel_samples;
+    vector<IndexSeq> dev_sents, *p_dev_sents = nullptr,
+        dev_postag_seqs, *p_dev_postag_seqs = nullptr,
+        dev_ner_seqs, *p_dev_ner_seqs = nullptr;
     if ("" != devel_data_path)
     {
         std::ifstream devel_is(devel_data_path);
@@ -174,14 +149,33 @@ int train_process(int argc, char *argv[] , const string &program_name)
             // if set devel data , but open failed , we exit .
             return -1;
         }
-        ner_model.read_devel_data(devel_is, &devel_samples);
+        ner_model.read_devel_data(devel_is, &dev_sents , &dev_postag_seqs , &dev_ner_seqs);
         devel_is.close();
-        p_devel_samples = &devel_samples;
+        p_dev_sents = &dev_sents;
+        p_dev_postag_seqs = &dev_postag_seqs;
+        p_dev_ner_seqs = &dev_ner_seqs;
     }
-    else p_devel_samples = nullptr;
+    
+    string conlleval_script_path = "";
+    if (0 != var_map.count("conlleval_script_path")) 
+    {
+        conlleval_script_path = var_map["conlleval_script_path"].as<string>();
+        // Check is evaluation scripts exists 
+        ifstream tmpis_for_check(conlleval_script_path);
+        if (!tmpis_for_check)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << conlleval_script_path << "`\n"
+                "Exit! ";
+            return -1;
+        }
+        tmpis_for_check.close();
+    }
+    
+
 
     // Train 
-    ner_model.train(&training_samples, max_epoch, p_devel_samples, devel_freq);
+    ner_model.train(&sents , &postag_seqs , &ner_seqs , max_epoch,
+        p_dev_sents , p_dev_postag_seqs , p_dev_ner_seqs , conlleval_script_path , devel_freq);
 
     // save model
     string model_path;
@@ -189,8 +183,8 @@ int train_process(int argc, char *argv[] , const string &program_name)
     {
         cerr << "no model name specified . using default .\n";
         ostringstream oss;
-        oss << "tagging_" << ner_model.INPUT_DIM << "_" << ner_model.LSTM_HIDDEN_DIM
-            << "_" << ner_model.TAG_HIDDEN_DIM << ".model";
+        oss << "ner_" << ner_model.LSTM_X_DIM << "_" << ner_model.LSTM_H_DIM << "_" << ner_model.LSTM_LAYER
+            << "_" << ner_model.NER_LAYER_HIDDEN_DIM << ".model";
         model_path = oss.str();
     }
     else model_path = var_map["model"].as<string>();
@@ -211,11 +205,12 @@ int devel_process(int argc, char *argv[] , const string &program_name)
         "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     // set params to receive the arguments 
-    string devel_data_path , model_path, error_output_path;
+    string devel_data_path , model_path, eval_script_path;
     op_des.add_options()
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
-        ("error_output", po::value<string>(&error_output_path), "Specify the file path to storing the predict error infomation . Empty to discard.")
+        ("conlleval_script_path", po::value<string>(&eval_script_path)->default_value(string("./ner_eval.sh")), 
+            "Use to specify the conll evaluation script path")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
@@ -239,6 +234,16 @@ int devel_process(int argc, char *argv[] , const string &program_name)
         return -1;
     }
   
+    // Check is evaluation scripts exists 
+    ifstream tmpis_for_check(eval_script_path);
+    if (!tmpis_for_check)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << eval_script_path << "`\n"
+            "Exit! ";
+        return -1;
+    }
+    tmpis_for_check.close();
+
     // Init 
     cnn::Initialize(argc, argv, 1234);
     BILSTMModel4NER ner_model;
@@ -262,29 +267,14 @@ int devel_process(int argc, char *argv[] , const string &program_name)
         return -1;
     }
 
-    // ready error output file
-    ofstream *p_error_output_os = nullptr;
-    if (0U != error_output_path.size())
-    {
-        p_error_output_os = new ofstream(error_output_path);
-        if (!p_error_output_os)
-        {
-            BOOST_LOG_TRIVIAL(fatal) << "Failed to open error output file : `" << error_output_path << "`\nExit!";
-            return -1;
-        }
-    }
-
-    vector<InstancePair> devel_samples;
-    ner_model.read_devel_data(devel_is , &devel_samples);
+    vector<IndexSeq> sents,
+        postag_seqs ,
+        ner_seqs ;
+    ner_model.read_devel_data(devel_is , &sents , &postag_seqs , &ner_seqs);
     devel_is.close();
 
     // devel
-    ner_model.devel(&devel_samples , p_error_output_os); // Get the same result , it is OK .
-    if (p_error_output_os)
-    {
-        p_error_output_os->close();
-        delete p_error_output_os;
-    }
+    ner_model.devel(&sents , &postag_seqs , &ner_seqs , eval_script_path); // Get the same result , it is OK .
     return 0;
 }
 

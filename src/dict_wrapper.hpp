@@ -22,7 +22,7 @@ namespace slnn {
             Index word_idx = rd.Convert(word);
             if (!rd.is_frozen())
             {
-                if (word_idx + 1 > freq_records.size())
+                if (static_cast<unsigned>(word_idx) + 1U > freq_records.size())
                 {
                     // new words has been pushed to the dict !
                     freq_records.push_back(1); // add word frequency record
@@ -40,7 +40,7 @@ namespace slnn {
         int ConvertProbability(Index word_idx)
         {
             if (word_idx == UNK) return UNK; // UNK is not in freq_records
-            assert(word_idx < freq_records.size());
+            assert(static_cast<unsigned>(word_idx) < freq_records.size());
             if (freq_records[word_idx] <= freq_threshold && prob_rand() <= prob_threshold) return UNK;
             return word_idx;
         }

@@ -1,26 +1,10 @@
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
-
 #include <iostream>
 #include <fstream>
 #include <sstream>
 #include <vector>
 #include <string>
-#include <chrono>
-#include <functional>
-#include <algorithm>
 
-#include <boost/algorithm/string/split.hpp>
-#include <boost/algorithm/string/trim.hpp>
-#include <boost/archive/text_iarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
 #include <boost/log/trivial.hpp>
-#include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 #include <boost/program_options.hpp>
 
@@ -85,7 +69,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("replace_freq_threshold" , po::value<unsigned>()->default_value(1) , "The frequency threshold to replace the word to UNK in probability"
                                                                                "(eg , if set 1, the words of training data which frequency <= 1 may be "
                                                                                " replaced in probability)")
-        ("replace_prob_threshold" , po::value<float>()->default_value(0.2) , "The probability threshold to replace the word to UNK ."
+        ("replace_prob_threshold" , po::value<float>()->default_value(0.2f) , "The probability threshold to replace the word to UNK ."
                                                                              " if words frequency <= replace_freq_threshold , the word will "
                                                                              "be replace in this probability")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,\

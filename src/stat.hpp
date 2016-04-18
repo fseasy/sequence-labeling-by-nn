@@ -1,6 +1,11 @@
 ﻿#include <chrono>
 #include <vector>
 #include <string>
+
+#include <stdlib.h>
+
+#include <boost/algorithm/string/trim.hpp>
+
 #include "cnn/dict.h"
 
 /*************************************
@@ -42,7 +47,7 @@ struct Stat : public BasicStat
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
     float get_speed_as_kilo_tokens_per_sencond()
     {
-        return (long double)(correct_tags) / 1000. / get_time_cost_in_seconds();
+        return static_cast<float>( (long double)(correct_tags) / 1000. / get_time_cost_in_seconds() );
     }
     Stat &operator+=(const Stat &other)
     {
@@ -64,11 +69,33 @@ struct NerStat : BasicStat
 
     }
 
-    double conlleval(const std::vector<IndexSeq> gold_ner_seqs ,
+    float conlleval(const std::vector<IndexSeq> gold_ner_seqs ,
         const std::vector<IndexSeq> predict_ner_seqs , const cnn::Dict &ner_dict) {
 #ifndef _MSC_VER
-        std::string cmd = conf["conlleval"].as<std::string>() + " " + tmp_output;
-        _TRACE << "Running: " << cmd << std::endl;
+        // write `WORD GOLD_NER PREDICT_NER` to temporal output , where we using fake `WORD` , it is no use for evaluation result
+        ofstream tmp_of(tmp_output_path);
+        if (!tmp_of)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Failed to create temporial output file for evaltion `" << tmp_output_path
+                << "`";
+            abort();
+        }
+        for (size_t seq_idx = 0; seq_idx < predict_ner_seqs.size(); ++seq_idx)
+        {
+            const IndexSeq &ner_seq = gold_ner_seqs.at(seq_idx),
+                &predict_seq = predict_ner_seqs.at(seq_idx);
+            for (size_t token_idx = 0; token_idx < predict_seq.size(); ++token_idx)
+            {
+                tmp_of << "W" << " "
+                    << ner_dict.Convert(ner_seq.at(token_idx)) << " "
+                    << ner_dict.Convert(predict_seq.at(token_idx)) << "\n";
+            }
+            tmp_of << "\n"; // split of one sequence
+        }
+        tmp_of.close();
+
+        std::string cmd = eval_script_path + " " + tmp_output_path;
+        BOOST_LOG_TRIVIAL(trace) << "Running: " << cmd << std::endl;
         FILE* pipe = popen(cmd.c_str(), "r");
         if (!pipe) {
             return 0.;
@@ -84,12 +111,11 @@ struct NerStat : BasicStat
         std::string token;
         while (S >> token) {
             boost::algorithm::trim(token);
-            return boost::lexical_cast<double>(token);
-}
+            return boost::lexical_cast<float>(token);
+        }
 #else
-        return 1.;
+        return 1.f ;
 #endif
-        return 0.;
     }
 
 };
