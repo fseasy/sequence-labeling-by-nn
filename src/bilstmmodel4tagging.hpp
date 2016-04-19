@@ -597,7 +597,7 @@ struct BILSTMModel4Tagging
                 {
                     sent_after_replace_unk[word_idx] = word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
                 }
-                negative_loglikelihood(p_sent, p_tag_seq, cg, &training_stat_per_report);
+                negative_loglikelihood(&sent_after_replace_unk, p_tag_seq, cg, &training_stat_per_report);
                 training_stat_per_report.loss += as_scalar(cg->forward());
                 cg->backward();
                 sgd.update(1.0);

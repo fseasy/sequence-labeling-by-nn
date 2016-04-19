@@ -731,7 +731,8 @@ struct BILSTMModel4NER
                 // If developing samples is available , do `devel` to get model training effect . 
                 if (p_dev_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq)
                 {
-                    float F1 = devel(p_dev_sents , p_dev_ner_seqs , p_dev_ner_seqs , conlleval_script_path);
+                    BOOST_LOG_TRIVIAL(info) << "do validation at every " << do_devel_freq << " samples " ;
+                    float F1 = devel(p_dev_sents , p_dev_postag_seqs , p_dev_ner_seqs , conlleval_script_path);
                     if (F1 > best_F1)
                     {
                         BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
@@ -754,25 +755,28 @@ struct BILSTMModel4NER
             // Output
             long long epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
             BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << " finished . ----------\n"
-                << nr_samples << " instances has been trained ."
-                << " For this epoch , E = "
-                << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
-                << " % with total time cost " << epoch_time_cost << " s"
-                << " total tags : " << training_stat_per_epoch.total_tags
-                << " correct tags : " << training_stat_per_epoch.correct_tags
-                << " current best F1 score " << best_F1 
-                << "\n";
+                << nr_samples << " instances has been trained .\n"
+                << "For this epoch , E = "
+                << training_stat_per_epoch.get_E() << "\n"
+                << "ACC = " << training_stat_per_epoch.get_acc() * 100 << " %\n"
+                << "Total time cost " << epoch_time_cost << " s"
+                << "Total tags : " << training_stat_per_epoch.total_tags << " , correct tags : " << training_stat_per_epoch.correct_tags << "\n"
+                << "Current best F1 score " << best_F1 << "\n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
             // do devel at every end of Epoch
-            float F1 = devel(p_dev_sents , p_dev_ner_seqs , p_dev_ner_seqs , conlleval_script_path);
-            if (F1 > best_F1)
+            if (p_dev_sents != nullptr)
             {
-                BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
-                best_F1 = F1;
-                best_model_tmp_ss.str(""); // first , clear it's content !
-                boost::archive::text_oarchive to(best_model_tmp_ss);
-                to << *m;
+                BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch ." ;
+                float F1 = devel(p_dev_sents , p_dev_postag_seqs , p_dev_ner_seqs , conlleval_script_path);
+                if (F1 > best_F1)
+                {
+                    BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
+                    best_F1 = F1;
+                    best_model_tmp_ss.str(""); // first , clear it's content !
+                    boost::archive::text_oarchive to(best_model_tmp_ss);
+                    to << *m;
+                }
             }
         }
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
@@ -782,7 +786,7 @@ struct BILSTMModel4NER
         const vector<IndexSeq> *p_dev_ner_seqs , const string conlleval_script_path="./ner_eval.sh" )
     {
         unsigned nr_samples = p_dev_sents->size();
-        BOOST_LOG_TRIVIAL(info) << "Validation at " << nr_samples << " instances .\n";
+        BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
         unsigned long line_cnt4error_output = 0;
         NerStat stat(conlleval_script_path);
         stat.start_time_stat();
@@ -802,7 +806,7 @@ struct BILSTMModel4NER
         }
         stat.end_time_stat();
         float F1 = stat.conlleval(*p_dev_ner_seqs , predict_ner_seqs , ner_dict);
-        BOOST_LOG_TRIVIAL(info) << "Validation finished . F1 = "
+        BOOST_LOG_TRIVIAL(info) << "validation finished . F1 = "
             << F1
             << ", with time cosing " << stat.get_time_cost_in_seconds() << " s . ";
         return F1 ;
