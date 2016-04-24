@@ -504,9 +504,8 @@ struct BILSTMModel4NER
             // rectify is suggested as activation function
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp_cont[i]);
-            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp); // ADD for PRE_TAG
-            
-            Expression tag_output_layer_output_at_timestep_t = output_linear_layer->build_graph(tag_output_layer_output_at_timestep_t);
+            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp);
+            Expression tag_output_layer_output_at_timestep_t = output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
             
             // if statistic , calc output at timestep t
             if (p_stat != nullptr)
@@ -616,6 +615,7 @@ struct BILSTMModel4NER
         sent_unk_replace.reserve(256);
         for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
         {
+            BOOST_LOG_TRIVIAL(info) << "Epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
             // shuffle samples by random access order
             shuffle(access_order.begin(), access_order.end(), *rndeng);
 
@@ -690,7 +690,7 @@ struct BILSTMModel4NER
 
             // Output
             long long epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
-            BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << " finished . ----------\n"
+            BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << "/" << max_epoch <<  " finished . ----------\n"
                 << nr_samples << " instances has been trained .\n"
                 << "For this epoch , E = "
                 << training_stat_per_epoch.get_E() << "\n"

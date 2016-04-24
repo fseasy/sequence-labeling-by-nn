@@ -451,8 +451,8 @@ struct BILSTMModel4Tagging
 
         // Some container
         vector<Expression> word_lookup_exp_cont(sent_len); // for storing word lookup(embedding) expression for every word(index) in sentence
-        vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
-        vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
+        vector<Expression> l2r_lstm_output_exp_cont; // for storing left to right lstm output(deepest hidden layer) expression for every timestep
+        vector<Expression> r2l_lstm_output_exp_cont; // right to left 
 
         // build computation graph(also get output expression) for left to right LSTM
         // 1. get word embeddings for sent 
@@ -572,7 +572,6 @@ struct BILSTMModel4Tagging
             }
 
             // End of an epoch 
-            //sgd.status();
             sgd.update_epoch();
 
             training_stat_per_epoch.end_time_stat();
@@ -580,17 +579,32 @@ struct BILSTMModel4Tagging
 
             // Output
             long long epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
-            BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << "/" << nr_epoch <<  " finished . ----------\n"
-                << nr_samples << " instances has been trained ."
-                << " For this epoch , E = "
-                << training_stat_per_epoch.get_E() << " , ACC = " << training_stat_per_epoch.get_acc() * 100
-                << " % with total time cost " << epoch_time_cost << " s"
-                << "( speed " << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens)."
-                << " total tags : " << training_stat_per_epoch.total_tags
-                << " correct tags : " << training_stat_per_epoch.correct_tags
-                << "\n";
+            BOOST_LOG_TRIVIAL(info) << "-------- Epoch " << nr_epoch + 1 << "/" << max_epoch << " finished . ----------\n"
+                << nr_samples << " instances has been trained .\n"
+                << "For this epoch , E = " << training_stat_per_epoch.get_E() << "\n"
+                << "ACC = " << training_stat_per_epoch.get_acc() * 100 << "  % \n"
+                << "total time cost " << epoch_time_cost << " s ( speed "
+                << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens).\n"
+                << "total tags : " << training_stat_per_epoch.total_tags << " with correct tags : "
+                << training_stat_per_epoch.correct_tags << " \n";
 
             total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
+
+            // do validation at every ends of epoch
+            if (p_dev_samples != nullptr)
+            {
+                BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
+                float acc = devel(p_dev_samples);
+                if (acc > best_acc)
+                {
+                    BOOST_LOG_TRIVIAL(info) << "Better model found . stash it .";
+                    best_acc = acc;
+                    best_model_tmp_ss.str(""); // first , clear it's content !
+                    boost::archive::text_oarchive to(best_model_tmp_ss);
+                    to << *m;
+                }
+            }
+
         }
         BOOST_LOG_TRIVIAL(info) << "Training finished with cost " << total_time_cost_in_seconds << " s .";
     }
@@ -624,7 +638,7 @@ struct BILSTMModel4Tagging
             }
         }
         acc_stat.end_time_stat();
-        BOOST_LOG_TRIVIAL(info) << "Validation finished . ACC = "
+        BOOST_LOG_TRIVIAL(info) << "validation finished . ACC = "
             << acc_stat.get_acc() * 100 << " % "
             << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . " 
             << "(speed " << acc_stat.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens) "
