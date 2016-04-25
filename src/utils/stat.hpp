@@ -1,10 +1,13 @@
 ﻿#include <chrono>
 #include <vector>
 #include <string>
-
+#include <fstream>
 #include <stdlib.h>
 
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/log/trivial.hpp>
+#include <boost/log/core.hpp>
+#include <boost/log/expressions.hpp>
 
 #include "cnn/dict.h"
 
@@ -18,14 +21,14 @@ namespace slnn{
 struct BasicStat
 {
     float loss;
-    chrono::high_resolution_clock::time_point time_start;
-    chrono::high_resolution_clock::time_point time_end;
-    chrono::high_resolution_clock::time_point start_time_stat() { return time_start = chrono::high_resolution_clock::now(); }
-    chrono::high_resolution_clock::time_point end_time_stat() { return time_end = chrono::high_resolution_clock::now(); }
+    std::chrono::high_resolution_clock::time_point time_start;
+    std::chrono::high_resolution_clock::time_point time_end;
+    std::chrono::high_resolution_clock::time_point start_time_stat() { return time_start = std::chrono::high_resolution_clock::now(); }
+    std::chrono::high_resolution_clock::time_point end_time_stat() { return time_end = std::chrono::high_resolution_clock::now(); }
     BasicStat() :loss(0.f) {};
     long long get_time_cost_in_seconds()
     {
-        chrono::seconds du = chrono::duration_cast<chrono::seconds>(time_end - time_start);
+        std::chrono::seconds du = std::chrono::duration_cast<std::chrono::seconds>(time_end - time_start);
         return du.count();
     }
     BasicStat &operator+=(const BasicStat &other)
@@ -61,9 +64,9 @@ struct Stat : public BasicStat
 
 struct NerStat : BasicStat
 {
-    string eval_script_path;
-    string tmp_output_path;
-    NerStat(const string &eval_script_path , const string &tmp_output_path=string("eval_out.tmp")) :BasicStat(),
+    std::string eval_script_path;
+    std::string tmp_output_path;
+    NerStat(const std::string &eval_script_path , const std::string &tmp_output_path=std::string("eval_out.tmp")) :BasicStat(),
         eval_script_path(eval_script_path), tmp_output_path(tmp_output_path)
     {
 
@@ -73,7 +76,7 @@ struct NerStat : BasicStat
         const std::vector<IndexSeq> predict_ner_seqs , const cnn::Dict &ner_dict) {
 #ifndef _MSC_VER
         // write `WORD GOLD_NER PREDICT_NER` to temporal output , where we using fake `WORD` , it is no use for evaluation result
-        ofstream tmp_of(tmp_output_path);
+        std::ofstream tmp_of(tmp_output_path);
         if (!tmp_of)
         {
             BOOST_LOG_TRIVIAL(fatal) << "Failed to create temporial output file for evaltion `" << tmp_output_path

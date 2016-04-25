@@ -54,6 +54,6 @@ namespace slnn {
         Index UNK;
         int freq_threshold;
         float prob_threshold;
-        function<float()> prob_rand;
+        std::function<float()> prob_rand;
     };
 } // End of namespace slnn

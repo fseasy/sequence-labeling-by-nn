@@ -3,16 +3,11 @@
 #define UTF8_PROCESSING_INCLUDED
 #include <string>
 #include <vector>
-using namespace std;
 
 struct UTF8Processing
 {
-    using Range = pair<string::iterator, string::iterator>;
-    inline static string::difference_type get_number_byte_width(string::iterator &start_pos, string::iterator end_pos);
-    inline static size_t get_number_byte_width(const string &str , size_t start_pos) ;
-
-
-
+    inline static std::string::difference_type get_number_byte_width(std::string::iterator &start_pos, std::string::iterator end_pos);
+    inline static size_t get_number_byte_width(const std::string &str, size_t start_pos);
 };
 
 
@@ -23,7 +18,7 @@ struct UTF8Processing
  * else , if UTF8 number , return 3
  * else , Ascii number , return 1
  */
-string::difference_type UTF8Processing::get_number_byte_width(string::iterator &pos, string::iterator end_pos)
+std::string::difference_type UTF8Processing::get_number_byte_width(std::string::iterator &pos, std::string::iterator end_pos)
 {
     if (pos == end_pos) return 0u ;
     if ((*pos & 0xff) == 0xef &&
@@ -45,7 +40,7 @@ string::difference_type UTF8Processing::get_number_byte_width(string::iterator &
     }
 }
 
-size_t UTF8Processing::get_number_byte_width(const string &str , size_t start_pos)
+size_t UTF8Processing::get_number_byte_width(const std::string &str , size_t start_pos)
 {
     size_t len = str.length() ;
     if(start_pos >= len) return 0u ;
