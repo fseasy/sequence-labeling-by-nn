@@ -1,6 +1,9 @@
 #ifndef TYPEDECLARATION_H_INCLUDED_
 #define TYPEDECLARATION_H_INCLUDED_
 
+#include <vector>
+#include <utility> 
+
 namespace slnn{
     using Index = int; // cnn::Dict return `int` as index 
     using IndexSeq = std::vector<Index>;

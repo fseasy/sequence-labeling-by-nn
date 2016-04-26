@@ -1,14 +1,11 @@
 #ifndef DOUBLECHANNEL_MODELHANDLER_H_INCLUDED_
 #define DOUBLECHANNEL_MODELHANDLER_H_INCLUDED_
 
-#include <string>
-#include <vector>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "bilstmmodel4tagging_doublechannel.h"
 #include "utils/utf8processing.hpp"
 #include "utils/typedeclaration.h"
-
-using namespace std;
 
 namespace slnn
 {
@@ -18,43 +15,58 @@ struct DoubleChannelModelHandler
     
     // Saving temporal model
     float best_acc;
-    stringstream best_model_tmp_ss;
+    std::stringstream best_model_tmp_ss;
 
     // others 
-    static const string number_transform_str;
+    static const std::string number_transform_str;
     static const size_t length_transform_str;
+    const size_t SentMaxLen = 256;
+    const size_t MaxSentNum = 0x8FFFF;
 
     DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m);
 
     // Reading data 
-    inline string replace_number(const string &str);
-    void do_read_annotated_dataset(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
-        vector<IndexSeq> &postag_seqs);
-    void read_training_data_and_build_dicts(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
-        vector<IndexSeq> &postag_seqs);
-    void read_devel_data(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
-        vector<IndexSeq> &postag_seqs);
-    void read_test_data(istream &is, vector<Seq> &raw_test_sents, vector<IndexSeq> &daynamic_sents ,
-        vector<IndexSeq> &fixed_sents);
+    inline std::string replace_number(const std::string &str);
+    void do_read_annotated_dataset(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs);
+    void read_training_data_and_build_dicts(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs);
+    void read_devel_data(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs);
+    void read_test_data(std::istream &is, std::vector<Seq> &raw_test_sents, std::vector<IndexSeq> &daynamic_sents ,
+        std::vector<IndexSeq> &fixed_sents);
     
     // After Reading Training data
     void finish_read_training_data();
+    void build_model(boost::program_options::variables_map &varmap);
 
     // Train & devel & predict
-    void train(const vector<InstancePair> *p_samples, unsigned max_epoch, const vector<InstancePair> *p_dev_samples = nullptr,
+    void train(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
+        const std::vector<IndexSeq> *p_postag_seqs , 
+        unsigned max_epoch, 
+        const std::vector<IndexSeq> *p_dev_dynamic_sents=nullptr, const std::vector<IndexSeq> *p_dev_fixed_sents=nullptr,
+        const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr ,
         const unsigned long do_devel_freq = 50000);
-    float devel(const vector<InstancePair> *dev_samples, ostream *p_error_output_os = nullptr);
-    void predict(istream &is, ostream &os);
+    float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
+        const std::vector<IndexSeq> *p_postag_seqs,
+        std::ostream *p_error_output_os = nullptr);
+    void predict(std::istream &is, std::ostream &os);
+
+    // Save & Load
+    void save_model(std::ostream &os);
+    void load_model(std::istream &is);
+private :
+    inline void save_current_best_model(float acc);
 
 };
 
-const string DoubleChannelModelHandler::number_transform_str = "##";
+const std::string DoubleChannelModelHandler::number_transform_str = "##";
 const size_t DoubleChannelModelHandler::length_transform_str = number_transform_str.length();
 
 inline
-string DoubleChannelModelHandler::replace_number(const string &str)
+std::string DoubleChannelModelHandler::replace_number(const std::string &str)
 {
-    string tmp_str = str;
+    std::string tmp_str = str;
     size_t start_pos = 0;
     while (start_pos < tmp_str.length())
     {
@@ -76,6 +88,17 @@ string DoubleChannelModelHandler::replace_number(const string &str)
         else ++start_pos;
     }
     return tmp_str;
+}
+
+
+inline 
+void DoubleChannelModelHandler::save_current_best_model(float acc)
+{
+    BOOST_LOG_TRIVIAL(info) << "better model has been found . stash it .";
+    best_acc = acc;
+    best_model_tmp_ss.str(""); // first , clear it's content !
+    boost::archive::text_oarchive to(best_model_tmp_ss);
+    to << *dc_m.m;
 }
 
 } // end of namespace 

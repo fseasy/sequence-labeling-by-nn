@@ -2,6 +2,7 @@
 #define BILSTMMODEL_4_TAGGING_DOUBLECHANNEL_H_INCLUDED_
 
 #include <string>
+#include <sstream>
 
 #include "cnn/nodes.h"
 #include "cnn/cnn.h"
@@ -42,6 +43,7 @@ struct DoubleChannelModel4POSTAG
 
     // Model param
     cnn::Model *m;
+
     Merge2Layer *merge_doublechannel_layer;
     BILSTMLayer *bilstm_layer;
     Merge3Layer *merge_bilstm_and_pretag_layer;
@@ -70,13 +72,14 @@ struct DoubleChannelModel4POSTAG
     void build_model_structure();
     void print_model_info();
 
-    void save_model(std::ostream &os);
+    void save_model(std::ostream &os , std::stringstream *best_model_tmp_ss=nullptr);
     void load_model(std::istream &is);
 
-    cnn::expr::Expression negative_loglikelihood(const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
-        cnn::ComputationGraph *p_cg, Stat *p_stat = nullptr);
-    void do_predict(const IndexSeq *p_sent, const IndexSeq *p_fixed_sent, 
-        cnn::ComputationGraph *p_cg, IndexSeq *p_predict_tag_seq);
+    cnn::expr::Expression negative_loglikelihood(cnn::ComputationGraph *p_cg, 
+        const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
+        Stat *p_stat = nullptr);
+    void do_predict(cnn::ComputationGraph *p_cg, 
+        const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, IndexSeq *p_predict_tag_seq);
 
 };
 
