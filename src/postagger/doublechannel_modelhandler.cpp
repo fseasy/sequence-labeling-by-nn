@@ -22,6 +22,7 @@ DoubleChannelModelHandler::DoubleChannelModelHandler(DoubleChannelModel4POSTAG &
 
 void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
 {
+    BOOST_LOG_TRIVIAL(info) << "initialize fixed dict .";
     string line;
     vector<string> split_cont;
     getline(is, line); // first line is the infomation !
@@ -31,8 +32,6 @@ void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstrea
     dc_m.fixed_embedding_dim = stol(split_cont[1]);
     
     // read all words and add to dc_m.fixed_dict
-    unsigned long long line_cnt = 1;
-    unsigned long long words_cnt_hit = 0;
     while (getline(is, line))
     {
         string::size_type delim_pos = line.find(" ");
@@ -95,7 +94,7 @@ void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<In
         tmp_fixed_sents.push_back(fixed_sent);
         tmp_postag_seqs.push_back(postag_seq);
         ++line_cnt;
-        if (0 == line_cnt % 10000) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << "lines"; }
+        if (0 == line_cnt % 10000) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << " lines"; }
     }
     swap(dynamic_sents, tmp_dynamic_sents);
     swap(fixed_sents, tmp_fixed_sents);
@@ -121,6 +120,7 @@ void DoubleChannelModelHandler::read_devel_data(istream &is, vector<IndexSeq> &d
     assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs);
+    BOOST_LOG_TRIVIAL(info) << "read developing data done .";
 }
 
 void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents, vector<IndexSeq> &dynamic_sents,
@@ -181,6 +181,7 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
 {
     // set lookup parameters from outer word embedding
     // using words_loopup_param.Initialize( word_id , value_vector )
+    BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     string line;
     vector<string> split_cont;
     getline(is, line); // first line is the infomation !
@@ -332,7 +333,7 @@ float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_se
     if (p_error_output_os) *p_error_output_os << "line_nr\tword_index\tword_at_dict\tpredict_tag\ttrue_tag\n";
     Stat acc_stat;
     acc_stat.start_time_stat();
-    for (int access_idx = 0; access_idx < nr_samples; ++access_idx)
+    for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
         ++line_cnt4error_output;
         ComputationGraph cg;

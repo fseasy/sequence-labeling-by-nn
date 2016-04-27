@@ -92,6 +92,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         return -1;
     }
     model_handler.build_fixed_dict_from_word2vec_file(embedding_is);
+    embedding_is.clear() ; // !! MUST calling before `seekg` ! even thouth using  c++ 11 .
     embedding_is.seekg(0 , embedding_is.beg); // will use in the following 
 
     ifstream train_is(training_data_path);

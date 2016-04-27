@@ -22,7 +22,7 @@
 
 namespace slnn
 {
-extern struct DoubleChannelModelHandler;
+struct DoubleChannelModelHandler;
 
 struct DoubleChannelModel4POSTAG
 {

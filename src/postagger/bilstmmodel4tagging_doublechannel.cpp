@@ -90,8 +90,6 @@ Expression DoubleChannelModel4POSTAG::negative_loglikelihood(ComputationGraph *p
     {
         Expression dynamic_word_lookup_exp = lookup(cg, dynamic_words_lookup_param, p_dynamic_sent->at(i));
         Expression fixed_word_lookup_exp = const_lookup(cg, fixed_words_lookup_param, p_fixed_sent->at(i)); // const look up
-        dynamic_word_lookup_exp = noise(dynamic_word_lookup_exp, 0.1f);
-        fixed_word_lookup_exp = noise(fixed_word_lookup_exp, 0.1f);
         Expression merge_dc_exp = merge_doublechannel_layer->build_graph(dynamic_word_lookup_exp, fixed_word_lookup_exp);
         merge_dc_exp_cont[i] = rectify(merge_dc_exp); // rectify for merged expression
     }
