@@ -16,6 +16,8 @@ using namespace std;
 using namespace cnn;
 namespace slnn{
 
+const std::string DoubleChannelModel4POSTAG::UNK_STR = "<UNK_REPR>";
+
 DoubleChannelModel4POSTAG::DoubleChannelModel4POSTAG()
     : m(nullptr),
     merge_doublechannel_layer(nullptr) ,
@@ -32,48 +34,6 @@ DoubleChannelModel4POSTAG::~DoubleChannelModel4POSTAG()
     if (bilstm_layer) delete bilstm_layer;
     if (merge_bilstm_and_pretag_layer) delete merge_bilstm_and_pretag_layer;
     if (tag_output_linear_layer) delete tag_output_linear_layer;
-}
-
-void DoubleChannelModel4POSTAG::freeze_dict_and_add_UNK()
-{
-    if (dynamic_dict.is_frozen() || fixed_dict.is_frozen() || postag_dict.is_frozen()) return;
-    dynamic_dict.Freeze();
-    fixed_dict.Freeze();
-    postag_dict.Freeze();
-
-    dynamic_dict.SetUnk(UNK_STR);
-    fixed_dict.SetUnk(UNK_STR);
-}
-
-void DoubleChannelModel4POSTAG::set_partial_model_structure_param_from_outer(boost::program_options::variables_map &varmap)
-{
-    dynamic_embedding_dim = varmap["dynamic_embedding_dim"].as<unsigned>();
-    postag_embedding_dim = varmap["postag_embedding_dim"].as<unsigned>();
-    nr_lstm_stacked_layer = varmap["nr_lstm_stacked_layer"].as<unsigned>();
-    lstm_x_dim = varmap["lstm_x_dim"].as<unsigned>();
-    lstm_h_dim = varmap["lstm_h_dim"].as<unsigned>();
-    tag_layer_hidden_dim = varmap["tag_layer_hidden_dim"].as<unsigned>();
-
-    string word2vec_embedding_path = varmap["word2vec_embedding_path"].as<string>();
-    ifstream fis(word2vec_embedding_path); // do not check the open status , should be check outer
-    string headerline;
-    getline(fis , headerline);
-    boost::trim_right(headerline);
-    vector<string> split_cont;
-    boost::split(split_cont, headerline, boost::is_any_of(" "));
-    assert(2U == split_cont.size());
-    fixed_embedding_dict_size = stol(split_cont[0]);
-    fixed_embedding_dim = stol(split_cont[1]);
-    // 8  parameters has been inited
-}
-
-
-
-void DoubleChannelModel4POSTAG::set_partial_model_structure_param_from_inner()
-{
-    dynamic_embedding_dict_size = dynamic_dict.size();
-    tag_layer_output_dim = postag_dict.size();
-    assert(fixed_dict.size() == fixed_embedding_dict_size);
 }
 
 void DoubleChannelModel4POSTAG::build_model_structure()
@@ -104,48 +64,9 @@ void DoubleChannelModel4POSTAG::print_model_info()
         << "tag layer output dimension : " << tag_layer_output_dim;
 }
 
-void DoubleChannelModel4POSTAG::save_model(std::ostream &os , stringstream *best_model_tmp_ss)
-{
-    boost::archive::text_oarchive to(os);
-    to << dynamic_embedding_dim << postag_embedding_dim
-       << nr_lstm_stacked_layer << lstm_x_dim << lstm_h_dim
-       << tag_layer_hidden_dim << fixed_embedding_dim
-       << fixed_embedding_dict_size << dynamic_embedding_dict_size
-       << tag_layer_output_dim;
-
-    to << dynamic_dict << fixed_dict << postag_dict;
-    if (best_model_tmp_ss && 0 != best_model_tmp_ss->rdbuf()->in_avail())
-    {
-        boost::archive::text_iarchive ti(*best_model_tmp_ss);
-        ti >> *m;
-        ; // if best model is not save to the temporary stringstream , we should firstly save it !
-    }
-
-    to << *m;
-    BOOST_LOG_TRIVIAL(info) << "save model done .";
-}
-
-void DoubleChannelModel4POSTAG::load_model(std::istream &is)
-{
-    boost::archive::text_iarchive ti(is);
-    ti >> dynamic_embedding_dim >> postag_embedding_dim
-        >> nr_lstm_stacked_layer >> lstm_x_dim >> lstm_h_dim
-        >> tag_layer_hidden_dim >> fixed_embedding_dim
-        >> fixed_embedding_dict_size >> dynamic_embedding_dict_size
-        >> tag_layer_output_dim;
-    
-    ti >> dynamic_dict >> fixed_dict >> postag_dict;
-    assert(dynamic_embedding_dict_size == dynamic_dict.size() && fixed_embedding_dict_size == fixed_dict.size()
-        && tag_layer_output_dim == postag_dict.size());
-    build_model_structure();
-    ti >> *m;
-    BOOST_LOG_TRIVIAL(info) << "load model done .";
-}
-
-
 Expression DoubleChannelModel4POSTAG::negative_loglikelihood(ComputationGraph *p_cg, 
     const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
-    Stat *p_stat = nullptr)
+    Stat *p_stat)
 {
     const unsigned sent_len = p_dynamic_sent->size();
     ComputationGraph &cg = *p_cg;

@@ -1,6 +1,8 @@
 
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/trim.hpp>
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 
 #include "utils/typedeclaration.h"
 #include "doublechannel_modelhandler.h"
@@ -10,9 +12,44 @@ using namespace cnn;
 namespace slnn
 {
 
+
+const std::string DoubleChannelModelHandler::number_transform_str = "##";
+const size_t DoubleChannelModelHandler::length_transform_str = number_transform_str.length();
+
 DoubleChannelModelHandler::DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m) 
     :dc_m(dc_m)
 {}
+
+void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
+{
+    string line;
+    vector<string> split_cont;
+    getline(is, line); // first line is the infomation !
+    boost::split(split_cont, line, boost::is_any_of(" "));
+    assert(2U == split_cont.size());
+    dc_m.fixed_embedding_dict_size = stol(split_cont[0]) + 1; // another UNK
+    dc_m.fixed_embedding_dim = stol(split_cont[1]);
+    
+    // read all words and add to dc_m.fixed_dict
+    unsigned long long line_cnt = 1;
+    unsigned long long words_cnt_hit = 0;
+    while (getline(is, line))
+    {
+        string::size_type delim_pos = line.find(" ");
+        assert(delim_pos != string::npos);
+        string word = line.substr(0, delim_pos);
+        dc_m.fixed_dict.Convert(word);  // add to dict
+    }
+    //  freeze & add unk to fixed_dict
+    dc_m.fixed_dict.Freeze();
+    dc_m.fixed_dict.SetUnk(dc_m.UNK_STR);
+    BOOST_LOG_TRIVIAL(info) << "initialize fixed dict done .";
+}
+
+void DoubleChannelModelHandler::set_unk_replace_threshold(int freq_thres, float prob_thres)
+{
+    dc_m.dynamic_dict_wrapper.set_threshold(freq_thres, prob_thres);
+}
 
 void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
@@ -65,18 +102,23 @@ void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<In
     swap(postag_seqs, tmp_postag_seqs);
 }
 
-void DoubleChannelModelHandler::read_training_data_and_build_dicts(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
+void DoubleChannelModelHandler::read_training_data_and_build_dynamic_and_postag_dicts(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
 {
-    assert(!dc_m.dynamic_dict.is_frozen() && !dc_m.fixed_dict.is_frozen() && !dc_m.postag_dict.is_frozen());
+    assert(dc_m.fixed_dict.is_frozen()); // fixed_dict should be Initialized .
+    assert(!dc_m.dynamic_dict.is_frozen() && !dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs);
+    dc_m.dynamic_dict_wrapper.Freeze();
+    dc_m.dynamic_dict_wrapper.SetUnk(dc_m.UNK_STR);
+    dc_m.postag_dict.Freeze();
+    BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic dict done . ";
 }
 
 void DoubleChannelModelHandler::read_devel_data(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
 {
-    assert(dc_m.dynamic_dict.is_frozen() &&!dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
+    assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs);
 }
@@ -114,25 +156,70 @@ void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_tes
     swap(tmp_fixed_sents, fixed_sents);
 }
 
-void DoubleChannelModelHandler::finish_read_training_data()
+void DoubleChannelModelHandler::finish_read_training_data(boost::program_options::variables_map &varmap)
 {
-    dc_m.freeze_dict_and_add_UNK();
+    // set param 
+    dc_m.dynamic_embedding_dim = varmap["dynamic_embedding_dim"].as<unsigned>();
+    dc_m.postag_embedding_dim = varmap["postag_embedding_dim"].as<unsigned>();
+    dc_m.nr_lstm_stacked_layer = varmap["nr_lstm_stacked_layer"].as<unsigned>();
+    dc_m.lstm_x_dim = varmap["lstm_x_dim"].as<unsigned>();
+    dc_m.lstm_h_dim = varmap["lstm_h_dim"].as<unsigned>();
+    dc_m.tag_layer_hidden_dim = varmap["tag_layer_hidden_dim"].as<unsigned>();
+
+    dc_m.dynamic_embedding_dict_size = dc_m.dynamic_dict.size();
+    dc_m.tag_layer_output_dim = dc_m.postag_dict.size();
+    assert(dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size());
 }
 
-void DoubleChannelModelHandler::build_model(boost::program_options::variables_map &varmap)
+void DoubleChannelModelHandler::build_model()
 {
-    dc_m.set_partial_model_structure_param_from_outer(varmap);
-    dc_m.set_partial_model_structure_param_from_inner();
     dc_m.build_model_structure();
     dc_m.print_model_info();
+}
+
+void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
+{
+    // set lookup parameters from outer word embedding
+    // using words_loopup_param.Initialize( word_id , value_vector )
+    string line;
+    vector<string> split_cont;
+    getline(is, line); // first line is the infomation !
+    split_cont.reserve(dc_m.fixed_embedding_dim + 1); // word + numbers 
+    unsigned long line_cnt = 0; // for warning when read embedding error
+    unsigned long words_cnt_hit = 0;
+    vector<float> embedding_vec(dc_m.fixed_embedding_dim , 0.f);
+    Index dynamic_unk = dc_m.dynamic_dict.Convert(dc_m.UNK_STR); // for calc hit rate
+    while (getline(is, line))
+    {
+        ++line_cnt;
+        boost::trim_right(line);
+        boost::split(split_cont, line, boost::is_any_of(" "));
+        if (dc_m.fixed_embedding_dim + 1 != split_cont.size())
+        {
+            BOOST_LOG_TRIVIAL(info) << "bad word dimension : `" << split_cont.size() - 1 << "` at line " << line_cnt;
+            continue;
+        }
+        string &word = split_cont.at(0);
+        Index word_id = dc_m.fixed_dict.Convert(word);
+        dc_m.fixed_words_lookup_param->Initialize(word_id, embedding_vec);
+        for (size_t idx = 1; idx < split_cont.size(); ++idx)
+        {
+            embedding_vec[idx - 1] = stof(split_cont[idx]);
+        }
+        if(dc_m.dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
+    }
+    BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
+        << words_cnt_hit << "/" << dc_m.fixed_embedding_dict_size  << " ("
+        << ( dc_m.fixed_embedding_dict_size ? static_cast<float>(words_cnt_hit) / dc_m.fixed_embedding_dict_size : 0. ) * 100 
+        << " %) " ;
 }
 
 void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vector<IndexSeq> *p_fixed_sents,
     const vector<IndexSeq> *p_postag_seqs,
     unsigned max_epoch,
-    const vector<IndexSeq> *p_dev_dynamic_sents = nullptr, const vector<IndexSeq> *p_dev_fixed_sents = nullptr,
-    const vector<IndexSeq> *p_dev_postag_seqs = nullptr,
-    const unsigned long do_devel_freq = 50000)
+    const vector<IndexSeq> *p_dev_dynamic_sents, const vector<IndexSeq> *p_dev_fixed_sents,
+    const vector<IndexSeq> *p_dev_postag_seqs,
+    const unsigned long do_devel_freq)
 {
     unsigned nr_samples = p_dynamic_sents->size();
 
@@ -237,7 +324,7 @@ void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, c
 
 float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
     const std::vector<IndexSeq> *p_postag_seqs,
-    std::ostream *p_error_output_os = nullptr)
+    std::ostream *p_error_output_os)
 {
     unsigned nr_samples = p_dynamic_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .\n";
@@ -308,12 +395,40 @@ void DoubleChannelModelHandler::predict(std::istream &is, std::ostream &os)
 
 void DoubleChannelModelHandler::save_model(std::ostream &os)
 {
-    dc_m.save_model(os, &best_model_tmp_ss);
+    boost::archive::text_oarchive to(os);
+    to << dc_m.dynamic_embedding_dim << dc_m.postag_embedding_dim
+        << dc_m.nr_lstm_stacked_layer << dc_m.lstm_x_dim << dc_m.lstm_h_dim
+        << dc_m.tag_layer_hidden_dim << dc_m.fixed_embedding_dim
+        << dc_m.fixed_embedding_dict_size << dc_m.dynamic_embedding_dict_size
+        << dc_m.tag_layer_output_dim;
+
+    to << dc_m.dynamic_dict << dc_m.fixed_dict << dc_m.postag_dict;
+    if (best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail())
+    {
+        boost::archive::text_iarchive ti(best_model_tmp_ss);
+        ti >> *dc_m.m;
+        ; // if best model is not save to the temporary stringstream , we should firstly save it !
+    }
+
+    to << *dc_m.m;
+    BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
 void DoubleChannelModelHandler::load_model(std::istream &is)
 {
-    dc_m.load_model(is);
+    boost::archive::text_iarchive ti(is);
+    ti >> dc_m.dynamic_embedding_dim >> dc_m.postag_embedding_dim
+        >> dc_m.nr_lstm_stacked_layer >> dc_m.lstm_x_dim >> dc_m.lstm_h_dim
+        >> dc_m.tag_layer_hidden_dim >> dc_m.fixed_embedding_dim
+        >> dc_m.fixed_embedding_dict_size >> dc_m.dynamic_embedding_dict_size
+        >> dc_m.tag_layer_output_dim;
+
+    ti >> dc_m.dynamic_dict >> dc_m.fixed_dict >> dc_m.postag_dict;
+    assert(dc_m.dynamic_embedding_dict_size == dc_m.dynamic_dict.size() && dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size()
+        && dc_m.tag_layer_output_dim == dc_m.postag_dict.size());
+    dc_m.build_model_structure();
+    ti >> *dc_m.m;
+    BOOST_LOG_TRIVIAL(info) << "load model done .";
 }
 
 } // end of namespace

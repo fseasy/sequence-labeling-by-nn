@@ -22,7 +22,7 @@
 
 namespace slnn
 {
-struct DoubleChannelModelHandler;
+extern struct DoubleChannelModelHandler;
 
 struct DoubleChannelModel4POSTAG
 {
@@ -66,14 +66,9 @@ struct DoubleChannelModel4POSTAG
     DoubleChannelModel4POSTAG();
     ~DoubleChannelModel4POSTAG();
 
-    void freeze_dict_and_add_UNK();
-    void set_partial_model_structure_param_from_outer(boost::program_options::variables_map &varmap);
-    void set_partial_model_structure_param_from_inner();
     void build_model_structure();
     void print_model_info();
 
-    void save_model(std::ostream &os , std::stringstream *best_model_tmp_ss=nullptr);
-    void load_model(std::istream &is);
 
     cnn::expr::Expression negative_loglikelihood(cnn::ComputationGraph *p_cg, 
         const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
@@ -83,7 +78,7 @@ struct DoubleChannelModel4POSTAG
 
 };
 
-const std::string DoubleChannelModel4POSTAG::UNK_STR = "<UNK_REPR>" ;
+
 } // end of namespace
 
 

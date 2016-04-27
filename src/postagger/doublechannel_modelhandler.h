@@ -25,11 +25,15 @@ struct DoubleChannelModelHandler
 
     DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m);
 
+    // Before read data
+    void set_unk_replace_threshold(int freq_thres , float prob_thres);
+    void build_fixed_dict_from_word2vec_file(std::ifstream &is);
+
     // Reading data 
     inline std::string replace_number(const std::string &str);
     void do_read_annotated_dataset(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
         std::vector<IndexSeq> &postag_seqs);
-    void read_training_data_and_build_dicts(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+    void read_training_data_and_build_dynamic_and_postag_dicts(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
         std::vector<IndexSeq> &postag_seqs);
     void read_devel_data(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
         std::vector<IndexSeq> &postag_seqs);
@@ -37,8 +41,9 @@ struct DoubleChannelModelHandler
         std::vector<IndexSeq> &fixed_sents);
     
     // After Reading Training data
-    void finish_read_training_data();
-    void build_model(boost::program_options::variables_map &varmap);
+    void finish_read_training_data(boost::program_options::variables_map &varmap);
+    void build_model();
+    void load_fixed_embedding(std::istream &is);
 
     // Train & devel & predict
     void train(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
@@ -60,8 +65,6 @@ private :
 
 };
 
-const std::string DoubleChannelModelHandler::number_transform_str = "##";
-const size_t DoubleChannelModelHandler::length_transform_str = number_transform_str.length();
 
 inline
 std::string DoubleChannelModelHandler::replace_number(const std::string &str)

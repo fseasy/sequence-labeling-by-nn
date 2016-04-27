@@ -21,3 +21,4 @@ ADD_EXECUTABLE(postagger_dc postagger_doublechannel.cpp ${common_headers}
 ${doublechannel_postagger_headers} ${common_libs} ${doublechannel_postagger_libs})
 
 target_link_libraries(postagger cnn ${Boost_LIBRARIES})
+target_link_libraries(postagger_dc cnn ${Boost_LIBRARIES})
