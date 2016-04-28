@@ -485,7 +485,7 @@ struct BILSTMModel4NER
             Expression word_lookup_exp = lookup(cg, words_lookup_param, p_sent->at(i));
             Expression postag_lookup_exp = lookup(cg, postags_lookup_param, p_postag_seq->at(i));
             Expression input_affine_exp = input_merge_layer->build_graph(word_lookup_exp, postag_lookup_exp);
-            input_affine_exp_cont[i] = noise(input_affine_exp, 0.1f);
+            input_affine_exp_cont[i] = rectify(input_affine_exp);
         }
 
 

@@ -17,7 +17,7 @@ const std::string DoubleChannelModelHandler::number_transform_str = "##";
 const size_t DoubleChannelModelHandler::length_transform_str = number_transform_str.length();
 
 DoubleChannelModelHandler::DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m) 
-    :dc_m(dc_m)
+    :dc_m(dc_m) , best_acc(0.f) , best_model_tmp_ss()
 {}
 
 void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
@@ -184,7 +184,7 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
     BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     string line;
     vector<string> split_cont;
-    getline(is, line); // first line is the infomation !
+    getline(is, line); // first line is the infomation , skip
     split_cont.reserve(dc_m.fixed_embedding_dim + 1); // word + numbers 
     unsigned long line_cnt = 0; // for warning when read embedding error
     unsigned long words_cnt_hit = 0;
@@ -202,11 +202,11 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
         }
         string &word = split_cont.at(0);
         Index word_id = dc_m.fixed_dict.Convert(word);
-        dc_m.fixed_words_lookup_param->Initialize(word_id, embedding_vec);
         for (size_t idx = 1; idx < split_cont.size(); ++idx)
         {
             embedding_vec[idx - 1] = stof(split_cont[idx]);
         }
+        dc_m.fixed_words_lookup_param->Initialize(word_id, embedding_vec);
         if(dc_m.dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
