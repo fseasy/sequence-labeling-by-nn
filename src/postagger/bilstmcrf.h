@@ -34,6 +34,7 @@ struct BILSTMCRFModel4POSTAG
         nr_lstm_stacked_layer ,
         lstm_x_dim,
         lstm_h_dim,
+        merge_hidden_dim,
         fixed_embedding_dim,
         fixed_embedding_dict_size;
     // - set from inner (dict)
@@ -45,7 +46,8 @@ struct BILSTMCRFModel4POSTAG
 
     Merge2Layer *merge_doublechannel_layer;
     BILSTMLayer *bilstm_layer;
-    Merge3Layer *emit_layer;
+    Merge3Layer *merge_hidden_layer;
+    DenseLayer *emit_layer;
 
     cnn::LookupParameters *dynamic_words_lookup_param;
     cnn::LookupParameters *fixed_words_lookup_param;

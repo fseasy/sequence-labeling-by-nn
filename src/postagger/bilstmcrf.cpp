@@ -22,6 +22,7 @@ BILSTMCRFModel4POSTAG::BILSTMCRFModel4POSTAG()
     : m(nullptr),
     merge_doublechannel_layer(nullptr) ,
     bilstm_layer(nullptr),
+    merge_hidden_layer(nullptr),
     emit_layer(nullptr),
     dynamic_dict_wrapper(dynamic_dict)
 {}
@@ -31,6 +32,7 @@ BILSTMCRFModel4POSTAG::~BILSTMCRFModel4POSTAG()
     if (m) delete m;
     if (merge_doublechannel_layer) delete merge_doublechannel_layer;
     if (bilstm_layer) delete bilstm_layer;
+    if (merge_hidden_layer) delete merge_hidden_layer;
     if (emit_layer) delete emit_layer;
 }
 
@@ -40,7 +42,8 @@ void BILSTMCRFModel4POSTAG::build_model_structure()
     m = new Model();
     merge_doublechannel_layer = new Merge2Layer(m, dynamic_embedding_dim, fixed_embedding_dim, lstm_x_dim);
     bilstm_layer = new BILSTMLayer(m, nr_lstm_stacked_layer, lstm_x_dim, lstm_h_dim);
-    emit_layer = new Merge3Layer(m, lstm_h_dim, lstm_h_dim, postag_embedding_dim, 1);
+    merge_hidden_layer = new Merge3Layer(m, lstm_h_dim, lstm_h_dim, postag_embedding_dim, merge_hidden_dim);
+    emit_layer = new DenseLayer(m, merge_hidden_dim, 1);
 
     dynamic_words_lookup_param = m->add_lookup_parameters(dynamic_embedding_dict_size, { dynamic_embedding_dim });
     fixed_words_lookup_param = m->add_lookup_parameters(fixed_embedding_dict_size, { fixed_embedding_dim });
@@ -57,7 +60,8 @@ void BILSTMCRFModel4POSTAG::print_model_info()
         << "dynamic vocabulary size : " << dynamic_embedding_dict_size << " with dimention : " << dynamic_embedding_dim << "\n"
         << "fixed vocabulary size : " << fixed_embedding_dict_size << " with dimension : " << fixed_embedding_dim << "\n"
         << "bilstm stacked layer num : " << nr_lstm_stacked_layer << " , x dim  : " << lstm_x_dim << " , h dim : " << lstm_h_dim << "\n"
-        << "postag num : " << postag_dict_size << " with dimension : " << postag_embedding_dim;
+        << "postag num : " << postag_dict_size << " with dimension : " << postag_embedding_dim << "\n" 
+        << "merge hidden dimension : " << merge_hidden_dim ;
 }
 
 Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg, 
@@ -69,6 +73,7 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     // New graph , ready for new sentence
     merge_doublechannel_layer->new_graph(cg);
     bilstm_layer->new_graph(cg);
+    merge_hidden_layer->new_graph(cg);
     emit_layer->new_graph(cg);
 
     bilstm_layer->start_new_sequence();
@@ -121,8 +126,9 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     {
         for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
         {
-            emit_score[time_step][postag_idx] = emit_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
+            Expression hidden_out_exp = merge_hidden_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
                 r2l_lstm_output_exp_cont[time_step], all_postag_exp_cont[postag_idx]);
+            emit_score[time_step][postag_idx] = emit_layer->build_graph( rectify(hidden_out_exp) );
         }
     }
     // 1. the time 0
@@ -141,7 +147,7 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
             vector<Expression> trans_score_from_pre_tag_cont(postag_dict_size);
             for (size_t from_postag_idx = 0; from_postag_idx < postag_dict_size; ++from_postag_idx)
             {
-                size_t flat_idx = from_postag_idx * postag_dict_size + postag_dict_size;
+                size_t flat_idx = from_postag_idx * postag_dict_size + postag_idx ;
                 // from-tag score + trans_score
                 trans_score_from_pre_tag_cont[from_postag_idx] = lattice[time_step - 1][from_postag_idx] +
                     trans_score[flat_idx];
@@ -163,7 +169,7 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     return predict_score - gold_score;
 }
 
-void BILSTMCRFModel4POSTAG::do_predict(ComputationGraph *p_cg, 
+void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg, 
     const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, IndexSeq *p_predict_tag_seq)
 {
     // The main structure is just a copy from build_bilstm4tagging_graph2train! 
@@ -173,8 +179,8 @@ void BILSTMCRFModel4POSTAG::do_predict(ComputationGraph *p_cg,
     // New graph , ready for new sentence
     merge_doublechannel_layer->new_graph(cg);
     bilstm_layer->new_graph(cg);
-    merge_bilstm_and_pretag_layer->new_graph(cg);
-    tag_output_linear_layer->new_graph(cg);
+    merge_hidden_layer->new_graph(cg);
+    emit_layer->new_graph(cg);
 
     bilstm_layer->start_new_sequence();
 
@@ -194,24 +200,73 @@ void BILSTMCRFModel4POSTAG::do_predict(ComputationGraph *p_cg,
     // 2. calc Expression of every timestep of BI-LSTM
 
     bilstm_layer->build_graph(merge_dc_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
-    // 3. set previous tag lookup expression
+    
+    
 
-    Expression pretag_lookup_exp = parameter(cg, TAG_SOS_param);
+    //viterbi - preparing score
+    vector<Expression> all_postag_exp_cont(postag_dict_size);
+    vector<cnn::real> init_score(postag_dict_size);
+    vector<cnn::real> trans_score(postag_dict_size * postag_dict_size);
+    vector<vector<cnn::real>> emit_score(sent_len, vector<cnn::real>(postag_dict_size));
+    vector<vector<cnn::real>> lattice(sent_len, vector<cnn::real>(postag_dict_size));
 
-    // build tag network , calc loss Expression of every timestep 
-    IndexSeq tmp_predict_tag_seq(sent_len);
-    for (unsigned i = 0; i < sent_len; ++i)
+    // get init score
+    for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
     {
-        Expression merge_bilstm_pretag_exp = merge_bilstm_and_pretag_layer->build_graph(l2r_lstm_output_exp_cont[i],
-            r2l_lstm_output_exp_cont[i], pretag_lookup_exp);
-        Expression tag_hidden_layer_output_at_timestep_t = rectify(merge_bilstm_pretag_exp);
-        tag_output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
-        vector<float> output_values = as_vector(cg.incremental_forward());
-        unsigned tag_id_with_max_value = distance(output_values.cbegin(), max_element(output_values.cbegin(), output_values.cend()));
-        tmp_predict_tag_seq.at(i) = tag_id_with_max_value ;
-        // set pretag_lookup_exp for next timestep 
-        pretag_lookup_exp = lookup(cg, postags_lookup_param, tag_id_with_max_value);
+        Expression init_exp = lookup(cg, init_score_lookup_param, postag_idx);
+        init_score[postag_idx] = as_scalar(cg.get_value(init_exp));
     }
+    // get trans score
+    for (size_t flat_idx = 0; flat_idx < postag_dict_size * postag_dict_size; ++flat_idx)
+    {
+        Expression trans_exp = lookup(cg, trans_score_lookup_param, flat_idx);
+        trans_score[flat_idx] = as_scalar(cg.get_value(trans_exp));
+    }
+    // get emit score
+    for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
+    {
+        all_postag_exp_cont[postag_idx] = lookup(cg, postags_lookup_param, postag_idx);
+    }
+    for (size_t time_step = 0; time_step < sent_len; ++time_step)
+    {
+        for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
+        {
+            Expression hidden_out_exp = merge_hidden_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
+                r2l_lstm_output_exp_cont[time_step], all_postag_exp_cont[postag_idx]);
+            Expression trans_score_exp = emit_layer->build_graph(rectify(hidden_out_exp));
+            emit_score[time_step][postag_idx] =  as_scalar(cg.get_value(trans_score_exp));
+        }
+            
+    }
+    // viterbi - process
+    vector<vector<size_t>> path_matrix(sent_len, vector<size_t>(postag_dict_size));
+    vector<cnn::real> current_scores(postag_dict_size);
+    // time 0
+    for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
+    {
+        current_scores[postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
+    }
+    // continues time
+    for (size_t time_step = 1; time_step < sent_len; ++time_step)
+    {
+        for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
+        {
+            size_t max_score_of_pre_tag = 0;
+            cnn::real max_score = current_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
+            for (size_t pre_tag_idx = 0; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
+            {
+                size_t flat_idx = pre_tag_idx * postag_dict_size + postag_idx;
+                cnn::real score = current_scores[pre_tag_idx] + trans_score[flat_idx];
+                if (score > max_score)
+                {
+                    max_score_of_pre_tag = pre_tag_idx;
+                    max_score = score;
+                }
+            }
+            path_matrix[time_step][postag_idx] = max_score_of_pre_tag;
+        }
+    }
+
     swap(tmp_predict_tag_seq, *p_predict_tag_seq);
 }
 
