@@ -5,7 +5,7 @@
 #include <boost/archive/text_oarchive.hpp>
 
 #include "utils/typedeclaration.h"
-#include "doublechannel_modelhandler.h"
+#include "bilstmcrf_modelhandler.h"
 
 using namespace std;
 using namespace cnn;
@@ -13,14 +13,14 @@ namespace slnn
 {
 
 
-const std::string DoubleChannelModelHandler::number_transform_str = "##";
-const size_t DoubleChannelModelHandler::length_transform_str = number_transform_str.length();
+const std::string BILSTMCRFModelHandler::number_transform_str = "##";
+const size_t BILSTMCRFModelHandler::length_transform_str = number_transform_str.length();
 
-DoubleChannelModelHandler::DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m) 
+BILSTMCRFModelHandler::BILSTMCRFModelHandler(BILSTMCRFModel4POSTAG &dc_m) 
     :dc_m(dc_m) , best_acc(0.f) , best_model_tmp_ss()
 {}
 
-void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
+void BILSTMCRFModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
 {
     BOOST_LOG_TRIVIAL(info) << "initialize fixed dict .";
     string line;
@@ -45,12 +45,12 @@ void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstrea
     BOOST_LOG_TRIVIAL(info) << "initialize fixed dict done .";
 }
 
-void DoubleChannelModelHandler::set_unk_replace_threshold(int freq_thres, float prob_thres)
+void BILSTMCRFModelHandler::set_unk_replace_threshold(int freq_thres, float prob_thres)
 {
     dc_m.dynamic_dict_wrapper.set_threshold(freq_thres, prob_thres);
 }
 
-void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
+void BILSTMCRFModelHandler::do_read_annotated_dataset(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
 {
     unsigned line_cnt = 0;
@@ -101,7 +101,7 @@ void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<In
     swap(postag_seqs, tmp_postag_seqs);
 }
 
-void DoubleChannelModelHandler::read_training_data_and_build_dynamic_and_postag_dicts(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
+void BILSTMCRFModelHandler::read_training_data_and_build_dynamic_and_postag_dicts(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
 {
     assert(dc_m.fixed_dict.is_frozen()); // fixed_dict should be Initialized .
@@ -114,7 +114,7 @@ void DoubleChannelModelHandler::read_training_data_and_build_dynamic_and_postag_
     BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic dict done . ";
 }
 
-void DoubleChannelModelHandler::read_devel_data(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
+void BILSTMCRFModelHandler::read_devel_data(istream &is, vector<IndexSeq> &dynamic_sents, vector<IndexSeq> &fixed_sents,
     vector<IndexSeq> &postag_seqs)
 {
     assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
@@ -123,7 +123,7 @@ void DoubleChannelModelHandler::read_devel_data(istream &is, vector<IndexSeq> &d
     BOOST_LOG_TRIVIAL(info) << "read developing data done .";
 }
 
-void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents, vector<IndexSeq> &dynamic_sents,
+void BILSTMCRFModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents, vector<IndexSeq> &dynamic_sents,
     vector<IndexSeq> &fixed_sents)
 {
     assert(dc_m.dynamic_dict.is_frozen() && !dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
@@ -156,7 +156,7 @@ void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_tes
     swap(tmp_fixed_sents, fixed_sents);
 }
 
-void DoubleChannelModelHandler::finish_read_training_data(boost::program_options::variables_map &varmap)
+void BILSTMCRFModelHandler::finish_read_training_data(boost::program_options::variables_map &varmap)
 {
     // set param 
     dc_m.dynamic_embedding_dim = varmap["dynamic_embedding_dim"].as<unsigned>();
@@ -164,20 +164,20 @@ void DoubleChannelModelHandler::finish_read_training_data(boost::program_options
     dc_m.nr_lstm_stacked_layer = varmap["nr_lstm_stacked_layer"].as<unsigned>();
     dc_m.lstm_x_dim = varmap["lstm_x_dim"].as<unsigned>();
     dc_m.lstm_h_dim = varmap["lstm_h_dim"].as<unsigned>();
-    dc_m.tag_layer_hidden_dim = varmap["tag_layer_hidden_dim"].as<unsigned>();
+    dc_m.merge_hidden_dim = varmap["merge_hidden_dim"].as<unsigned>();
 
     dc_m.dynamic_embedding_dict_size = dc_m.dynamic_dict.size();
-    dc_m.tag_layer_output_dim = dc_m.postag_dict.size();
+    dc_m.postag_dict_size = dc_m.postag_dict.size();
     assert(dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size());
 }
 
-void DoubleChannelModelHandler::build_model()
+void BILSTMCRFModelHandler::build_model()
 {
     dc_m.build_model_structure();
     dc_m.print_model_info();
 }
 
-void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
+void BILSTMCRFModelHandler::load_fixed_embedding(std::istream &is)
 {
     // set lookup parameters from outer word embedding
     // using words_loopup_param.Initialize( word_id , value_vector )
@@ -215,7 +215,7 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
         << " %) " ;
 }
 
-void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vector<IndexSeq> *p_fixed_sents,
+void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vector<IndexSeq> *p_fixed_sents,
     const vector<IndexSeq> *p_postag_seqs,
     unsigned max_epoch,
     const vector<IndexSeq> *p_dev_dynamic_sents, const vector<IndexSeq> *p_dev_fixed_sents,
@@ -262,7 +262,7 @@ void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, c
             {
                 dynamic_sent_after_replace_unk[word_idx] = dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
             }
-            dc_m.negative_loglikelihood(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
+            dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
             training_stat_per_report.loss += as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.0);
@@ -323,7 +323,7 @@ void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, c
     BOOST_LOG_TRIVIAL(info) << "training finished with cost " << total_time_cost_in_seconds << " s .";
 }
 
-float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
+float BILSTMCRFModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
     const std::vector<IndexSeq> *p_postag_seqs,
     std::ostream *p_error_output_os)
 {
@@ -341,7 +341,7 @@ float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_se
         const IndexSeq *p_dynamic_sent = &p_dynamic_sents->at(access_idx),
             *p_fixed_sent = &p_fixed_sents->at(access_idx) ,
             *p_tag_seq = &p_postag_seqs->at(access_idx);
-        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent, &predict_tag_seq);
+        dc_m.viterbi_predict(&cg, p_dynamic_sent, p_fixed_sent, &predict_tag_seq);
         assert(predict_tag_seq.size() == p_tag_seq->size());
         for (unsigned i = 0; i < p_tag_seq->size(); ++i)
         {
@@ -363,13 +363,17 @@ float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_se
     return acc_stat.get_acc();
 }
 
-void DoubleChannelModelHandler::predict(std::istream &is, std::ostream &os)
+void BILSTMCRFModelHandler::predict(std::istream &is, std::ostream &os)
 {
+    BOOST_LOG_TRIVIAL(info) << "do predict ";
     const string SPLIT_DELIMITER = "\t";
     vector<Seq> raw_instances;
     vector<IndexSeq> dynamic_sents,
         fixed_sents;
     read_test_data(is,raw_instances,dynamic_sents ,fixed_sents);
+    BOOST_LOG_TRIVIAL(info) << "read " << raw_instances.size() << " instance .";
+    Stat time_stat;
+    time_stat.start_time_stat();
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
         vector<string> *p_raw_sent = &raw_instances.at(i);
@@ -382,7 +386,7 @@ void DoubleChannelModelHandler::predict(std::istream &is, std::ostream &os)
             *p_fixed_sent = &fixed_sents.at(i);
         IndexSeq predict_seq;
         ComputationGraph cg;
-        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent , &predict_seq);
+        dc_m.viterbi_predict(&cg, p_dynamic_sent, p_fixed_sent , &predict_seq);
         // output the result directly
         os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.Convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
@@ -392,16 +396,18 @@ void DoubleChannelModelHandler::predict(std::istream &is, std::ostream &os)
         }
         os << "\n";
     }
+    time_stat.end_time_stat();
+    BOOST_LOG_TRIVIAL(info) << "predicted done with time costing " << time_stat.get_time_cost_in_seconds() << " s .";
 }
 
-void DoubleChannelModelHandler::save_model(std::ostream &os)
+void BILSTMCRFModelHandler::save_model(std::ostream &os)
 {
     boost::archive::text_oarchive to(os);
     to << dc_m.dynamic_embedding_dim << dc_m.postag_embedding_dim
         << dc_m.nr_lstm_stacked_layer << dc_m.lstm_x_dim << dc_m.lstm_h_dim
-        << dc_m.tag_layer_hidden_dim << dc_m.fixed_embedding_dim
+        << dc_m.merge_hidden_dim << dc_m.fixed_embedding_dim
         << dc_m.fixed_embedding_dict_size << dc_m.dynamic_embedding_dict_size
-        << dc_m.tag_layer_output_dim;
+        << dc_m.postag_dict_size;
 
     to << dc_m.dynamic_dict << dc_m.fixed_dict << dc_m.postag_dict;
     if (best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail())
@@ -415,18 +421,18 @@ void DoubleChannelModelHandler::save_model(std::ostream &os)
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
-void DoubleChannelModelHandler::load_model(std::istream &is)
+void BILSTMCRFModelHandler::load_model(std::istream &is)
 {
     boost::archive::text_iarchive ti(is);
     ti >> dc_m.dynamic_embedding_dim >> dc_m.postag_embedding_dim
         >> dc_m.nr_lstm_stacked_layer >> dc_m.lstm_x_dim >> dc_m.lstm_h_dim
-        >> dc_m.tag_layer_hidden_dim >> dc_m.fixed_embedding_dim
+        >> dc_m.merge_hidden_dim >> dc_m.fixed_embedding_dim
         >> dc_m.fixed_embedding_dict_size >> dc_m.dynamic_embedding_dict_size
-        >> dc_m.tag_layer_output_dim;
+        >> dc_m.postag_dict_size;
 
     ti >> dc_m.dynamic_dict >> dc_m.fixed_dict >> dc_m.postag_dict;
     assert(dc_m.dynamic_embedding_dict_size == dc_m.dynamic_dict.size() && dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size()
-        && dc_m.tag_layer_output_dim == dc_m.postag_dict.size());
+        && dc_m.postag_dict_size == dc_m.postag_dict.size());
     dc_m.build_model_structure();
     ti >> *dc_m.m;
     BOOST_LOG_TRIVIAL(info) << "load model done .";

@@ -102,6 +102,8 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     vector<Expression> init_score(postag_dict_size);
     vector<Expression> trans_score(postag_dict_size * postag_dict_size);
     vector<vector<Expression>> emit_score(sent_len, vector<Expression>(postag_dict_size));
+    vector<vector<size_t>> path_matrix(sent_len, vector<size_t>(postag_dict_size));
+    Expression gold_score_exp ;
     // init all_postag_exp_cont , init_score , trans_score , emit_score
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
     {
@@ -137,6 +139,7 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
         // init_score + emit_score
         lattice[0][postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
     }
+    gold_score_exp = init_score[p_tag_seq->at(0)] + emit_score[0][p_tag_seq->at(0)];
     // 2. the continues time
     for(size_t time_step = 1; time_step < sent_len; ++time_step)
     {
@@ -152,21 +155,58 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
                 trans_score_from_pre_tag_cont[from_postag_idx] = lattice[time_step - 1][from_postag_idx] +
                     trans_score[flat_idx];
             }
+            if (p_stat)
+            {
+                size_t pre_tag_value = 0;
+                cnn::real max_score_value = as_scalar(cg.get_value(trans_score_from_pre_tag_cont[pre_tag_value]));
+                for (size_t pre_tag_idx = 1; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
+                {
+                    cnn::real score_value = as_scalar(cg.get_value(trans_score_from_pre_tag_cont[pre_tag_idx]));
+                    if (score_value > max_score_value)
+                    {
+                        max_score_value = score_value;
+                        pre_tag_value = pre_tag_idx;
+                    }
+                }
+                path_matrix[time_step][postag_idx] = pre_tag_value;
+            }
             lattice[time_step][postag_idx] = logsumexp(trans_score_from_pre_tag_cont) + emit_score[time_step][postag_idx];
         }
+        // calc gold 
+        size_t gold_trans_flat_idx = p_tag_seq->at(time_step - 1) * postag_dict_size + p_tag_seq->at(time_step);
+        gold_score_exp = gold_score_exp + trans_score[gold_trans_flat_idx] + emit_score[time_step][p_tag_seq->at(time_step)];
     }
-    Expression predict_score = logsumexp(lattice[sent_len - 1]);
+    Expression predict_score_exp = logsumexp(lattice[sent_len - 1]);
 
-    // gold score
-    Expression gold_score = lattice[0][p_tag_seq->at(0)];
-    for (size_t time_step = 1 ; time_step < sent_len; ++time_step)
-    {
-        gold_score =  gold_score + lattice[time_step][p_tag_seq->at(time_step)];
-    }
+
     // predict is the max-score of lattice
     // if totally correct , loss = 0 (predict_score = gold_score , that is , predict sequence equal to gold sequence)
     // else , loss = predict_score - gold_score
-    return predict_score - gold_score;
+    Expression loss =  predict_score_exp - gold_score_exp;
+    if (p_stat)
+    {
+        Index end_predicted_idx = 0;
+        cnn::real max_score_value = as_scalar(cg.get_value(lattice[sent_len-1][end_predicted_idx]));
+        for (size_t postag_idx = 1; postag_idx < postag_dict_size; ++postag_idx)
+        {
+            cnn::real score_value = as_scalar(cg.get_value(lattice[sent_len - 1][postag_idx]));
+            if (score_value > max_score_value)
+            {
+               max_score_value = score_value;
+               end_predicted_idx = postag_idx;
+            }
+        }
+        ++p_stat->total_tags;
+        if (end_predicted_idx == p_tag_seq->at(sent_len - 1)) ++p_stat->correct_tags;
+        Index pre_predicted_tag = end_predicted_idx;
+        for (unsigned backtrace_idx = sent_len - 1; backtrace_idx >= 1; --backtrace_idx)
+        {
+            pre_predicted_tag = path_matrix[backtrace_idx][pre_predicted_tag];
+            ++p_stat->total_tags;
+            if (pre_predicted_tag == p_tag_seq->at(backtrace_idx - 1)) ++p_stat->correct_tags;
+        }
+    }
+    return loss;
 }
 
 void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg, 
@@ -247,16 +287,18 @@ void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
         current_scores[postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
     }
     // continues time
+    vector<cnn::real>  pre_timestep_scores(current_scores);
     for (size_t time_step = 1; time_step < sent_len; ++time_step)
     {
+        swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
         for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
         {
             size_t max_score_of_pre_tag = 0;
-            cnn::real max_score = current_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
+            cnn::real max_score = pre_timestep_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
             for (size_t pre_tag_idx = 0; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
             {
                 size_t flat_idx = pre_tag_idx * postag_dict_size + postag_idx;
-                cnn::real score = current_scores[pre_tag_idx] + trans_score[flat_idx];
+                cnn::real score = pre_timestep_scores[pre_tag_idx] + trans_score[flat_idx];
                 if (score > max_score)
                 {
                     max_score_of_pre_tag = pre_tag_idx;
@@ -264,9 +306,20 @@ void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
                 }
             }
             path_matrix[time_step][postag_idx] = max_score_of_pre_tag;
+            current_scores[postag_idx] = max_score + emit_score[time_step][postag_idx];
         }
     }
+    // get result 
+    IndexSeq tmp_predict_tag_seq(sent_len);
+    Index end_predicted_idx = distance(current_scores.begin() ,  max_element(current_scores.begin(), current_scores.end()));
+    tmp_predict_tag_seq[sent_len - 1] = end_predicted_idx;
+    Index pre_predicted_idx = end_predicted_idx;
+    for (size_t reverse_idx = sent_len - 1; reverse_idx >= 1 ; --reverse_idx)
+    {
+        pre_predicted_idx = path_matrix[reverse_idx][pre_predicted_idx]; // backtrace
+        tmp_predict_tag_seq[reverse_idx-1] = pre_predicted_idx;
 
+    }
     swap(tmp_predict_tag_seq, *p_predict_tag_seq);
 }
 

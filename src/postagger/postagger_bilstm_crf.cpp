@@ -26,7 +26,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("nr_lstm_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-LSTM.")
         ("lstm_x_dim", po::value<unsigned>()->default_value(50) , "The dimension for LSTM X .")
         ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM H.")
-        ("tag_layer_hidden_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
+        ("merge_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for tag hidden layer.")
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
             "(eg , if set 1, the words of training data which frequency <= 1 may be "
             " replaced in probability)")
@@ -79,8 +79,8 @@ int train_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234); // 
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
+    BILSTMCRFModel4POSTAG dc_model;
+    BILSTMCRFModelHandler model_handler(dc_model);
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
     model_handler.set_unk_replace_threshold(replace_freq_threshold, replace_prob_threshold);
@@ -150,7 +150,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         cerr << "no model name specified . using default .\n";
         ostringstream oss;
         oss << "dc_" << dc_model.dynamic_embedding_dim << "_" << dc_model.lstm_h_dim
-            << "_" << dc_model.tag_layer_hidden_dim << ".model";
+            << "_" << dc_model.merge_hidden_dim << ".model";
         model_path = oss.str();
     }
     else model_path = var_map["model"].as<string>();
@@ -202,8 +202,8 @@ int devel_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
+    BILSTMCRFModel4POSTAG dc_model;
+    BILSTMCRFModelHandler model_handler(dc_model);
     // Load model 
     ifstream is(model_path);
     if (!is)
@@ -300,8 +300,8 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
+    BILSTMCRFModel4POSTAG dc_model;
+    BILSTMCRFModelHandler model_handler(dc_model);
 
 
 

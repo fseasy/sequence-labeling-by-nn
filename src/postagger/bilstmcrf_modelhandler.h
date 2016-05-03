@@ -3,15 +3,15 @@
 
 #include <boost/archive/text_oarchive.hpp>
 
-#include "bilstmmodel4tagging_doublechannel.h"
+#include "bilstmcrf.h"
 #include "utils/utf8processing.hpp"
 #include "utils/typedeclaration.h"
 
 namespace slnn
 {
-struct DoubleChannelModelHandler
+struct BILSTMCRFModelHandler
 {
-    DoubleChannelModel4POSTAG &dc_m;
+    BILSTMCRFModel4POSTAG &dc_m;
     
     // Saving temporal model
     float best_acc;
@@ -23,7 +23,7 @@ struct DoubleChannelModelHandler
     const size_t SentMaxLen = 256;
     const size_t MaxSentNum = 0x8FFFF;
 
-    DoubleChannelModelHandler(DoubleChannelModel4POSTAG &dc_m);
+    BILSTMCRFModelHandler(BILSTMCRFModel4POSTAG &dc_m);
 
     // Before read data
     void set_unk_replace_threshold(int freq_thres , float prob_thres);
@@ -67,7 +67,7 @@ private :
 
 
 inline
-std::string DoubleChannelModelHandler::replace_number(const std::string &str)
+std::string BILSTMCRFModelHandler::replace_number(const std::string &str)
 {
     std::string tmp_str = str;
     size_t start_pos = 0;
@@ -95,7 +95,7 @@ std::string DoubleChannelModelHandler::replace_number(const std::string &str)
 
 
 inline 
-void DoubleChannelModelHandler::save_current_best_model(float acc)
+void BILSTMCRFModelHandler::save_current_best_model(float acc)
 {
     BOOST_LOG_TRIVIAL(info) << "better model has been found . stash it .";
     best_acc = acc;
