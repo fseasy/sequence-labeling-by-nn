@@ -10,39 +10,43 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "bilstmcrf.h"
+#include "bilstmcrf_dc.h"
 
 using namespace std;
 using namespace cnn;
 namespace slnn{
 
-const std::string BILSTMCRFModel4POSTAG::UNK_STR = "<UNK_REPR>";
+const std::string BILSTMCRFDCModel4POSTAG::UNK_STR = "<UNK_REPR>";
 
-BILSTMCRFModel4POSTAG::BILSTMCRFModel4POSTAG()
+BILSTMCRFDCModel4POSTAG::BILSTMCRFDCModel4POSTAG()
     : m(nullptr),
+    merge_doublechannel_layer(nullptr) ,
     bilstm_layer(nullptr),
     merge_hidden_layer(nullptr),
     emit_layer(nullptr),
-    word_dict_wrapper(word_dict)
+    dynamic_dict_wrapper(dynamic_dict)
 {}
 
-BILSTMCRFModel4POSTAG::~BILSTMCRFModel4POSTAG()
+BILSTMCRFDCModel4POSTAG::~BILSTMCRFDCModel4POSTAG()
 {
     if (m) delete m;
+    if (merge_doublechannel_layer) delete merge_doublechannel_layer;
     if (bilstm_layer) delete bilstm_layer;
     if (merge_hidden_layer) delete merge_hidden_layer;
     if (emit_layer) delete emit_layer;
 }
 
-void BILSTMCRFModel4POSTAG::build_model_structure()
+void BILSTMCRFDCModel4POSTAG::build_model_structure()
 {
-    assert(word_dict.is_frozen() && postag_dict.is_frozen()); // Assert all frozen
+    assert(dynamic_dict.is_frozen() && fixed_dict.is_frozen() && postag_dict.is_frozen()); // Assert all frozen
     m = new Model();
-    bilstm_layer = new BILSTMLayer(m, nr_lstm_stacked_layer, word_embedding_dim , lstm_h_dim);
+    merge_doublechannel_layer = new Merge2Layer(m, dynamic_embedding_dim, fixed_embedding_dim, lstm_x_dim);
+    bilstm_layer = new BILSTMLayer(m, nr_lstm_stacked_layer, lstm_x_dim, lstm_h_dim);
     merge_hidden_layer = new Merge3Layer(m, lstm_h_dim, lstm_h_dim, postag_embedding_dim, merge_hidden_dim);
     emit_layer = new DenseLayer(m, merge_hidden_dim, 1);
 
-    words_lookup_param = m->add_lookup_parameters(word_dict_size, { word_embedding_dim });
+    dynamic_words_lookup_param = m->add_lookup_parameters(dynamic_embedding_dict_size, { dynamic_embedding_dim });
+    fixed_words_lookup_param = m->add_lookup_parameters(fixed_embedding_dict_size, { fixed_embedding_dim });
     postags_lookup_param = m->add_lookup_parameters(postag_dict_size , { postag_embedding_dim });
 
     trans_score_lookup_param = m->add_lookup_parameters(postag_dict_size * postag_dict_size, { 1 });
@@ -50,22 +54,24 @@ void BILSTMCRFModel4POSTAG::build_model_structure()
 
 }
 
-void BILSTMCRFModel4POSTAG::print_model_info()
+void BILSTMCRFDCModel4POSTAG::print_model_info()
 {
     BOOST_LOG_TRIVIAL(info) << "---------------- Model Structure Info ----------------\n"
-        << "vocabulary size : " << word_dict_size << " with dimention : " << word_embedding_dim << "\n"
-        << "bilstm stacked layer num : " << nr_lstm_stacked_layer << " , x dim  : " << word_embedding_dim << " , h dim : " << lstm_h_dim << "\n"
+        << "dynamic vocabulary size : " << dynamic_embedding_dict_size << " with dimention : " << dynamic_embedding_dim << "\n"
+        << "fixed vocabulary size : " << fixed_embedding_dict_size << " with dimension : " << fixed_embedding_dim << "\n"
+        << "bilstm stacked layer num : " << nr_lstm_stacked_layer << " , x dim  : " << lstm_x_dim << " , h dim : " << lstm_h_dim << "\n"
         << "postag num : " << postag_dict_size << " with dimension : " << postag_embedding_dim << "\n" 
         << "merge hidden dimension : " << merge_hidden_dim ;
 }
 
-Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg, 
-    const IndexSeq *p_sent, const IndexSeq *p_tag_seq,
+Expression BILSTMCRFDCModel4POSTAG::viterbi_train(ComputationGraph *p_cg, 
+    const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
     Stat *p_stat)
 {
-    const unsigned sent_len = p_sent->size();
+    const unsigned sent_len = p_dynamic_sent->size();
     ComputationGraph &cg = *p_cg;
     // New graph , ready for new sentence
+    merge_doublechannel_layer->new_graph(cg);
     bilstm_layer->new_graph(cg);
     merge_hidden_layer->new_graph(cg);
     emit_layer->new_graph(cg);
@@ -73,18 +79,21 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     bilstm_layer->start_new_sequence();
 
     // Some container
-    vector<Expression> word_exp_cont(sent_len);
+    vector<Expression> merge_dc_exp_cont(sent_len);
     vector<Expression> l2r_lstm_output_exp_cont; // for storing left to right lstm output(deepest hidden layer) expression for every timestep
     vector<Expression> r2l_lstm_output_exp_cont; // right to left 
 
     // 1. build input , and merge
     for (unsigned i = 0; i < sent_len; ++i)
     {
-        word_exp_cont[i] = lookup(cg, words_lookup_param, p_sent->at(i));
+        Expression dynamic_word_lookup_exp = lookup(cg, dynamic_words_lookup_param, p_dynamic_sent->at(i));
+        Expression fixed_word_lookup_exp = const_lookup(cg, fixed_words_lookup_param, p_fixed_sent->at(i)); // const look up
+        Expression merge_dc_exp = merge_doublechannel_layer->build_graph(dynamic_word_lookup_exp, fixed_word_lookup_exp);
+        merge_dc_exp_cont[i] = rectify(merge_dc_exp); // rectify for merged expression
     }
 
     // 2. Build bi-lstm
-    bilstm_layer->build_graph(word_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
+    bilstm_layer->build_graph(merge_dc_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
 
     // viterbi data preparation
     vector<Expression> all_postag_exp_cont(postag_dict_size);
@@ -199,13 +208,15 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     return loss;
 }
 
-void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg, 
-    const IndexSeq *p_sent, IndexSeq *p_predict_tag_seq)
+void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg, 
+    const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, IndexSeq *p_predict_tag_seq)
 {
     // The main structure is just a copy from build_bilstm4tagging_graph2train! 
-    const unsigned sent_len = p_sent->size();
+    const unsigned sent_len = p_dynamic_sent->size();
     ComputationGraph &cg = *p_cg;
     // New graph , ready for new sentence 
+    // New graph , ready for new sentence
+    merge_doublechannel_layer->new_graph(cg);
     bilstm_layer->new_graph(cg);
     merge_hidden_layer->new_graph(cg);
     emit_layer->new_graph(cg);
@@ -213,18 +224,21 @@ void BILSTMCRFModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
     bilstm_layer->start_new_sequence();
 
     // Some container
-    vector<Expression> word_exp_cont(sent_len);
+    vector<Expression> merge_dc_exp_cont(sent_len);
     vector<Expression> l2r_lstm_output_exp_cont; // for storing left to right lstm output(deepest hidden layer) expression for every timestep
     vector<Expression> r2l_lstm_output_exp_cont; // right to left                                                  
     
     // 1. get word embeddings for sent 
     for (unsigned i = 0; i < sent_len; ++i)
     {
-        word_exp_cont[i] = lookup(cg, words_lookup_param, p_sent->at(i));
+        Expression dynamic_word_lookup_exp = lookup(cg, dynamic_words_lookup_param, p_dynamic_sent->at(i));
+        Expression fixed_word_lookup_exp = const_lookup(cg, fixed_words_lookup_param, p_fixed_sent->at(i)); // const look up
+        Expression merge_dc_exp = merge_doublechannel_layer->build_graph(dynamic_word_lookup_exp, fixed_word_lookup_exp);
+        merge_dc_exp_cont[i] = rectify(merge_dc_exp); // rectify for merged expression
     }
     // 2. calc Expression of every timestep of BI-LSTM
 
-    bilstm_layer->build_graph(word_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
+    bilstm_layer->build_graph(merge_dc_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
     
     
 

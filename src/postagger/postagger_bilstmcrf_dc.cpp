@@ -1,10 +1,10 @@
-#include "bilstmcrf.h"
-#include "bilstmcrf_modelhandler.h"
+#include "bilstmcrf_dc.h"
+#include "bilstmcrf_dc_modelhandler.h"
 
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Postagger-BILSTM_CRF based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Postagger-BILSTM_CRF Double Channel based on CNN Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -82,8 +82,8 @@ int train_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234); // 
-    BILSTMCRFModel4POSTAG dc_model;
-    BILSTMCRFModelHandler model_handler(dc_model);
+    BILSTMCRFDCModel4POSTAG dc_model;
+    BILSTMCRFDCModelHandler model_handler(dc_model);
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
     model_handler.set_unk_replace_threshold(replace_freq_threshold, replace_prob_threshold);
@@ -205,8 +205,8 @@ int devel_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    BILSTMCRFModel4POSTAG dc_model;
-    BILSTMCRFModelHandler model_handler(dc_model);
+    BILSTMCRFDCModel4POSTAG dc_model;
+    BILSTMCRFDCModelHandler model_handler(dc_model);
     // Load model 
     ifstream is(model_path);
     if (!is)
@@ -303,8 +303,8 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    BILSTMCRFModel4POSTAG dc_model;
-    BILSTMCRFModelHandler model_handler(dc_model);
+    BILSTMCRFDCModel4POSTAG dc_model;
+    BILSTMCRFDCModelHandler model_handler(dc_model);
 
 
 

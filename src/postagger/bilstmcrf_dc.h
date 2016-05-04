@@ -22,30 +22,35 @@
 
 namespace slnn
 {
-struct BILSTMCRFModelHandler;
+struct BILSTMCRFDCModelHandler;
 
-struct BILSTMCRFModel4POSTAG
+struct BILSTMCRFDCModel4POSTAG
 {
-    friend struct BILSTMCRFModelHandler;
+    friend struct BILSTMCRFDCModelHandler;
     // Model structure param 
     // - set by outer
-    unsigned word_embedding_dim,
+    unsigned dynamic_embedding_dim,
         postag_embedding_dim,
         nr_lstm_stacked_layer ,
+        lstm_x_dim,
         lstm_h_dim,
-        merge_hidden_dim;
+        merge_hidden_dim,
+        fixed_embedding_dim,
+        fixed_embedding_dict_size;
     // - set from inner (dict)
-    unsigned word_dict_size ,
+    unsigned dynamic_embedding_dict_size,
         postag_dict_size;
 
     // Model param
     cnn::Model *m;
 
+    Merge2Layer *merge_doublechannel_layer;
     BILSTMLayer *bilstm_layer;
     Merge3Layer *merge_hidden_layer;
     DenseLayer *emit_layer;
 
-    cnn::LookupParameters *words_lookup_param;
+    cnn::LookupParameters *dynamic_words_lookup_param;
+    cnn::LookupParameters *fixed_words_lookup_param;
     cnn::LookupParameters *postags_lookup_param;
     
     cnn::LookupParameters *trans_score_lookup_param; // trans score , that is , TAG_A -> TAG_B 's score
@@ -53,23 +58,24 @@ struct BILSTMCRFModel4POSTAG
 
 
     // Dict
-    cnn::Dict word_dict;
+    cnn::Dict dynamic_dict;
+    cnn::Dict fixed_dict;
     cnn::Dict postag_dict;
-    DictWrapper word_dict_wrapper;
+    DictWrapper dynamic_dict_wrapper;
     static const std::string UNK_STR ; 
 
-    BILSTMCRFModel4POSTAG();
-    ~BILSTMCRFModel4POSTAG();
+    BILSTMCRFDCModel4POSTAG();
+    ~BILSTMCRFDCModel4POSTAG();
 
     void build_model_structure();
     void print_model_info();
 
 
     cnn::expr::Expression viterbi_train(cnn::ComputationGraph *p_cg, 
-        const IndexSeq *p_sent, const IndexSeq *p_tag_seq,
+        const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_tag_seq,
         Stat *p_stat = nullptr);
     void viterbi_predict(cnn::ComputationGraph *p_cg, 
-        const IndexSeq *p_sent, IndexSeq *p_predict_tag_seq);
+        const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, IndexSeq *p_predict_tag_seq);
 
 };
 

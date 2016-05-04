@@ -51,7 +51,7 @@ struct Stat : public BasicStat
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
     float get_speed_as_kilo_tokens_per_sencond()
     {
-        return static_cast<float>( (long double)(correct_tags) / 1000. / get_time_cost_in_seconds() );
+        return static_cast<float>( static_cast<long double>(correct_tags) / 1000. / get_time_cost_in_seconds() );
     }
     Stat &operator+=(const Stat &other)
     {
@@ -61,6 +61,29 @@ struct Stat : public BasicStat
         return *this;
     }
     Stat operator+(const Stat &other) { Stat tmp = *this;  tmp += other;  return tmp; }
+};
+
+struct PostagStat : BasicStat // Just Copy from Stat , the Stat may be deleted future , here just for compatibility
+{
+    unsigned long correct_tags;
+    unsigned long total_tags;
+
+    PostagStat() : BasicStat(), correct_tags(0), total_tags(0) {};
+    float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.f; }
+    float get_E() { return total_tags != 0 ? loss / total_tags : 0.f; }
+    void  clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
+    float get_speed_as_kilo_tokens_per_sencond()
+    {
+        return static_cast<float>(static_cast<long double>(correct_tags) / 1000. / get_time_cost_in_seconds());
+    }
+    PostagStat &operator+=(const PostagStat &other)
+    {
+        correct_tags += other.correct_tags;
+        total_tags += other.total_tags;
+        loss += other.loss;
+        return *this;
+    }
+    PostagStat operator+(const PostagStat &other) { PostagStat tmp = *this;  tmp += other;  return tmp; }
 };
 
 struct NerStat : BasicStat
