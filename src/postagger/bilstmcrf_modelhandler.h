@@ -51,7 +51,9 @@ struct BILSTMCRFModelHandler
         unsigned max_epoch, 
         const std::vector<IndexSeq> *p_dev_dynamic_sents=nullptr, const std::vector<IndexSeq> *p_dev_fixed_sents=nullptr,
         const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr ,
-        const unsigned long do_devel_freq = 50000);
+        unsigned do_devel_freq=50000 ,
+        bool do_train_stat=false ,
+        unsigned verbose_train_report=50000);
     float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
         const std::vector<IndexSeq> *p_postag_seqs,
         std::ostream *p_error_output_os = nullptr);

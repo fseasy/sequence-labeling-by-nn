@@ -96,34 +96,30 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     // 2. Build bi-lstm
     bilstm_layer->build_graph(merge_dc_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
 
-    // viterbi
+    // viterbi data preparation
     vector<Expression> all_postag_exp_cont(postag_dict_size);
-    vector<vector<Expression>> lattice(sent_len, vector<Expression>(postag_dict_size));
     vector<Expression> init_score(postag_dict_size);
     vector<Expression> trans_score(postag_dict_size * postag_dict_size);
     vector<vector<Expression>> emit_score(sent_len, vector<Expression>(postag_dict_size));
-    vector<vector<size_t>> path_matrix(sent_len, vector<size_t>(postag_dict_size));
+    vector<Expression> cur_score_exp_cont(postag_dict_size)  ,
+                       pre_score_exp_cont(postag_dict_size) ;
+    vector<vector<size_t>> *p_path_matrix = nullptr ;
+        // allocate memory only when using p_stat
+    if(p_stat) p_path_matrix = new vector<vector<size_t>>(sent_len , vector<size_t>(postag_dict_size)) ;
     Expression gold_score_exp ;
-    // init all_postag_exp_cont , init_score , trans_score , emit_score
+    
+    // init all_postag_exp_cont , init_score together
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
     {
         all_postag_exp_cont[postag_idx] = lookup(cg, postags_lookup_param, postag_idx);
         init_score[postag_idx] = lookup(cg, init_score_lookup_param, postag_idx);
     }
-    /*
-    for (size_t from_postag_idx = 0; from_postag_idx < postag_dict_size; ++from_postag_idx)
-    {
-        for (size_t to_postag_idx = 0; to_postag_idx < postag_dict_size; ++to_postag_idx)
-        {
-            size_t flat_idx = from_postag_idx * postag_dict_size + to_postag_idx;
-            trans_score[flat_idx] = lookup(cg, trans_score_lookup_param, flat_idx);
-        }
-    }
-    */
+    // init translation score
     for (size_t flat_idx = 0; flat_idx < postag_dict_size * postag_dict_size; ++flat_idx)
     {
         trans_score[flat_idx] = lookup(cg, trans_score_lookup_param, flat_idx);
     }
+    // init emit score
     for (size_t time_step = 0; time_step < sent_len; ++time_step)
     {
         for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
@@ -133,51 +129,54 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
             emit_score[time_step][postag_idx] = emit_layer->build_graph( rectify(hidden_out_exp) );
         }
     }
+    // viterbi docoding
     // 1. the time 0
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
     {
         // init_score + emit_score
-        lattice[0][postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
+        cur_score_exp_cont[postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
     }
-    gold_score_exp = init_score[p_tag_seq->at(0)] + emit_score[0][p_tag_seq->at(0)];
+    gold_score_exp = cur_score_exp_cont[p_tag_seq->at(0)];
     // 2. the continues time
     for(size_t time_step = 1; time_step < sent_len; ++time_step)
     {
         // for every tag(to-tag)
-        for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
+        swap(cur_score_exp_cont , pre_score_exp_cont) ;
+        for (size_t cur_postag_idx = 0; cur_postag_idx < postag_dict_size; ++cur_postag_idx)
         {
             // for every possible trans
-            vector<Expression> trans_score_from_pre_tag_cont(postag_dict_size);
-            for (size_t from_postag_idx = 0; from_postag_idx < postag_dict_size; ++from_postag_idx)
+            vector<Expression> partial_score_exp_cont(postag_dict_size);
+            for (size_t pre_postag_idx = 0; pre_postag_idx < postag_dict_size; ++pre_postag_idx)
             {
-                size_t flat_idx = from_postag_idx * postag_dict_size + postag_idx ;
+                size_t flatten_idx = pre_postag_idx * postag_dict_size + cur_postag_idx ;
                 // from-tag score + trans_score
-                trans_score_from_pre_tag_cont[from_postag_idx] = lattice[time_step - 1][from_postag_idx] +
-                    trans_score[flat_idx];
+                partial_score_exp_cont[pre_postag_idx] = pre_score_exp_cont[pre_postag_idx] +
+                    trans_score[flatten_idx];
             }
+            cur_score_exp_cont[cur_postag_idx] = logsumexp(partial_score_exp_cont) + 
+                                                 emit_score[time_step][cur_postag_idx];
             if (p_stat)
             {
                 size_t pre_tag_value = 0;
-                cnn::real max_score_value = as_scalar(cg.get_value(trans_score_from_pre_tag_cont[pre_tag_value]));
+                cnn::real max_score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_value]));
                 for (size_t pre_tag_idx = 1; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
                 {
-                    cnn::real score_value = as_scalar(cg.get_value(trans_score_from_pre_tag_cont[pre_tag_idx]));
+                    cnn::real score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_idx]));
                     if (score_value > max_score_value)
                     {
                         max_score_value = score_value;
                         pre_tag_value = pre_tag_idx;
                     }
                 }
-                path_matrix[time_step][postag_idx] = pre_tag_value;
+                (*p_path_matrix)[time_step][cur_postag_idx] = pre_tag_value;
             }
-            lattice[time_step][postag_idx] = logsumexp(trans_score_from_pre_tag_cont) + emit_score[time_step][postag_idx];
         }
         // calc gold 
-        size_t gold_trans_flat_idx = p_tag_seq->at(time_step - 1) * postag_dict_size + p_tag_seq->at(time_step);
-        gold_score_exp = gold_score_exp + trans_score[gold_trans_flat_idx] + emit_score[time_step][p_tag_seq->at(time_step)];
+        size_t gold_trans_flatten_idx = p_tag_seq->at(time_step - 1) * postag_dict_size + p_tag_seq->at(time_step);
+        gold_score_exp = gold_score_exp + trans_score[gold_trans_flatten_idx] + 
+                                          emit_score[time_step][p_tag_seq->at(time_step)];
     }
-    Expression predict_score_exp = logsumexp(lattice[sent_len - 1]);
-
+    Expression predict_score_exp = logsumexp(cur_score_exp_cont);
 
     // predict is the max-score of lattice
     // if totally correct , loss = 0 (predict_score = gold_score , that is , predict sequence equal to gold sequence)
@@ -186,10 +185,10 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     if (p_stat)
     {
         Index end_predicted_idx = 0;
-        cnn::real max_score_value = as_scalar(cg.get_value(lattice[sent_len-1][end_predicted_idx]));
+        cnn::real max_score_value = as_scalar(cg.get_value(cur_score_exp_cont[end_predicted_idx]));
         for (size_t postag_idx = 1; postag_idx < postag_dict_size; ++postag_idx)
         {
-            cnn::real score_value = as_scalar(cg.get_value(lattice[sent_len - 1][postag_idx]));
+            cnn::real score_value = as_scalar(cg.get_value(cur_score_exp_cont[postag_idx]));
             if (score_value > max_score_value)
             {
                max_score_value = score_value;
@@ -201,10 +200,11 @@ Expression BILSTMCRFModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
         Index pre_predicted_tag = end_predicted_idx;
         for (unsigned backtrace_idx = sent_len - 1; backtrace_idx >= 1; --backtrace_idx)
         {
-            pre_predicted_tag = path_matrix[backtrace_idx][pre_predicted_tag];
+            pre_predicted_tag = (*p_path_matrix)[backtrace_idx][pre_predicted_tag];
             ++p_stat->total_tags;
             if (pre_predicted_tag == p_tag_seq->at(backtrace_idx - 1)) ++p_stat->correct_tags;
         }
+        if(p_path_matrix) delete p_path_matrix ;
     }
     return loss;
 }

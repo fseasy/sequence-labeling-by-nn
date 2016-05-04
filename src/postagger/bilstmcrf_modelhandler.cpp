@@ -220,7 +220,9 @@ void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const
     unsigned max_epoch,
     const vector<IndexSeq> *p_dev_dynamic_sents, const vector<IndexSeq> *p_dev_fixed_sents,
     const vector<IndexSeq> *p_dev_postag_seqs,
-    const unsigned long do_devel_freq)
+    unsigned do_devel_freq , 
+    bool do_train_stat ,
+    unsigned verbose_train_report )
 {
     unsigned nr_samples = p_dynamic_sents->size();
 
@@ -240,11 +242,12 @@ void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const
         shuffle(access_order.begin(), access_order.end(), *rndeng);
 
         // For loss , accuracy , time cost report
-        Stat training_stat_per_report, training_stat_per_epoch;
-        unsigned report_freq = 50000;
+        Stat training_stat_per_epoch ;
+        shared_ptr<Stat> p_training_stat_per_report(nullptr) ;
+        if( do_train_stat ) p_training_stat_per_report.reset(new Stat()) ;
 
         // training for an epoch
-        training_stat_per_report.start_time_stat();
+        if(p_training_stat_per_report) p_training_stat_per_report->start_time_stat();
         training_stat_per_epoch.start_time_stat();
         for (unsigned i = 0; i < nr_samples; ++i)
         {
@@ -262,23 +265,26 @@ void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const
             {
                 dynamic_sent_after_replace_unk[word_idx] = dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
             }
-            dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
-            training_stat_per_report.loss += as_scalar(cg->forward());
+            dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,
+                                p_training_stat_per_report.get());
+            cnn::real E = as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.0);
             delete cg;
-
-            if (0 == (i + 1) % report_freq) // Report 
+            
+            if(do_train_stat) p_training_stat_per_report->loss += E ;
+            else training_stat_per_epoch.loss += E ;
+            if (do_train_stat && 0 == (i + 1) % verbose_train_report) // Report 
             {
-                training_stat_per_report.end_time_stat();
+                p_training_stat_per_report->end_time_stat();
                 BOOST_LOG_TRIVIAL(trace) << i + 1 << " instances have been trained , with E = "
-                    << training_stat_per_report.get_E()
-                    << " , ACC = " << training_stat_per_report.get_acc() * 100
-                    << " % with time cost " << training_stat_per_report.get_time_cost_in_seconds()
+                    << p_training_stat_per_report->get_E()
+                    << " , ACC = " << p_training_stat_per_report->get_acc() * 100
+                    << " % with time cost " << p_training_stat_per_report->get_time_cost_in_seconds()
                     << " s .";
-                training_stat_per_epoch += training_stat_per_report;
-                training_stat_per_report.clear();
-                training_stat_per_report.start_time_stat();
+                training_stat_per_epoch += *p_training_stat_per_report;
+                p_training_stat_per_report->clear();
+                p_training_stat_per_report->start_time_stat();
             }
 
             // Devel
@@ -296,19 +302,27 @@ void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const
         sgd.update_epoch();
 
         training_stat_per_epoch.end_time_stat();
-        training_stat_per_epoch += training_stat_per_report;
+        if(do_train_stat) training_stat_per_epoch += *p_training_stat_per_report;
 
         // Output
         long long epoch_time_cost = training_stat_per_epoch.get_time_cost_in_seconds();
         BOOST_LOG_TRIVIAL(info) << "-------- epoch " << nr_epoch + 1 << "/" << max_epoch << " finished . ----------\n"
-            << nr_samples << " instances has been trained .\n"
-            << "For this epoch , E = " << training_stat_per_epoch.get_E() << "\n"
-            << "ACC = " << training_stat_per_epoch.get_acc() * 100 << "  % \n"
-            << "total time cost " << epoch_time_cost << " s ( speed "
-            << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens).\n"
-            << "total tags : " << training_stat_per_epoch.total_tags << " with correct tags : "
-            << training_stat_per_epoch.correct_tags << " \n";
-
+            << nr_samples << " instances has been trained ." ;
+        if(do_train_stat)
+        {
+            BOOST_LOG_TRIVIAL(info)   << "For this epoch , E = " << training_stat_per_epoch.get_E() << "\n"
+                                      << "ACC = " << training_stat_per_epoch.get_acc() * 100 << "  % \n"
+                                      << "total time cost " << epoch_time_cost << " s ( speed "
+                                      << training_stat_per_epoch.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens).\n"
+                                      << "total tags : " << training_stat_per_epoch.total_tags << " with correct tags : "
+                                        << training_stat_per_epoch.correct_tags << " \n";
+        }
+        else
+        {
+            BOOST_LOG_TRIVIAL(info) << "For this epoch , \n"
+                                    << "Total E = " << training_stat_per_epoch.get_sum_E() << "\n" 
+                                    << "Time cost : " << epoch_time_cost ;
+        }
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
 
         // do validation at every ends of epoch

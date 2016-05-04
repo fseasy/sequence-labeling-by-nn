@@ -40,7 +40,7 @@ struct DenseLayer
     DenseLayer(cnn::Model *m , unsigned input_dim , unsigned output_dim );
     ~DenseLayer();
     inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(cnn::expr::Expression &e);
+    inline Expression build_graph(const cnn::expr::Expression &e);
 };
 
 struct Merge2Layer
@@ -54,7 +54,7 @@ struct Merge2Layer
     Merge2Layer(cnn::Model *model , unsigned input1_dim, unsigned input2_dim, unsigned output_dim );
     ~Merge2Layer();
     inline void new_graph(cnn::ComputationGraph &cg);
-    inline cnn::expr::Expression build_graph(cnn::expr::Expression &e1, cnn::expr::Expression &e2);
+    inline cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2);
 };
 
 struct Merge3Layer
@@ -70,7 +70,7 @@ struct Merge3Layer
     Merge3Layer(cnn::Model *model ,unsigned input1_dim , unsigned input2_dim , unsigned input3_dim , unsigned output_dim);
     ~Merge3Layer();
     inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(cnn::expr::Expression &e1, cnn::expr::Expression &e2, cnn::expr::Expression &e3);
+    inline Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
 };
 
 
@@ -121,7 +121,7 @@ void DenseLayer::new_graph(cnn::ComputationGraph &cg)
     b_exp = parameter(cg, b);
 }
 inline
-Expression DenseLayer::build_graph(cnn::expr::Expression &e)
+Expression DenseLayer::build_graph(const cnn::expr::Expression &e)
 {
     return affine_transform({ 
        b_exp ,
@@ -138,7 +138,7 @@ void Merge2Layer::new_graph(cnn::ComputationGraph &cg)
     w2_exp = parameter(cg, w2);
 }
 inline
-cnn::expr::Expression Merge2Layer::build_graph(cnn::expr::Expression &e1, cnn::expr::Expression &e2)
+cnn::expr::Expression Merge2Layer::build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2)
 {
     return affine_transform({
         b_exp ,
@@ -158,7 +158,7 @@ void Merge3Layer::new_graph(cnn::ComputationGraph &cg)
 
 }
 inline
-cnn::expr::Expression Merge3Layer::build_graph(cnn::expr::Expression &e1, cnn::expr::Expression &e2, cnn::expr::Expression &e3)
+cnn::expr::Expression Merge3Layer::build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3)
 {
     return affine_transform({
         b_exp,

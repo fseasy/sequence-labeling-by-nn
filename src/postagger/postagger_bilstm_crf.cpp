@@ -19,7 +19,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("word2vec_embedding", po::value<string>(), "The path to word embedding . only support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("dynamic_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("postag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for postag embedding.")
@@ -35,6 +35,8 @@ int train_process(int argc, char *argv[], const string &program_name)
                 " be replace in this probability")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
                     "else value leads to output trace info.")
+        ("do_train_stat" , po::value<bool>()->default_value(false) , "Whether doing stat during traing ."
+                    "default false in bilstm crf for decreasing time cost ")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
@@ -72,7 +74,8 @@ int train_process(int argc, char *argv[], const string &program_name)
     }
     embedding_path = var_map["word2vec_embedding"].as<string>();
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
-    unsigned long devel_freq = var_map["devel_freq"].as<unsigned long>();
+    unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
+    bool do_train_stat = var_map["do_train_stat"].as<bool>() ;
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     // others will be processed flowing 
@@ -141,7 +144,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // Train 
     model_handler.train(&dynamic_sents , &fixed_sents , &postag_seqs , max_epoch, 
         p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs ,
-        devel_freq);
+        devel_freq , do_train_stat );
 
     // save model
     string model_path;
