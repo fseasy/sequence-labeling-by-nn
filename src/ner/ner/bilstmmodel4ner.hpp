@@ -1,3 +1,6 @@
+#ifndef BILSTMMODEL4NER_HPP_INCLUDED_
+#define BILSTMMODEL4NER_HPP_INCLUDED_
+
 #include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
@@ -34,11 +37,6 @@ using namespace cnn;
 namespace po = boost::program_options;
 
 
-/********************************
- *BILSTMModel4Tagging (for postagging currently)
- *tagging model based on CNN library , do as CNN examples `tag-bilstm.cc`
- *
- * ******************************/
 namespace slnn{
 struct BILSTMModel4NER
 {
@@ -526,9 +524,8 @@ struct BILSTMModel4NER
             }
             err_exp_cont[i] = pickneglogsoftmax(tag_output_layer_output_at_timestep_t, p_ner_seq->at(i));
         }
-
         // build the finally loss 
-        return sum(err_exp_cont); // in fact , no need to return . just to avoid a warning .
+        return sum(err_exp_cont); 
     }
 
     void do_predict(const IndexSeq *p_sent, const IndexSeq *p_postag_seq, IndexSeq *p_predict_tag_seq , ComputationGraph *p_cg )
@@ -795,3 +792,5 @@ const string BILSTMModel4NER::number_transform_str = "##";
 const size_t BILSTMModel4NER::length_transform_str = number_transform_str.length();
 
 } // End of namespace slnn 
+
+#endif

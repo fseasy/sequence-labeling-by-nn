@@ -1,17 +1,17 @@
-#ifndef BILSTMCRF_MODELHANDLER_H_INCLUDED_
-#define BILSTMCRF_MODELHANDLER_H_INCLUDED_
+#ifndef NER_DC_MODELHANDLER_H_INCLUDED_
+#define NER_DC_MODELHANDLER_H_INCLUDED_
 
 #include <boost/archive/text_oarchive.hpp>
 
-#include "bilstmcrf.h"
+#include "ner_dc_model.h"
 #include "utils/utf8processing.hpp"
 #include "utils/typedeclaration.h"
 
 namespace slnn
 {
-struct BILSTMCRFModelHandler
+struct NERDCModelHandler
 {
-    BILSTMCRFModel4POSTAG &dc_m;
+    NERDCModel dc_m;
     
     // Saving temporal model
     float best_acc;
@@ -21,38 +21,39 @@ struct BILSTMCRFModelHandler
     static const std::string number_transform_str;
     static const size_t length_transform_str;
     const size_t SentMaxLen = 256;
-    const size_t MaxSentNum = 0x8FFFF;
+    const size_t MaxSentNum = 0x8000; // 32k
 
-    BILSTMCRFModelHandler(BILSTMCRFModel4POSTAG &dc_m);
+    NERDCModelHandler();
 
     // Before read data
     void set_unk_replace_threshold(int freq_thres , float prob_thres);
+    void build_fixed_dict_from_word2vec_file(std::ifstream &is);
 
     // Reading data 
     inline std::string replace_number(const std::string &str);
-    void do_read_annotated_dataset(std::istream &is, std::vector<IndexSeq> &sents,
-        std::vector<IndexSeq> &postag_seqs);
-    void read_training_data_and_build_word_and_postag_dicts(std::istream &is, std::vector<IndexSeq> &sents,
-        std::vector<IndexSeq> &postag_seqs);
-    void read_devel_data(std::istream &is, std::vector<IndexSeq> &sents,
-        std::vector<IndexSeq> &postag_seqs);
-    void read_test_data(std::istream &is, std::vector<Seq> &raw_test_sents, std::vector<IndexSeq> &sents);
+    void do_read_annotated_dataset(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs , std::vector<IndexSeq> &ner_seqs);
+    void read_training_data_and_build_dicts(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs , std::vector<IndexSeq> &ner_seqs);
+    void read_devel_data(std::istream &is, std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
+        std::vector<IndexSeq> &postag_seqs , std::vector<IndexSeq> &ner_seqs);
+    void read_test_data(std::istream &is, std::vector<Seq> &raw_test_sents, std::vector<IndexSeq> &daynamic_sents ,
+        std::vector<IndexSeq> &fixed_sents , std::vector<IndexSeq> &postag_seqs);
     
     // After Reading Training data
     void finish_read_training_data(boost::program_options::variables_map &varmap);
     void build_model();
+    void load_fixed_embedding(std::istream &is);
 
     // Train & devel & predict
-    void train(const std::vector<IndexSeq> *p_sents,
-        const std::vector<IndexSeq> *p_postag_seqs , 
+    void train(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
+        const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs ,
         unsigned max_epoch, 
-        const std::vector<IndexSeq> *p_dev_sents=nullptr,
-        const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr ,
-        unsigned do_devel_freq=50000 ,
-        bool do_train_stat=false ,
-        unsigned verbose_train_report=50000);
-    float devel(const std::vector<IndexSeq> *p_sents,
-        const std::vector<IndexSeq> *p_postag_seqs,
+        const std::vector<IndexSeq> *p_dev_dynamic_sents=nullptr, const std::vector<IndexSeq> *p_dev_fixed_sents=nullptr,
+        const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr , const std::vector<IndexSeq> *p_dev_ner_seqs=nullptr ,
+        const unsigned long do_devel_freq = 50000);
+    float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
+        const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs,
         std::ostream *p_error_output_os = nullptr);
     void predict(std::istream &is, std::ostream &os);
 
@@ -66,7 +67,7 @@ private :
 
 
 inline
-std::string BILSTMCRFModelHandler::replace_number(const std::string &str)
+std::string NERDCModelHandler::replace_number(const std::string &str)
 {
     std::string tmp_str = str;
     size_t start_pos = 0;
@@ -94,7 +95,7 @@ std::string BILSTMCRFModelHandler::replace_number(const std::string &str)
 
 
 inline 
-void BILSTMCRFModelHandler::save_current_best_model(float acc)
+void NERDCModelHandler::save_current_best_model(float acc)
 {
     BOOST_LOG_TRIVIAL(info) << "better model has been found . stash it .";
     best_acc = acc;

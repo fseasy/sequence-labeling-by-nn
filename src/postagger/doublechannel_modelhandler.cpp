@@ -126,7 +126,7 @@ void DoubleChannelModelHandler::read_devel_data(istream &is, vector<IndexSeq> &d
 void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents, vector<IndexSeq> &dynamic_sents,
     vector<IndexSeq> &fixed_sents)
 {
-    assert(dc_m.dynamic_dict.is_frozen() && !dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
+    assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read test data .";
     vector<Seq> tmp_raw_sents;
     vector<IndexSeq> tmp_dynamic_sents,

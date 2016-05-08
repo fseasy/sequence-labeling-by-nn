@@ -1,3 +1,6 @@
+#ifndef BILSTMMODEL4TAGGING_INCLUDED_H
+#define BILSTMMODEL4TAGGING_INCLUDED_H
+
 #include "cnn/nodes.h"
 #include "cnn/cnn.h"
 #include "cnn/training.h"
@@ -181,7 +184,7 @@ struct BILSTMModel4Tagging
         // Read Test data , raw data is also been stored for outputing (because we may get an UNK word and can't can't convert it to origin text )
         // Test data format :
         // Each line is combined with words and delimeters , delimeters can be TAB or SPACE 
-        // - Attation : Empty line is also reserved .
+        // - Attention : Empty line is also reserved .
         if (!word_dict.is_frozen() && !tag_dict.is_frozen()) add_special_flag_and_freeze_dict();
         BOOST_LOG_TRIVIAL(info) << "reading test data .";
         vector<IndexSeq> tmp_sents;
@@ -682,3 +685,5 @@ const string BILSTMModel4Tagging::number_transform_str = "##";
 const size_t BILSTMModel4Tagging::length_transform_str = number_transform_str.length();
 
 } // End of namespace slnn 
+
+#endif
