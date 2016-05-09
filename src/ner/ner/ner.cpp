@@ -58,7 +58,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned long>()->default_value(10000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("devel_freq", po::value<unsigned long>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("conlleval_script_path" , po::value<string>() , "Use to specify the conll evaluation script path")
 

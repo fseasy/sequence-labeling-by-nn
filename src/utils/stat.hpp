@@ -3,6 +3,13 @@
 #include <string>
 #include <fstream>
 #include <stdlib.h>
+#include <chrono>
+
+#ifndef _WIN32
+#include <unistd.h>
+#else
+#include <process.h>
+#endif
 
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/log/trivial.hpp>
@@ -77,6 +84,10 @@ struct NerStat : BasicStat
         const std::vector<IndexSeq> predict_ner_seqs , const cnn::Dict &ner_dict) {
 #ifndef _MSC_VER
         // write `WORD GOLD_NER PREDICT_NER` to temporal output , where we using fake `WORD` , it is no use for evaluation result
+        // - set unique output path
+        unsigned timestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count() ;
+        unsigned pid = static_cast<unsigned>(::getpid()) ;
+        tmp_output_path = tmp_output_path + "_" + std::to_string(pid) + "_" + std::to_string(timestamp) ;
         std::ofstream tmp_of(tmp_output_path);
         if (!tmp_of)
         {
@@ -97,9 +108,8 @@ struct NerStat : BasicStat
             tmp_of << "\n"; // split of one sequence
         }
         tmp_of.close();
-
         std::string cmd = eval_script_path + " " + tmp_output_path;
-        BOOST_LOG_TRIVIAL(trace) << "Running: " << cmd << std::endl;
+        BOOST_LOG_TRIVIAL(info) << "Running: " << cmd << std::endl;
         FILE* pipe = popen(cmd.c_str(), "r");
         if (!pipe) {
             return 0.;
@@ -110,7 +120,16 @@ struct NerStat : BasicStat
             if (fgets(buffer, 128, pipe) != NULL) { result += buffer; }
         }
         pclose(pipe);
-
+        // rm tmp output file
+        pipe = popen( (std::string("rm -f ") + tmp_output_path).c_str() , "r") ;
+        if(!pipe)
+        {
+            std::cerr << "Error . failed to rm temp output file : `" << tmp_output_path << "`\n" ; 
+        }
+        else
+        {
+            pclose(pipe) ;
+        }
         std::stringstream S(result);
         std::string token;
         while (S >> token) {
