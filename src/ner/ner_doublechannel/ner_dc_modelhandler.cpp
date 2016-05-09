@@ -17,7 +17,7 @@ const std::string NERDCModelHandler::number_transform_str = "##";
 const size_t NERDCModelHandler::length_transform_str = number_transform_str.length();
 
 NERDCModelHandler::NERDCModelHandler() 
-    :dc_m(NERDCModel()) , best_acc(0.f) , best_model_tmp_ss()
+    :dc_m(NERDCModel()) , best_F1(0.f) , best_model_tmp_ss()
 {}
 
 void NERDCModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is)
@@ -133,7 +133,7 @@ void NERDCModelHandler::read_devel_data(istream &is, vector<IndexSeq> &dynamic_s
     vector<IndexSeq> &postag_seqs , vector<IndexSeq> &ner_seqs)
 {
     assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen()
-           && dc_m.ner_dict.is_frozon());
+           && dc_m.ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs , ner_seqs);
     BOOST_LOG_TRIVIAL(info) << "read developing data done .";
@@ -186,16 +186,20 @@ void NERDCModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents,
 
 void NERDCModelHandler::finish_read_training_data(boost::program_options::variables_map &varmap)
 {
+    assert(dc_m.dynamic_dict.is_frozen() && dc_m.fixed_dict.is_frozen() && dc_m.postag_dict.is_frozen()
+        && dc_m.ner_dict.is_frozen());
     // set param 
     dc_m.dynamic_embedding_dim = varmap["dynamic_embedding_dim"].as<unsigned>();
     dc_m.postag_embedding_dim = varmap["postag_embedding_dim"].as<unsigned>();
+    dc_m.ner_embedding_dim = varmap["ner_embedding_dim"].as<unsigned>();
     dc_m.nr_lstm_stacked_layer = varmap["nr_lstm_stacked_layer"].as<unsigned>();
     dc_m.lstm_x_dim = varmap["lstm_x_dim"].as<unsigned>();
     dc_m.lstm_h_dim = varmap["lstm_h_dim"].as<unsigned>();
     dc_m.tag_layer_hidden_dim = varmap["tag_layer_hidden_dim"].as<unsigned>();
 
     dc_m.dynamic_embedding_dict_size = dc_m.dynamic_dict.size();
-    dc_m.tag_layer_output_dim = dc_m.postag_dict.size();
+    dc_m.postag_embedding_dict_size = dc_m.postag_dict.size();
+    dc_m.ner_embedding_dict_size = dc_m.ner_dict.size();
     assert(dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size());
 }
 
@@ -244,11 +248,13 @@ void NERDCModelHandler::load_fixed_embedding(std::istream &is)
 }
 
 void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vector<IndexSeq> *p_fixed_sents,
-    const vector<IndexSeq> *p_postag_seqs,
+    const vector<IndexSeq> *p_postag_seqs, const vector<IndexSeq> *p_ner_seqs ,
     unsigned max_epoch,
     const vector<IndexSeq> *p_dev_dynamic_sents, const vector<IndexSeq> *p_dev_fixed_sents,
-    const vector<IndexSeq> *p_dev_postag_seqs,
-    const unsigned long do_devel_freq)
+    const vector<IndexSeq> *p_dev_postag_seqs, const vector<IndexSeq> *p_dev_ner_seqs ,
+    const string &conlleval_script_path , 
+    unsigned do_devel_freq ,
+    unsigned trivial_report_freq)
 {
     unsigned nr_samples = p_dynamic_sents->size();
 
@@ -269,7 +275,6 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
 
         // For loss , accuracy , time cost report
         Stat training_stat_per_report, training_stat_per_epoch;
-        unsigned report_freq = 50000;
 
         // training for an epoch
         training_stat_per_report.start_time_stat();
@@ -280,7 +285,8 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
             // using negative_loglikelihood loss to build model
             const IndexSeq *p_dynamic_sent = &p_dynamic_sents->at(access_idx),
                 *p_fixed_sent = &p_fixed_sents->at(access_idx) ,
-                *p_tag_seq = &p_postag_seqs->at(access_idx);
+                *p_postag_seq = &p_postag_seqs->at(access_idx) ,
+                *p_ner_seq = &p_ner_seqs->at(access_idx);
             ComputationGraph *cg = new ComputationGraph(); // because at one scope , only one ComputationGraph is permited .
                                                            // so we have to declaring it as pointer and destroy it handly 
                                                            // before develing.
@@ -290,13 +296,14 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
             {
                 dynamic_sent_after_replace_unk[word_idx] = dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
             }
-            dc_m.negative_loglikelihood(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
+            dc_m.negative_loglikelihood(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, 
+                                        p_postag_seq, p_ner_seq ,  &training_stat_per_report);
             training_stat_per_report.loss += as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.0);
             delete cg;
 
-            if (0 == (i + 1) % report_freq) // Report 
+            if (0 == (i + 1) % trivial_report_freq) // Report 
             {
                 training_stat_per_report.end_time_stat();
                 BOOST_LOG_TRIVIAL(trace) << i + 1 << " instances have been trained , with E = "
@@ -314,8 +321,9 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
             // If developing samples is available , do `devel` to get model training effect . 
             if (p_dev_dynamic_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq)
             {
-                float acc = devel(p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs);
-                if (acc > best_acc) save_current_best_model(acc);
+                float F1 = devel(p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs , 
+                    p_dev_ner_seqs , conlleval_script_path);
+                if (F1 > best_F1) save_current_best_model(F1);
                 line_cnt_for_devel = 0; // avoid overflow
             }
         }
@@ -343,8 +351,9 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
         if (p_dev_dynamic_sents != nullptr)
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
-            float acc = devel(p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs);
-            if (acc > best_acc) save_current_best_model(acc);
+            float F1 = devel(p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs , 
+                p_dev_ner_seqs , conlleval_script_path);
+            if (F1 > best_F1) save_current_best_model(F1);
         }
 
     }
@@ -352,43 +361,35 @@ void NERDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vec
 }
 
 float NERDCModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
-    const std::vector<IndexSeq> *p_postag_seqs,
-    std::ostream *p_error_output_os)
+    const std::vector<IndexSeq> *p_postag_seqs, const vector<IndexSeq> *p_ner_seqs , 
+    const string &conlleval_script_path)
 {
     unsigned nr_samples = p_dynamic_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .\n";
     unsigned long line_cnt4error_output = 0;
-    if (p_error_output_os) *p_error_output_os << "line_nr\tword_index\tword_at_dict\tpredict_tag\ttrue_tag\n";
-    Stat acc_stat;
-    acc_stat.start_time_stat();
+
+    NerStat stat(conlleval_script_path);
+    stat.start_time_stat();
+    vector<IndexSeq> predict_ner_seqs(p_ner_seqs->size());
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
         ++line_cnt4error_output;
         ComputationGraph cg;
-        IndexSeq predict_tag_seq;
+        IndexSeq predict_ner_seq;
         const IndexSeq *p_dynamic_sent = &p_dynamic_sents->at(access_idx),
             *p_fixed_sent = &p_fixed_sents->at(access_idx) ,
-            *p_tag_seq = &p_postag_seqs->at(access_idx);
-        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent, &predict_tag_seq);
-        assert(predict_tag_seq.size() == p_tag_seq->size());
-        for (unsigned i = 0; i < p_tag_seq->size(); ++i)
-        {
-            ++acc_stat.total_tags;
-            if (p_tag_seq->at(i) == predict_tag_seq[i]) ++acc_stat.correct_tags;
-            else if (p_error_output_os)
-            {
-                *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << dc_m.dynamic_dict.Convert(p_dynamic_sent->at(i))
-                    << "\t" << dc_m.postag_dict.Convert(predict_tag_seq[i]) << "\t" << dc_m.postag_dict.Convert(p_tag_seq->at(i)) << "\n";
-            }
-        }
+            *p_postag_seq = &p_postag_seqs->at(access_idx);
+        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent, p_postag_seq , &predict_ner_seq);
+        predict_ner_seqs[access_idx] = predict_ner_seq;
+        stat.total_tags += predict_ner_seq.size();
     }
-    acc_stat.end_time_stat();
-    BOOST_LOG_TRIVIAL(info) << "validation finished . ACC = "
-        << acc_stat.get_acc() * 100 << " % "
-        << ", with time cosing " << acc_stat.get_time_cost_in_seconds() << " s . "
-        << "(speed " << acc_stat.get_speed_as_kilo_tokens_per_sencond() << " k/s tokens) "
-        << "total tags : " << acc_stat.total_tags << " correct tags : " << acc_stat.correct_tags;
-    return acc_stat.get_acc();
+    stat.end_time_stat();
+    float F1 = stat.conlleval(*p_ner_seqs, predict_ner_seqs, dc_m.ner_dict);
+    BOOST_LOG_TRIVIAL(info) << "validation finished . F1 = "
+        << F1
+        << ", with time cosing " << stat.get_time_cost_in_seconds() << " s . \n"
+        << "speed " << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens / s";
+    return F1;
 }
 
 void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
@@ -396,8 +397,14 @@ void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
     const string SPLIT_DELIMITER = "\t";
     vector<Seq> raw_instances;
     vector<IndexSeq> dynamic_sents,
-        fixed_sents;
-    read_test_data(is,raw_instances,dynamic_sents ,fixed_sents);
+        fixed_sents , 
+        postag_seqs ;
+    read_test_data(is,raw_instances,dynamic_sents ,fixed_sents , postag_seqs);
+    
+    BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
+    BasicStat stat;
+    stat.start_time_stat();
+    
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
         vector<string> *p_raw_sent = &raw_instances.at(i);
@@ -407,16 +414,21 @@ void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
             continue;
         }
         IndexSeq *p_dynamic_sent = &dynamic_sents.at(i) ,
-            *p_fixed_sent = &fixed_sents.at(i);
+            *p_fixed_sent = &fixed_sents.at(i) ,
+            *p_postag_seq = &postag_seqs.at(i);
         IndexSeq predict_seq;
         ComputationGraph cg;
-        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent , &predict_seq);
+        dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent , p_postag_seq , &predict_seq);
         // output the result directly
-        os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.Convert(predict_seq.at(0));
+        os << p_raw_sent->at(0)
+            << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(0))
+            << "#" << dc_m.ner_dict.Convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
         {
             os << SPLIT_DELIMITER
-                << p_raw_sent->at(k) << "_" << dc_m.postag_dict.Convert(predict_seq.at(k));
+                << p_raw_sent->at(k)
+                << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(k))
+                << "#" << dc_m.ner_dict.Convert(predict_seq.at(k));
         }
         os << "\n";
     }
@@ -424,38 +436,40 @@ void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
 
 void NERDCModelHandler::save_model(std::ostream &os)
 {
+    BOOST_LOG_TRIVIAL(info) << "saving model ...";
     boost::archive::text_oarchive to(os);
-    to << dc_m.dynamic_embedding_dim << dc_m.postag_embedding_dim
+    to << dc_m.dynamic_embedding_dim << dc_m.fixed_embedding_dim
+        << dc_m.postag_embedding_dim << dc_m.ner_embedding_dim
         << dc_m.nr_lstm_stacked_layer << dc_m.lstm_x_dim << dc_m.lstm_h_dim
-        << dc_m.tag_layer_hidden_dim << dc_m.fixed_embedding_dim
-        << dc_m.fixed_embedding_dict_size << dc_m.dynamic_embedding_dict_size
-        << dc_m.tag_layer_output_dim;
+        << dc_m.tag_layer_hidden_dim 
+        << dc_m.dynamic_embedding_dict_size << dc_m.fixed_embedding_dict_size
+        << dc_m.postag_embedding_dict_size << dc_m.ner_embedding_dict_size ;
 
-    to << dc_m.dynamic_dict << dc_m.fixed_dict << dc_m.postag_dict;
+    to << dc_m.dynamic_dict << dc_m.fixed_dict << dc_m.postag_dict << dc_m.ner_dict ;
     if (best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail())
     {
         boost::archive::text_iarchive ti(best_model_tmp_ss);
         ti >> *dc_m.m;
-        ; // if best model is not save to the temporary stringstream , we should firstly save it !
     }
-
     to << *dc_m.m;
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
 void NERDCModelHandler::load_model(std::istream &is)
 {
+    BOOST_LOG_TRIVIAL(info) << "loading model ...";
     boost::archive::text_iarchive ti(is);
-    ti >> dc_m.dynamic_embedding_dim >> dc_m.postag_embedding_dim
+    ti >> dc_m.dynamic_embedding_dim >> dc_m.fixed_embedding_dim
+        >> dc_m.postag_embedding_dim >> dc_m.ner_embedding_dim 
         >> dc_m.nr_lstm_stacked_layer >> dc_m.lstm_x_dim >> dc_m.lstm_h_dim
-        >> dc_m.tag_layer_hidden_dim >> dc_m.fixed_embedding_dim
-        >> dc_m.fixed_embedding_dict_size >> dc_m.dynamic_embedding_dict_size
-        >> dc_m.tag_layer_output_dim;
+        >> dc_m.tag_layer_hidden_dim 
+        >> dc_m.dynamic_embedding_dict_size >> dc_m.fixed_embedding_dict_size
+        >> dc_m.postag_embedding_dict_size >> dc_m.ner_embedding_dict_size ;
 
-    ti >> dc_m.dynamic_dict >> dc_m.fixed_dict >> dc_m.postag_dict;
+    ti >> dc_m.dynamic_dict >> dc_m.fixed_dict >> dc_m.postag_dict >> dc_m.ner_dict ;
     assert(dc_m.dynamic_embedding_dict_size == dc_m.dynamic_dict.size() && dc_m.fixed_embedding_dict_size == dc_m.fixed_dict.size()
-        && dc_m.tag_layer_output_dim == dc_m.postag_dict.size());
-    dc_m.build_model_structure();
+        && dc_m.postag_embedding_dict_size == dc_m.postag_dict.size() && dc_m.ner_embedding_dict_size == dc_m.ner_dict.size());
+    build_model();
     ti >> *dc_m.m;
     BOOST_LOG_TRIVIAL(info) << "load model done .";
 }

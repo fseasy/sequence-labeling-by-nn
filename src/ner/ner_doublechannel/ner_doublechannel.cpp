@@ -4,7 +4,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Postagger-DoubleChannel based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Ner-DoubleChannel based on CNN Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -19,10 +19,12 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("word2vec_embedding", po::value<string>(), "The path to word embedding . only support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
-        ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
+        ("conlleval_script_path", po::value<string>(), "Use to specify the conll evaluation script path")
+        ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("dynamic_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("postag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for postag embedding.")
+        ("ner_embedding_dim" , po::value<unsigned>()->default_value(5) , "The dimension for ner embedding")
         ("nr_lstm_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-LSTM.")
         ("lstm_x_dim", po::value<unsigned>()->default_value(50) , "The dimension for LSTM X .")
         ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM H.")
@@ -33,6 +35,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
                 " if words frequency <= replace_freq_threshold , the word will"
                 " be replace in this probability")
+        ("trivial_report_freq" , po::value<unsigned>()->default_value(10000) , "Trace frequent during training process")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
                     "else value leads to output trace info.")
         ("help,h", "Show help information.");
@@ -45,14 +48,14 @@ int train_process(int argc, char *argv[], const string &program_name)
         return 0;
     }
     // trace switch
-    if (0 == var_map.count("logging_verbose") || 0 == var_map["logging_verbose"].as<int>())
+    if (0 == var_map["logging_verbose"].as<int>())
     {
         boost::log::core::get()->set_filter(
             boost::log::trivial::severity >= boost::log::trivial::debug
         );
     }
     // set params 
-    string training_data_path, devel_data_path , embedding_path ;
+    string training_data_path, devel_data_path , conlleval_script_path , embedding_path ;
     if (0 == var_map.count("training_data"))
     {
         BOOST_LOG_TRIVIAL(fatal) << "Error : Training data should be specified ! \n"
@@ -63,6 +66,27 @@ int train_process(int argc, char *argv[], const string &program_name)
     training_data_path = var_map["training_data"].as<string>();
     if (0 == var_map.count("devel_data")) devel_data_path = "";
     else devel_data_path = var_map["devel_data"].as<string>();
+    
+    if ("" != devel_data_path)
+    {
+        if (0 == var_map.count("conlleval_script_path"))
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Eval script path should be specified when doing validation ."
+                << "\nExit!";
+            return -1;
+        }
+        conlleval_script_path = var_map["conlleval_script_path"].as<string>();
+        // Check is evaluation scripts exists 
+        ifstream tmpis_for_check(conlleval_script_path);
+        if (!tmpis_for_check)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << conlleval_script_path << "`\n"
+                "Exit! ";
+            return -1;
+        }
+        tmpis_for_check.close();
+    }
+    
     if (0 == var_map.count("word2vec_embedding"))
     {
         BOOST_LOG_TRIVIAL(fatal) << "Error : word2vec embedding path should be specified ! \n"
@@ -71,16 +95,36 @@ int train_process(int argc, char *argv[], const string &program_name)
         return -1;
     }
     embedding_path = var_map["word2vec_embedding"].as<string>();
+    
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
-    unsigned long devel_freq = var_map["devel_freq"].as<unsigned long>();
+    unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
+    unsigned trivial_report_freq = var_map["trivial_report_freq"].as<unsigned>();
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     // others will be processed flowing 
 
     // Init 
     cnn::Initialize(argc, argv, 1234); // 
-    NERDCModel dc_model;
-    NERDCModelHandler model_handler(dc_model);
+    NERDCModelHandler model_handler;
+
+    // check model path
+    string model_path;
+    if (0 == var_map.count("model"))
+    {
+        cerr << "no model name specified . using default .\n";
+        ostringstream oss;
+        oss << "dc_" << model_handler.dc_m.dynamic_embedding_dim << "_" << model_handler.dc_m.lstm_h_dim
+            << "_" << model_handler.dc_m.tag_layer_hidden_dim << ".model";
+        model_path = oss.str();
+    }
+    else model_path = var_map["model"].as<string>();
+    ofstream model_os(model_path);
+    if (!model_os)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit !";
+        return -1;
+    }
+
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
     model_handler.set_unk_replace_threshold(replace_freq_threshold, replace_prob_threshold);
@@ -102,8 +146,10 @@ int train_process(int argc, char *argv[], const string &program_name)
     }
     vector<IndexSeq> dynamic_sents , 
         fixed_sents , 
-        postag_seqs ;
-    model_handler.read_training_data_and_build_dynamic_and_postag_dicts(train_is, dynamic_sents , fixed_sents , postag_seqs);
+        postag_seqs ,
+        ner_seqs ;
+    model_handler.read_training_data_and_build_dicts(train_is, dynamic_sents , fixed_sents , 
+        postag_seqs , ner_seqs);
     train_is.close();
     // set model structure param 
     model_handler.finish_read_training_data(var_map);
@@ -118,7 +164,8 @@ int train_process(int argc, char *argv[], const string &program_name)
     // reading developing data
     vector<IndexSeq> dev_dynamic_sents, *p_dev_dynamic_sents ,
         dev_fixed_sents, *p_dev_fixed_sents ,
-        dev_postag_seqs, *p_dev_postag_seqs;
+        dev_postag_seqs, *p_dev_postag_seqs ,
+        dev_ner_seqs , *p_dev_ner_seqs;
     if ("" != devel_data_path)
     {
         std::ifstream devel_is(devel_data_path);
@@ -127,41 +174,29 @@ int train_process(int argc, char *argv[], const string &program_name)
             // if set devel data , but open failed , we exit .
             return -1;
         }
-        model_handler.read_devel_data(devel_is, dev_dynamic_sents , dev_fixed_sents , dev_postag_seqs);
+        model_handler.read_devel_data(devel_is, dev_dynamic_sents , dev_fixed_sents , 
+            dev_postag_seqs , dev_ner_seqs);
         devel_is.close();
         p_dev_dynamic_sents = &dev_dynamic_sents;
         p_dev_fixed_sents = &dev_fixed_sents;
         p_dev_postag_seqs = &dev_postag_seqs;
+        p_dev_ner_seqs = &dev_ner_seqs;
     }
     else
     {
-        p_dev_dynamic_sents = p_dev_fixed_sents = p_dev_postag_seqs = nullptr;
+        p_dev_dynamic_sents = p_dev_fixed_sents = p_dev_postag_seqs = p_dev_ner_seqs =  nullptr;
     }
 
     // Train 
-    model_handler.train(&dynamic_sents , &fixed_sents , &postag_seqs , max_epoch, 
-        p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs ,
-        devel_freq);
+    model_handler.train(&dynamic_sents , &fixed_sents , &postag_seqs , &ner_seqs , 
+        max_epoch, 
+        p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs , p_dev_ner_seqs , 
+        conlleval_script_path , 
+        devel_freq , trivial_report_freq);
 
     // save model
-    string model_path;
-    if (0 == var_map.count("model"))
-    {
-        cerr << "no model name specified . using default .\n";
-        ostringstream oss;
-        oss << "dc_" << dc_model.dynamic_embedding_dim << "_" << dc_model.lstm_h_dim
-            << "_" << dc_model.tag_layer_hidden_dim << ".model";
-        model_path = oss.str();
-    }
-    else model_path = var_map["model"].as<string>();
-    ofstream os(model_path);
-    if (!os)
-    {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit !";
-        return -1;
-    }
-    model_handler.save_model(os);
-    os.close();
+    model_handler.save_model(model_os);
+    model_os.close();
     return 0;
 }
 
@@ -172,11 +207,12 @@ int devel_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     // set params to receive the arguments 
-    string devel_data_path, model_path, error_output_path;
+    string devel_data_path, model_path, eval_script_path;
     op_des.add_options()
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
-        ("error_output", po::value<string>(&error_output_path), "Specify the file path to storing the predict error infomation . Empty to discard.")
+        ("conlleval_script_path", po::value<string>(&eval_script_path)->default_value(string("./ner_eval.sh")),
+            "Use to specify the conll evaluation script path")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
@@ -200,10 +236,19 @@ int devel_process(int argc, char *argv[], const string &program_name)
         return -1;
     }
 
+    // Check is evaluation scripts exists 
+    ifstream tmpis_for_check(eval_script_path);
+    if (!tmpis_for_check)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "Eval script is not exists at `" << eval_script_path << "`\n"
+            "Exit! ";
+        return -1;
+    }
+    tmpis_for_check.close();
+
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    NERDCModel dc_model;
-    NERDCModelHandler model_handler(dc_model);
+    NERDCModelHandler model_handler;
     // Load model 
     ifstream is(model_path);
     if (!is)
@@ -214,7 +259,6 @@ int devel_process(int argc, char *argv[], const string &program_name)
     }
     model_handler.load_model(is);
     is.close();
-    dc_model.print_model_info();
 
     // read validation(develop) data
     std::ifstream devel_is(devel_data_path);
@@ -224,31 +268,17 @@ int devel_process(int argc, char *argv[], const string &program_name)
         return -1;
     }
 
-    // ready error output file
-    ofstream *p_error_output_os = nullptr;
-    if (0U != error_output_path.size())
-    {
-        p_error_output_os = new ofstream(error_output_path);
-        if (!p_error_output_os)
-        {
-            BOOST_LOG_TRIVIAL(fatal) << "Failed to open error output file : `" << error_output_path << "`\nExit!";
-            return -1;
-        }
-    }
     // read devel data
     vector<IndexSeq> dynamic_sents,
         fixed_sents,
-        postag_seqs;
-    model_handler.read_devel_data(devel_is, dynamic_sents , fixed_sents , postag_seqs);
+        postag_seqs ,
+        ner_seqs ;
+    model_handler.read_devel_data(devel_is, dynamic_sents , fixed_sents , postag_seqs , ner_seqs);
     devel_is.close();
 
     // devel
-    model_handler.devel(&dynamic_sents , &fixed_sents , &postag_seqs, p_error_output_os); // Get the same result , it is OK .
-    if (p_error_output_os)
-    {
-        p_error_output_os->close();
-        delete p_error_output_os;
-    }
+    model_handler.devel(&dynamic_sents , &fixed_sents , &postag_seqs, &ner_seqs , eval_script_path); // Get the same result , it is OK .
+    
     return 0;
 }
 
@@ -300,10 +330,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    NERDCModel dc_model;
-    NERDCModelHandler model_handler(dc_model);
-
-
+    NERDCModelHandler model_handler ;
 
     // load model 
     ifstream is(model_path);

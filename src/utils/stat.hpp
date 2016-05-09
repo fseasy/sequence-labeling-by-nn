@@ -21,16 +21,21 @@ namespace slnn{
 struct BasicStat
 {
     float loss;
+    unsigned long total_tags;
     std::chrono::high_resolution_clock::time_point time_start;
     std::chrono::high_resolution_clock::time_point time_end;
     std::chrono::high_resolution_clock::time_point start_time_stat() { return time_start = std::chrono::high_resolution_clock::now(); }
     std::chrono::high_resolution_clock::time_point end_time_stat() { return time_end = std::chrono::high_resolution_clock::now(); }
-    BasicStat() :loss(0.f) {};
+    BasicStat() :loss(0.f) , total_tags(0){};
     float get_sum_E(){ return loss ; }
     long long get_time_cost_in_seconds()
     {
         std::chrono::seconds du = std::chrono::duration_cast<std::chrono::seconds>(time_end - time_start);
         return du.count();
+    }
+    float get_speed_as_kilo_tokens_per_sencond()
+    {
+        return static_cast<float>(static_cast<long double>(total_tags) / 1000. / get_time_cost_in_seconds());
     }
     BasicStat &operator+=(const BasicStat &other)
     {
@@ -40,42 +45,14 @@ struct BasicStat
     BasicStat operator+(const BasicStat &other) { BasicStat tmp = *this;  tmp += other;  return tmp; }
 };
 
-struct Stat : public BasicStat
+struct PostagStat : public BasicStat
 {
-    unsigned long correct_tags;
-    unsigned long total_tags;
+    unsigned long correct_tags ;
     
-    Stat() : BasicStat() , correct_tags(0), total_tags(0) {};
+    PostagStat() : BasicStat() , correct_tags(0){};
     float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.f; }
     float get_E() { return total_tags != 0 ? loss / total_tags : 0.f; }
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
-    float get_speed_as_kilo_tokens_per_sencond()
-    {
-        return static_cast<float>( static_cast<long double>(correct_tags) / 1000. / get_time_cost_in_seconds() );
-    }
-    Stat &operator+=(const Stat &other)
-    {
-        correct_tags += other.correct_tags;
-        total_tags += other.total_tags;
-        loss += other.loss;
-        return *this;
-    }
-    Stat operator+(const Stat &other) { Stat tmp = *this;  tmp += other;  return tmp; }
-};
-
-struct PostagStat : BasicStat // Just Copy from Stat , the Stat may be deleted future , here just for compatibility
-{
-    unsigned long correct_tags;
-    unsigned long total_tags;
-
-    PostagStat() : BasicStat(), correct_tags(0), total_tags(0) {};
-    float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.f; }
-    float get_E() { return total_tags != 0 ? loss / total_tags : 0.f; }
-    void  clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
-    float get_speed_as_kilo_tokens_per_sencond()
-    {
-        return static_cast<float>(static_cast<long double>(correct_tags) / 1000. / get_time_cost_in_seconds());
-    }
     PostagStat &operator+=(const PostagStat &other)
     {
         correct_tags += other.correct_tags;
@@ -86,15 +63,15 @@ struct PostagStat : BasicStat // Just Copy from Stat , the Stat may be deleted f
     PostagStat operator+(const PostagStat &other) { PostagStat tmp = *this;  tmp += other;  return tmp; }
 };
 
+using Stat = PostagStat;
+
 struct NerStat : BasicStat
 {
     std::string eval_script_path;
     std::string tmp_output_path;
     NerStat(const std::string &eval_script_path , const std::string &tmp_output_path=std::string("eval_out.tmp")) :BasicStat(),
         eval_script_path(eval_script_path), tmp_output_path(tmp_output_path)
-    {
-
-    }
+    {}
 
     float conlleval(const std::vector<IndexSeq> gold_ner_seqs ,
         const std::vector<IndexSeq> predict_ner_seqs , const cnn::Dict &ner_dict) {

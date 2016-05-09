@@ -410,7 +410,6 @@ struct BILSTMModel4NER
         {
             boost::archive::text_iarchive ti(best_model_tmp_ss);
             ti >> *m;
-            ; // if best model is not save to the temporary stringstream , we should firstly save it !
         }
         
         to << *m; 
@@ -595,8 +594,8 @@ struct BILSTMModel4NER
     void train(const vector<IndexSeq> *p_sents, const vector<IndexSeq> *p_postag_seqs , const vector<IndexSeq> *p_ner_seqs ,
         unsigned max_epoch, const vector<IndexSeq> *p_dev_sents = nullptr, const vector<IndexSeq> *p_dev_postag_seqs = nullptr ,
         const vector<IndexSeq> *p_dev_ner_seqs = nullptr ,
-        const string conlleval_script_path="./ner_eval.sh" ,
-        const unsigned long do_devel_freq=10000)
+        const string &conlleval_script_path="./ner_eval.sh" ,
+        unsigned do_devel_freq=10000)
     {
         unsigned nr_samples = p_sents->size();
 

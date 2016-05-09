@@ -14,7 +14,7 @@ struct NERDCModelHandler
     NERDCModel dc_m;
     
     // Saving temporal model
-    float best_acc;
+    float best_F1;
     std::stringstream best_model_tmp_ss;
 
     // others 
@@ -51,17 +51,19 @@ struct NERDCModelHandler
         unsigned max_epoch, 
         const std::vector<IndexSeq> *p_dev_dynamic_sents=nullptr, const std::vector<IndexSeq> *p_dev_fixed_sents=nullptr,
         const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr , const std::vector<IndexSeq> *p_dev_ner_seqs=nullptr ,
-        const unsigned long do_devel_freq = 50000);
+        const std::string &conlleval_script_path = "./ner_eval.sh" , 
+        unsigned do_devel_freq = 10000 ,
+        unsigned trivial_report_freq=1000);
     float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
         const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs,
-        std::ostream *p_error_output_os = nullptr);
+        const std::string &conlleval_script_path = "./ner_eval.sh");
     void predict(std::istream &is, std::ostream &os);
 
     // Save & Load
     void save_model(std::ostream &os);
     void load_model(std::istream &is);
 private :
-    inline void save_current_best_model(float acc);
+    inline void save_current_best_model(float F1);
 
 };
 
@@ -95,10 +97,10 @@ std::string NERDCModelHandler::replace_number(const std::string &str)
 
 
 inline 
-void NERDCModelHandler::save_current_best_model(float acc)
+void NERDCModelHandler::save_current_best_model(float F1)
 {
     BOOST_LOG_TRIVIAL(info) << "better model has been found . stash it .";
-    best_acc = acc;
+    best_F1 = F1;
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
     to << *dc_m.m;
