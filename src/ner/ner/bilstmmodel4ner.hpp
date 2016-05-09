@@ -470,7 +470,7 @@ struct BILSTMModel4NER
 
         // Some container
         vector<Expression> err_exp_cont(sent_len); // for storing every error expression in each tag prediction
-        vector<Expression> input_affine_exp_cont(sent_len); // for storing input exp ( `input_word_w * word_embedding + input_postag_w * postag_embedding + input_b` at every pos )
+        vector<Expression> input_exp_cont(sent_len); // for storing input exp ( `input_word_w * word_embedding + input_postag_w * postag_embedding + input_b` at every pos )
         vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
         vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
         vector<Expression> pretag_lookup_exp_cont(sent_len); // ADD for PRE_TAG
@@ -482,12 +482,12 @@ struct BILSTMModel4NER
             Expression word_lookup_exp = lookup(cg, words_lookup_param, p_sent->at(i));
             Expression postag_lookup_exp = lookup(cg, postags_lookup_param, p_postag_seq->at(i));
             Expression input_affine_exp = input_merge_layer->build_graph(word_lookup_exp, postag_lookup_exp);
-            input_affine_exp_cont[i] = rectify(input_affine_exp);
+            input_exp_cont[i] = rectify(input_affine_exp);
         }
 
 
         // 2. calc Expression of every timestep of BI-LSTM
-        bilstm_layer->build_graph(input_affine_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
+        bilstm_layer->build_graph(input_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
         // 3. prepare for PRE_TAG embedding
         pretag_lookup_exp_cont[0] = pretag_SOS_exp ;
         for (unsigned i = 1; i < sent_len ; ++i)
@@ -545,7 +545,7 @@ struct BILSTMModel4NER
 
         // Some container
         vector<Expression> err_exp_cont(sent_len); // for storing every error expression in each tag prediction
-        vector<Expression> input_affine_exp_cont(sent_len); // for storing input exp ( `input_word_w * word_embedding + input_postag_w * postag_embedding + input_b` at every pos )
+        vector<Expression> input_exp_cont(sent_len); // for storing input exp ( `input_word_w * word_embedding + input_postag_w * postag_embedding + input_b` at every pos )
         vector<Expression> l2r_lstm_output_exp_cont(sent_len); // for storing left to right lstm output(deepest hidden layer) expression for every timestep
         vector<Expression> r2l_lstm_output_exp_cont(sent_len); // right to left 
         vector<Expression> pretag_lookup_exp_cont(sent_len); // ADD for PRE_TAG
@@ -556,13 +556,14 @@ struct BILSTMModel4NER
         {
             Expression word_lookup_exp = lookup(cg, words_lookup_param, p_sent->at(i));
             Expression postag_lookup_exp = lookup(cg, postags_lookup_param, p_postag_seq->at(i));
-            input_affine_exp_cont[i] = input_merge_layer->build_graph(word_lookup_exp , postag_lookup_exp);
+            Expression affine_exp = input_merge_layer->build_graph(word_lookup_exp , postag_lookup_exp);
+            input_exp_cont[i] = rectify(affine_exp) ;
         }
 
 
         // 2 calc Expression of every timestep of BI-LSTM
 
-        bilstm_layer->build_graph(input_affine_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
+        bilstm_layer->build_graph(input_exp_cont , l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
         // 3. set previous tag lookup expression
 
         Expression pretag_lookup_exp = pretag_SOS_exp ;

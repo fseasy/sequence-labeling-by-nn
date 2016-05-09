@@ -42,7 +42,7 @@ void NERDCModel::build_model_structure()
     m = new Model();
     merge_doublechannel_layer = new Merge3Layer(m, dynamic_embedding_dim, fixed_embedding_dim, postag_embedding_dim , lstm_x_dim);
     bilstm_layer = new BILSTMLayer(m, nr_lstm_stacked_layer, lstm_x_dim, lstm_h_dim);
-    merge_bilstm_and_pretag_layer = new Merge3Layer(m, lstm_h_dim, lstm_h_dim, postag_embedding_dim, tag_layer_hidden_dim);
+    merge_bilstm_and_pretag_layer = new Merge3Layer(m, lstm_h_dim, lstm_h_dim, ner_embedding_dim, tag_layer_hidden_dim);
     tag_output_linear_layer = new DenseLayer(m, tag_layer_hidden_dim, ner_embedding_dict_size);
 
     dynamic_words_lookup_param = m->add_lookup_parameters(dynamic_embedding_dict_size, { dynamic_embedding_dim });
