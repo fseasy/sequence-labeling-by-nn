@@ -735,13 +735,19 @@ struct BILSTMModel4NER
                 &ner_seq = p_dev_ner_seqs->at(idx);
             do_predict(&sent, &postag_seq, &predict_ner_seq, &cg);
             assert(predict_ner_seq.size() == ner_seq.size());
+            stat.total_tags += predict_ner_seq.size() ;
             predict_ner_seqs[idx] = predict_ner_seq;
         }
         stat.end_time_stat();
-        float F1 = stat.conlleval(*p_dev_ner_seqs , predict_ner_seqs , ner_dict);
-        BOOST_LOG_TRIVIAL(info) << "validation finished . F1 = "
-            << F1
-            << ", with time cosing " << stat.get_time_cost_in_seconds() << " s . ";
+        array<float , 4> eval_scores = stat.conlleval(*p_dev_ner_seqs , predict_ner_seqs , ner_dict);
+        float Acc = eval_scores[0] ,
+            P = eval_scores[1] ,
+            R = eval_scores[2] ,
+            F1 = eval_scores[3] ; 
+        BOOST_LOG_TRIVIAL(info) << "validation finished . \n"
+            << "Acc = " << Acc << "% , P = " << P << "% , R = " << R << "%  , F1 = " << F1 << "%\n"
+            << "with time cosing " << stat.get_time_cost_in_seconds() << " s  , speed  " 
+            << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens/s" ;
         return F1 ;
     }
 
@@ -781,9 +787,11 @@ struct BILSTMModel4NER
                     << "#" << ner_dict.Convert(predict_ner_seq.at(k));
             }
             os << "\n";
+            stat.total_tags += predict_ner_seq.size() ;
         }
         stat.end_time_stat();
-        BOOST_LOG_TRIVIAL(info) << "predict finished , costing " << stat.get_time_cost_in_seconds() << " s.";
+        BOOST_LOG_TRIVIAL(info) << "predict finished , costing " << stat.get_time_cost_in_seconds() << " s , speed " 
+            << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
     }
 };
 

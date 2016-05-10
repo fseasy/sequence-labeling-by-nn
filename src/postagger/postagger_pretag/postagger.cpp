@@ -1,13 +1,53 @@
-#include "bilstmmodel4tagging_doublechannel.h"
-#include "doublechannel_modelhandler.h"
+#include <iostream>
+#include <fstream>
+#include <sstream>
+#include <vector>
+#include <string>
+
+#include <boost/log/trivial.hpp>
+#include <boost/log/expressions.hpp>
+#include <boost/program_options.hpp>
+
+#include "bilstmmodel4tagging.hpp"
 
 using namespace std;
+using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Postagger-DoubleChannel based on CNN Library";
 
 
-int train_process(int argc, char *argv[], const string &program_name)
+
+const string PROGRAM_DESCRIPTION = "Postagger based on CNN Library";
+
+/********************************DEBUG OUPTUT FUNCTION***********************************/
+
+template<typename Iterator>
+void print(Iterator begin, Iterator end)
+{
+    for (Iterator i = begin; i != end; ++i)
+    {
+        cout << *i << "\t";
+    }
+    cout << endl;
+}
+
+void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word_dict, const cnn::Dict &tag_dict)
+{
+    for (const InstancePair & instance_pair : cont)
+    {
+        const IndexSeq &sent_indices = instance_pair.first,
+            &tag_indices = instance_pair.second;
+        for (auto sent_id : sent_indices) cout << word_dict.Convert(sent_id) << " ";
+        cout << "\n";
+        for (auto tag_id : tag_indices) cout << tag_dict.Convert(tag_id) << " ";
+        cout << "\n" << endl;
+    }
+}
+
+
+/********************************Action****************************************/
+
+int train_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
         "Training process .\n"
@@ -16,28 +56,27 @@ int train_process(int argc, char *argv[], const string &program_name)
     op_des.add_options()
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
-        ("word2vec_embedding", po::value<string>(), "The path to word embedding . only support word2vec txt-mode output result . "
+        ("word_embedding", po::value<string>(), "The path to word embedding . support word2vec txt-mode output result . "
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>()->default_value(4), "The epoch to iterate for training")
         ("devel_freq", po::value<unsigned long>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("model", po::value<string>(), "Use to specify the model name(path)")
-        ("dynamic_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
-        ("postag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for postag embedding.")
-        ("nr_lstm_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-LSTM.")
-        ("lstm_x_dim", po::value<unsigned>()->default_value(50) , "The dimension for LSTM X .")
-        ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM H.")
-        ("tag_layer_hidden_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
-        ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
-            "(eg , if set 1, the words of training data which frequency <= 1 may be "
-            " replaced in probability)")
-        ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
-                " if words frequency <= replace_freq_threshold , the word will"
-                " be replace in this probability")
+        ("input_dim", po::value<unsigned>()->default_value(50), "The dimension for input word embedding.")
+        ("tag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for tag embedding.")
+        ("lstm_layers", po::value<unsigned>()->default_value(1), "The number of layers in bi-LSTM.")
+        ("lstm_hidden_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM output.")
+        ("tag_dim", po::value<unsigned>()->default_value(32), "The dimension for tag.")
+        ("replace_freq_threshold" , po::value<unsigned>()->default_value(1) , "The frequency threshold to replace the word to UNK in probability"
+                                                                               "(eg , if set 1, the words of training data which frequency <= 1 may be "
+                                                                               " replaced in probability)")
+        ("replace_prob_threshold" , po::value<float>()->default_value(0.2f) , "The probability threshold to replace the word to UNK ."
+                                                                             " if words frequency <= replace_freq_threshold , the word will "
+                                                                             "be replace in this probability")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
-                    "else value leads to output trace info.")
+                                                                "else value leads to output trace info.")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc,argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -49,76 +88,83 @@ int train_process(int argc, char *argv[], const string &program_name)
     {
         boost::log::core::get()->set_filter(
             boost::log::trivial::severity >= boost::log::trivial::debug
-        );
+            );
     }
     // set params 
-    string training_data_path, devel_data_path , embedding_path ;
+    string training_data_path, devel_data_path;
     if (0 == var_map.count("training_data"))
     {
         BOOST_LOG_TRIVIAL(fatal) << "Error : Training data should be specified ! \n"
-            "using `" + program_name + " train -h ` to see detail parameters .\n"
+            "using `-h` to see detail parameters .\n"
             "Exit .";
         return -1;
     }
     training_data_path = var_map["training_data"].as<string>();
     if (0 == var_map.count("devel_data")) devel_data_path = "";
     else devel_data_path = var_map["devel_data"].as<string>();
-    if (0 == var_map.count("word2vec_embedding"))
-    {
-        BOOST_LOG_TRIVIAL(fatal) << "Error : word2vec embedding path should be specified ! \n"
-            "using `" + program_name + " train -h ` to see detail parameters .\n"
-            "Exit .";
-        return -1;
-    }
-    embedding_path = var_map["word2vec_embedding"].as<string>();
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
     unsigned long devel_freq = var_map["devel_freq"].as<unsigned long>();
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
-    // others will be processed flowing 
-
-    // Init 
-    cnn::Initialize(argc, argv, 1234); // 
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
-    // reading traing data , get word dict size and output tag number
-    // -> set replace frequency for word_dict_wrapper
-    model_handler.set_unk_replace_threshold(replace_freq_threshold, replace_prob_threshold);
-    // build fixed dict 
-    ifstream embedding_is(embedding_path);
-    if (!embedding_is)
+    
+    string model_path;
+    if (0 == var_map.count("model"))
     {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open word2vec embedding : `" << training_data_path << "` .\n Exit! \n";
+        BOOST_LOG_TRIVIAL(fatal) << "model path must be specified ! \n Exit !";
         return -1;
     }
-    model_handler.build_fixed_dict_from_word2vec_file(embedding_is);
-    embedding_is.clear() ; // !! MUST calling before `seekg` ! even thouth using  c++ 11 .
-    embedding_is.seekg(0 , embedding_is.beg); // will use in the following 
+    else model_path = var_map["model"].as<string>();
+    ofstream model_os(model_path); // check whether model path is ok 
+    if (!model_os)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit !";
+        return -1;
+    }
+    
+    // others will be processed flowing 
+    
+    // Init 
+    cnn::Initialize(argc , argv , 1234); // 
+    BILSTMModel4Tagging tagging_model;
 
+    // reading traing data , get word dict size and output tag number
+    // -> set replace frequency for word_dict_wrapper
+    tagging_model.word_dict_wrapper.set_threshold(replace_freq_threshold, replace_prob_threshold);
     ifstream train_is(training_data_path);
     if (!train_is) {
         BOOST_LOG_TRIVIAL(fatal) << "failed to open training: `" << training_data_path << "` .\n Exit! \n";
         return -1;
     }
-    vector<IndexSeq> dynamic_sents , 
-        fixed_sents , 
-        postag_seqs ;
-    model_handler.read_training_data_and_build_dynamic_and_postag_dicts(train_is, dynamic_sents , fixed_sents , postag_seqs);
+    vector<InstancePair> training_samples;
+    tagging_model.read_training_data_and_build_dicts(train_is, &training_samples);
+    tagging_model.finish_read_training_data();
     train_is.close();
-    // set model structure param 
-    model_handler.finish_read_training_data(var_map);
-    
-    // build model structure
-    model_handler.build_model(); // passing the var_map to specify the model structure
 
-    // load fixed embedding 
-    model_handler.load_fixed_embedding(embedding_is);
-    embedding_is.close();
-    
+    // build model structure
+    tagging_model.build_model_structure(var_map); // passing the var_map to specify the model structure
+
+    // reading word embedding
+    if (0 != var_map.count("word_embedding"))
+    {
+        string word_embedding_path = var_map["word_embedding"].as<string>();
+        ifstream word_embedding_is(word_embedding_path);
+        if (!word_embedding_is)
+        {
+            BOOST_LOG_TRIVIAL(fatal) << "Failed to open wordEmbedding at : `" << word_embedding_path << "` .\n Exit! \n";
+            return -1;
+        }
+        BOOST_LOG_TRIVIAL(info) << "load word embedding from file `" << word_embedding_path << "`";
+        tagging_model.load_wordembedding_from_word2vec_txt_format(word_embedding_is);
+        word_embedding_is.close();
+    }
+    else
+    {
+        BOOST_LOG_TRIVIAL(info) << "No word embedding is specified . Using randomized initialization .";
+    }
+
+
     // reading developing data
-    vector<IndexSeq> dev_dynamic_sents, *p_dev_dynamic_sents ,
-        dev_fixed_sents, *p_dev_fixed_sents ,
-        dev_postag_seqs, *p_dev_postag_seqs;
+    std::vector<InstancePair> devel_samples, *p_devel_samples;
     if ("" != devel_data_path)
     {
         std::ifstream devel_is(devel_data_path);
@@ -127,59 +173,35 @@ int train_process(int argc, char *argv[], const string &program_name)
             // if set devel data , but open failed , we exit .
             return -1;
         }
-        model_handler.read_devel_data(devel_is, dev_dynamic_sents , dev_fixed_sents , dev_postag_seqs);
+        tagging_model.read_devel_data(devel_is, &devel_samples);
         devel_is.close();
-        p_dev_dynamic_sents = &dev_dynamic_sents;
-        p_dev_fixed_sents = &dev_fixed_sents;
-        p_dev_postag_seqs = &dev_postag_seqs;
+        p_devel_samples = &devel_samples;
     }
-    else
-    {
-        p_dev_dynamic_sents = p_dev_fixed_sents = p_dev_postag_seqs = nullptr;
-    }
+    else p_devel_samples = nullptr;
 
     // Train 
-    model_handler.train(&dynamic_sents , &fixed_sents , &postag_seqs , max_epoch, 
-        p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs ,
-        devel_freq);
+    tagging_model.train(&training_samples, max_epoch, p_devel_samples, devel_freq);
 
     // save model
-    string model_path;
-    if (0 == var_map.count("model"))
-    {
-        cerr << "no model name specified . using default .\n";
-        ostringstream oss;
-        oss << "dc_" << dc_model.dynamic_embedding_dim << "_" << dc_model.lstm_h_dim
-            << "_" << dc_model.tag_layer_hidden_dim << ".model";
-        model_path = oss.str();
-    }
-    else model_path = var_map["model"].as<string>();
-    ofstream os(model_path);
-    if (!os)
-    {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open model path at '" << model_path << "'. \n Exit !";
-        return -1;
-    }
-    model_handler.save_model(os);
-    os.close();
+    tagging_model.save_model(model_os);
+    model_os.close();
     return 0;
 }
-
-int devel_process(int argc, char *argv[], const string &program_name)
+int devel_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
         "Validation(develop) process "
         "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     // set params to receive the arguments 
-    string devel_data_path, model_path, error_output_path;
+    string devel_data_path , model_path, error_output_path;
     op_des.add_options()
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("error_output", po::value<string>(&error_output_path), "Specify the file path to storing the predict error infomation . Empty to discard.")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -199,11 +221,11 @@ int devel_process(int argc, char *argv[], const string &program_name)
             "Exit! ";
         return -1;
     }
-
+  
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
+    BILSTMModel4Tagging tagging_model;
+
     // Load model 
     ifstream is(model_path);
     if (!is)
@@ -212,9 +234,8 @@ int devel_process(int argc, char *argv[], const string &program_name)
             "Exit !";
         return -1;
     }
-    model_handler.load_model(is);
+    tagging_model.load_model(is);
     is.close();
-    dc_model.print_model_info();
 
     // read validation(develop) data
     std::ifstream devel_is(devel_data_path);
@@ -235,15 +256,13 @@ int devel_process(int argc, char *argv[], const string &program_name)
             return -1;
         }
     }
-    // read devel data
-    vector<IndexSeq> dynamic_sents,
-        fixed_sents,
-        postag_seqs;
-    model_handler.read_devel_data(devel_is, dynamic_sents , fixed_sents , postag_seqs);
+
+    vector<InstancePair> devel_samples;
+    tagging_model.read_devel_data(devel_is , &devel_samples);
     devel_is.close();
 
     // devel
-    model_handler.devel(&dynamic_sents , &fixed_sents , &postag_seqs, p_error_output_os); // Get the same result , it is OK .
+    tagging_model.devel(&devel_samples , p_error_output_os); // Get the same result , it is OK .
     if (p_error_output_os)
     {
         p_error_output_os->close();
@@ -252,8 +271,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     return 0;
 }
 
-
-int predict_process(int argc, char *argv[], const string &program_name)
+int predict_process(int argc, char *argv[] , const string &program_name) 
 {
     string description = PROGRAM_DESCRIPTION + "\n"
         "Predict process ."
@@ -261,11 +279,11 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
         ("raw_data", po::value<string>(), "The path to raw data(It should be segmented) .")
-        ("output", po::value<string>(), "The path to storing result . using `stdout` if not specified .")
+        ("output" , po::value<string>() , "The path to storing result . using `stdout` if not specified ." )
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc , argv).options(op_des).allow_unregistered().run(), var_map);
     po::notify(var_map);
     if (var_map.count("help"))
     {
@@ -300,10 +318,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    DoubleChannelModel4POSTAG dc_model;
-    DoubleChannelModelHandler model_handler(dc_model);
-
-
+    BILSTMModel4Tagging tagging_model;
 
     // load model 
     ifstream is(model_path);
@@ -313,7 +328,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
             "Exit .";
         return -1;
     }
-    model_handler.load_model(is);
+    tagging_model.load_model(is);
     is.close();
 
     // open raw_data
@@ -327,7 +342,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     // open output 
     if ("" == output_path)
     {
-        model_handler.predict(raw_is, cout); // using `cout` as output stream 
+        tagging_model.predict(raw_is, cout); // using `cout` as output stream 
         raw_is.close();
     }
     else
@@ -339,27 +354,26 @@ int predict_process(int argc, char *argv[], const string &program_name)
             raw_is.close();
             return -1;
         }
-        model_handler.predict(raw_is, os);
+        tagging_model.predict(raw_is, os);
         os.close();
         is.close();
     }
     return 0;
 }
 
-
 int main(int argc, char *argv[])
 {
     string usage = PROGRAM_DESCRIPTION + "\n"
-        "usage : " + string(argv[0]) + " [ train | devel | predict ] <options> \n"
-        "using  `" + string(argv[0]) + " [ train | devel | predict ] -h` to see details for specify task\n";
+                   "usage : " + string(argv[0]) + " [ train | devel | predict ] <options> \n"
+                   "using  `" + string(argv[0]) + " [ train | devel | predict ] -h` to see details for specify task\n";
     if (argc <= 1)
     {
         cerr << usage;
         return -1;
     }
-    else if (string(argv[1]) == "train") return train_process(argc - 1, argv + 1, argv[0]);
-    else if (string(argv[1]) == "devel") return devel_process(argc - 1, argv + 1, argv[0]);
-    else if (string(argv[1]) == "predict") return predict_process(argc - 1, argv + 1, argv[0]);
+    else if (string(argv[1]) == "train") return train_process(argc-1, argv+1 , argv[0]);
+    else if (string(argv[1]) == "devel") return devel_process(argc-1, argv+1 , argv[0]);
+    else if (string(argv[1]) == "predict") return predict_process(argc-1, argv+1 , argv[0]);
     else
     {
         cerr << "unknown mode : " << argv[1] << "\n"

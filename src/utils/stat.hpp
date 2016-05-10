@@ -2,6 +2,8 @@
 #include <vector>
 #include <string>
 #include <fstream>
+#include <sstream>
+#include <array>
 #include <stdlib.h>
 #include <chrono>
 
@@ -80,8 +82,13 @@ struct NerStat : BasicStat
         eval_script_path(eval_script_path), tmp_output_path(tmp_output_path)
     {}
 
-    float conlleval(const std::vector<IndexSeq> gold_ner_seqs ,
-        const std::vector<IndexSeq> predict_ner_seqs , const cnn::Dict &ner_dict) {
+    std::array<float , 4>
+    conlleval(const std::vector<IndexSeq> &gold_ner_seqs ,
+        const std::vector<IndexSeq> &predict_ner_seqs , 
+        const cnn::Dict &ner_dict) 
+    {
+        std::array<float , 4> fake_ret = {100.f , 100.f , 100.f , 100.f } ;
+        std::array<float , 4> ret ; 
 #ifndef _MSC_VER
         // write `WORD GOLD_NER PREDICT_NER` to temporal output , where we using fake `WORD` , it is no use for evaluation result
         // - set unique output path
@@ -90,7 +97,7 @@ struct NerStat : BasicStat
         tmp_output_path = tmp_output_path + "_" + std::to_string(pid) + "_" + std::to_string(timestamp) ;
         std::ofstream tmp_of(tmp_output_path);
         if (!tmp_of)
-        {
+        { 
             BOOST_LOG_TRIVIAL(fatal) << "Failed to create temporial output file for evaltion `" << tmp_output_path
                 << "`";
             abort();
@@ -112,7 +119,7 @@ struct NerStat : BasicStat
         BOOST_LOG_TRIVIAL(info) << "Running: " << cmd << std::endl;
         FILE* pipe = popen(cmd.c_str(), "r");
         if (!pipe) {
-            return 0.;
+            return fake_ret ;
         }
         char buffer[128];
         std::string result = "";
@@ -132,14 +139,16 @@ struct NerStat : BasicStat
         }
         std::stringstream S(result);
         std::string token;
+        unsigned idx = 0 ;
         while (S >> token) {
             boost::algorithm::trim(token);
-            return boost::lexical_cast<float>(token);
+            ret[idx++] = stof(token);
         }
+        return ret ;
 #else
-        return 1.f ;
+        return fake_ret ;
 #endif
-        return 0.f ;
+        return fake_ret ;
     }
 
 };

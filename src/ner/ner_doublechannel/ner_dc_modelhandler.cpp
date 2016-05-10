@@ -384,11 +384,15 @@ float NERDCModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, con
         stat.total_tags += predict_ner_seq.size();
     }
     stat.end_time_stat();
-    float F1 = stat.conlleval(*p_ner_seqs, predict_ner_seqs, dc_m.ner_dict);
-    BOOST_LOG_TRIVIAL(info) << "validation finished . F1 = "
-        << F1
-        << ", with time cosing " << stat.get_time_cost_in_seconds() << " s . \n"
-        << "speed " << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens / s";
+    array<float , 4> eval_scores = stat.conlleval(*p_ner_seqs, predict_ner_seqs, dc_m.ner_dict);
+    float Acc = eval_scores[0] , 
+          P = eval_scores[1] ,
+          R = eval_scores[2] ,
+          F1 = eval_scores[3] ;
+    BOOST_LOG_TRIVIAL(info) << "validation finished .\n"
+        << "Acc = " << Acc << "% , P = " << P << "% , R = " << R << "% , F1 = "<< F1 << "%\n"
+        << "Time cosing " << stat.get_time_cost_in_seconds() << " s . \n"
+        << "Speed " << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens / s";
     return F1;
 }
 
@@ -404,7 +408,6 @@ void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     BasicStat stat;
     stat.start_time_stat();
-    
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
         vector<string> *p_raw_sent = &raw_instances.at(i);
@@ -431,7 +434,11 @@ void NERDCModelHandler::predict(std::istream &is, std::ostream &os)
                 << "#" << dc_m.ner_dict.Convert(predict_seq.at(k));
         }
         os << "\n";
+        stat.total_tags += predict_seq.size() ;
     }
+    stat.end_time_stat() ;
+    BOOST_LOG_TRIVIAL(info) << "predict done . time cosing " << stat.get_time_cost_in_seconds() << " s , speed "
+        << stat.get_speed_as_kilo_tokens_per_sencond() << " K tokens/s"  ;
 }
 
 void NERDCModelHandler::save_model(std::ostream &os)
