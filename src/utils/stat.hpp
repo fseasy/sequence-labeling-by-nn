@@ -52,6 +52,17 @@ struct BasicStat
         return *this;
     }
     BasicStat operator+(const BasicStat &other) { BasicStat tmp = *this;  tmp += other;  return tmp; }
+    std::string get_stat_str(const std::string &info_header)
+    {
+        std::ostringstream str_os;
+        str_os << info_header << "\n"
+            << "Total E = " << get_sum_E() << "\n"
+            << "Time cost : " << get_time_cost_in_seconds() << "\n"
+            << "Speed " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
+        return str_os.str();
+    }
+    
+
 };
 
 struct PostagStat : public BasicStat
@@ -70,6 +81,21 @@ struct PostagStat : public BasicStat
         return *this;
     }
     PostagStat operator+(const PostagStat &other) { PostagStat tmp = *this;  tmp += other;  return tmp; }
+    std::string get_stat_str(const std::string &info_header)
+    {
+        std::ostringstream str_os;
+        str_os << info_header << "\n"
+            << "Average E = " << get_E() << "\n"
+            << "Acc = " << get_acc() * 100 << "% \n" 
+            << "Time cost : " << get_time_cost_in_seconds() << "\n"
+            << "Speed " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s"
+            << "Total tags " << total_tags << " , Correct tags " << correct_tags ;
+        return str_os.str();
+    }
+    std::string get_basic_stat_str(const std::string &info_header)
+    {
+        return BasicStat::get_stat_str(info_header);
+    }
 };
 
 using Stat = PostagStat;
@@ -150,7 +176,6 @@ struct NerStat : BasicStat
 #endif
         return fake_ret ;
     }
-
 };
 
 } // End of namespace slnn

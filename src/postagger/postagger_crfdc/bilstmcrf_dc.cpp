@@ -240,14 +240,11 @@ void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
 
     bilstm_layer->build_graph(merge_dc_exp_cont, l2r_lstm_output_exp_cont, r2l_lstm_output_exp_cont);
     
-    
-
     //viterbi - preparing score
     vector<Expression> all_postag_exp_cont(postag_dict_size);
     vector<cnn::real> init_score(postag_dict_size);
     vector<cnn::real> trans_score(postag_dict_size * postag_dict_size);
     vector<vector<cnn::real>> emit_score(sent_len, vector<cnn::real>(postag_dict_size));
-    vector<vector<cnn::real>> lattice(sent_len, vector<cnn::real>(postag_dict_size));
 
     // get init score
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
@@ -272,8 +269,8 @@ void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
         {
             Expression hidden_out_exp = merge_hidden_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
                 r2l_lstm_output_exp_cont[time_step], all_postag_exp_cont[postag_idx]);
-            Expression trans_score_exp = emit_layer->build_graph(rectify(hidden_out_exp));
-            emit_score[time_step][postag_idx] =  as_scalar(cg.get_value(trans_score_exp));
+            Expression emit_score_exp = emit_layer->build_graph(rectify(hidden_out_exp));
+            emit_score[time_step][postag_idx] =  as_scalar(cg.get_value(emit_score_exp));
         }
             
     }
@@ -292,19 +289,19 @@ void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
         swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
         for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
         {
-            size_t max_score_of_pre_tag = 0;
+            size_t pre_tag_with_max_score = 0;
             cnn::real max_score = pre_timestep_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
-            for (size_t pre_tag_idx = 0; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
+            for (size_t pre_tag_idx = 1; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
             {
                 size_t flat_idx = pre_tag_idx * postag_dict_size + postag_idx;
                 cnn::real score = pre_timestep_scores[pre_tag_idx] + trans_score[flat_idx];
                 if (score > max_score)
                 {
-                    max_score_of_pre_tag = pre_tag_idx;
+                    pre_tag_with_max_score = pre_tag_idx;
                     max_score = score;
                 }
             }
-            path_matrix[time_step][postag_idx] = max_score_of_pre_tag;
+            path_matrix[time_step][postag_idx] = pre_tag_with_max_score;
             current_scores[postag_idx] = max_score + emit_score[time_step][postag_idx];
         }
     }

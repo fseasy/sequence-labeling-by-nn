@@ -242,7 +242,7 @@ void BILSTMCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, con
         shuffle(access_order.begin(), access_order.end(), *rndeng);
 
         // For loss , accuracy , time cost report
-        Stat training_stat_per_epoch ;
+        PostagStat training_stat_per_epoch ;
         shared_ptr<Stat> p_training_stat_per_report(nullptr) ;
         if( do_train_stat ) p_training_stat_per_report.reset(new Stat()) ;
 
@@ -252,7 +252,6 @@ void BILSTMCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, con
         for (unsigned i = 0; i < nr_samples; ++i)
         {
             unsigned access_idx = access_order[i];
-            // using negative_loglikelihood loss to build model
             const IndexSeq *p_dynamic_sent = &p_dynamic_sents->at(access_idx),
                 *p_fixed_sent = &p_fixed_sents->at(access_idx) ,
                 *p_tag_seq = &p_postag_seqs->at(access_idx);

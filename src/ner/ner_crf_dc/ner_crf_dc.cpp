@@ -1,5 +1,5 @@
-#include "ner_dc_model.h"
-#include "ner_dc_modelhandler.h"
+#include "ner_crf_dc_model.h"
+#include "ner_crf_dc_modelhandler.h"
 #include "utils/general.hpp"
 
 using namespace std;
@@ -109,7 +109,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     
     // Init 
     cnn::Initialize(argc, argv, 1234); 
-    NERDCModelHandler model_handler;
+    NERCRFDCModelHandler model_handler;
 
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
@@ -212,7 +212,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    NERDCModelHandler model_handler;
+    NERCRFDCModelHandler model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -277,7 +277,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    NERDCModelHandler model_handler ;
+    NERCRFDCModelHandler model_handler ;
 
     // load model 
     ifstream is(model_path);
