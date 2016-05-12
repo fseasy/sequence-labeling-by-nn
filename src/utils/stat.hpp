@@ -1,4 +1,6 @@
-﻿#include <chrono>
+﻿#ifndef STAT_HPP_INCLUDED_
+#define STAT_HPP_INCLUDED_
+#include <chrono>
 #include <vector>
 #include <string>
 #include <fstream>
@@ -128,8 +130,8 @@ struct NerStat : BasicStat
         const cnn::Dict &ner_dict) 
     {
         std::array<float , 4> fake_ret = {100.f , 100.f , 100.f , 100.f } ;
-        std::array<float , 4> ret ; 
 #ifndef _MSC_VER
+        std::array<float, 4> ret;
         // write `WORD GOLD_NER PREDICT_NER` to temporal output , where we using fake `WORD` , it is no use for evaluation result
         // - set unique output path
         unsigned timestamp = std::chrono::high_resolution_clock::now().time_since_epoch().count() ;
@@ -193,3 +195,5 @@ struct NerStat : BasicStat
 };
 
 } // End of namespace slnn
+
+#endif

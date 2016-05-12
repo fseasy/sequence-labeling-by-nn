@@ -1,4 +1,7 @@
-﻿#include "typedeclaration.h"
+﻿#ifndef DICT_WRAPPER_HPP_INCLUDED_
+#define DICT_WRAPPER_HPP_INCLUDED_
+
+#include "typedeclaration.h"
 #include "cnn/dict.h"
 
 #include <functional>
@@ -57,3 +60,5 @@ namespace slnn {
         std::function<float()> prob_rand;
     };
 } // End of namespace slnn
+
+#endif
