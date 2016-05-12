@@ -33,12 +33,25 @@ struct BasicStat
     unsigned long total_tags;
     std::chrono::high_resolution_clock::time_point time_start;
     std::chrono::high_resolution_clock::time_point time_end;
-    std::chrono::high_resolution_clock::time_point start_time_stat() { return time_start = std::chrono::high_resolution_clock::now(); }
-    std::chrono::high_resolution_clock::time_point end_time_stat() { return time_end = std::chrono::high_resolution_clock::now(); }
-    BasicStat() :loss(0.f) , total_tags(0){};
+    std::chrono::high_resolution_clock::time_point start_time_stat() 
+    {
+        time_clock_locked = false;
+        return time_start = std::chrono::high_resolution_clock::now(); 
+    }
+    std::chrono::high_resolution_clock::time_point end_time_stat() 
+    { 
+        time_clock_locked = true;
+        return time_end = std::chrono::high_resolution_clock::now(); 
+    }
+    BasicStat() :loss(0.f) , total_tags(0) , time_clock_locked(false){};
     float get_sum_E(){ return loss ; }
     long long get_time_cost_in_seconds()
     {
+        if (!time_clock_locked) 
+        {
+            end_time_stat();
+            time_clock_locked = false;
+        }
         std::chrono::seconds du = std::chrono::duration_cast<std::chrono::seconds>(time_end - time_start);
         return du.count();
     }
@@ -61,7 +74,8 @@ struct BasicStat
             << "Speed " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
         return str_os.str();
     }
-    
+protected :
+    bool time_clock_locked;
 
 };
 

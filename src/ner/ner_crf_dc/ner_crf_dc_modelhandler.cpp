@@ -350,11 +350,11 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
         string info_header = tmp_sos.str();
         if (do_stat_in_training)
         {
-            training_stat_per_epoch.get_stat_str(info_header);
+            BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         }
         else
         {
-            training_stat_per_epoch.get_basic_stat_str(info_header);
+            BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_basic_stat_str(info_header);
         }
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch

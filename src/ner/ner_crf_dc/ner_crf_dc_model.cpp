@@ -52,7 +52,6 @@ void NERCRFDCModel::build_model_structure()
 
     init_score_lookup_param = m->add_lookup_parameters(ner_embedding_dict_size, { 1 });
     trans_score_lookup_param = m->add_lookup_parameters(ner_embedding_dict_size * ner_embedding_dict_size , { 1 });
-
 }
 
 void NERCRFDCModel::print_model_info()
@@ -129,7 +128,9 @@ Expression NERCRFDCModel::viterbi_train(ComputationGraph *p_cg,
         {
             Expression emit_hidden_out_exp = emit_hidden_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
                 r2l_lstm_output_exp_cont[time_step], all_ner_exp_cont[ner_idx]);
-            emit_score[time_step][ner_idx] = emit_output_layer->build_graph(rectify(emit_hidden_out_exp));
+            emit_score[time_step][ner_idx] = emit_output_layer->build_graph(
+                rectify(emit_hidden_out_exp)
+            );
         }
     }
     // viterbi docoding

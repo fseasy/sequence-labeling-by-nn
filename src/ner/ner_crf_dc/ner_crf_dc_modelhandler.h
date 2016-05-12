@@ -54,7 +54,7 @@ struct NERCRFDCModelHandler
         const std::string &conlleval_script_path = "./ner_eval.sh" , 
         unsigned do_devel_freq=6000 ,
         bool is_do_stat_in_training=false , 
-        unsigned trivial_report_freq=1000);
+        unsigned trivial_report_freq=5000);
     float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
         const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs,
         const std::string &conlleval_script_path = "./ner_eval.sh");

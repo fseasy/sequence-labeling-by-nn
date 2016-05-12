@@ -5,7 +5,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Ner-DoubleChannel based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Ner-CRF-DoubleChannel based on CNN Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -23,20 +23,22 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("conlleval_script_path", po::value<string>(), "Use to specify the conll evaluation script path")
         ("devel_freq", po::value<unsigned>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("do_stat_in_training" , po::value<bool>()->default_value(false) , "True to calculate the acc during traing ,"
+            "which will slow down the training speed . default false .")
+        ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
+        ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
+            "(eg , if set 1, the words of training data which frequency <= 1 may be "
+            " replaced in probability)")
+        ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
+            " if words frequency <= replace_freq_threshold , the word will"
+            " be replace in this probability")
         ("dynamic_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("postag_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for postag embedding.")
         ("ner_embedding_dim" , po::value<unsigned>()->default_value(5) , "The dimension for ner embedding")
         ("nr_lstm_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-LSTM.")
         ("lstm_x_dim", po::value<unsigned>()->default_value(50) , "The dimension for LSTM X .")
         ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM H.")
-        ("tag_layer_hidden_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
-        ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
-            "(eg , if set 1, the words of training data which frequency <= 1 may be "
-            " replaced in probability)")
-        ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
-                " if words frequency <= replace_freq_threshold , the word will"
-                " be replace in this probability")
-        ("trivial_report_freq" , po::value<unsigned>()->default_value(10000) , "Trace frequent during training process")
+        ("emit_hidden_layer_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
                     "else value leads to output trace info.")
         ("help,h", "Show help information.");
