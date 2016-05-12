@@ -70,8 +70,8 @@ struct BasicStat
         std::ostringstream str_os;
         str_os << info_header << "\n"
             << "Total E = " << get_sum_E() << "\n"
-            << "Time cost : " << get_time_cost_in_seconds() << "\n"
-            << "Speed " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
+            << "Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
         return str_os.str();
     }
 protected :
@@ -101,9 +101,9 @@ struct PostagStat : public BasicStat
         str_os << info_header << "\n"
             << "Average E = " << get_E() << "\n"
             << "Acc = " << get_acc() * 100 << "% \n" 
-            << "Time cost : " << get_time_cost_in_seconds() << "\n"
-            << "Speed " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s"
-            << "Total tags " << total_tags << " , Correct tags " << correct_tags ;
+            << "Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s\n"
+            << "Total tags = " << total_tags << " , Correct tags = " << correct_tags ;
         return str_os.str();
     }
     std::string get_basic_stat_str(const std::string &info_header)

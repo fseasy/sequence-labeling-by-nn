@@ -49,15 +49,15 @@ struct NERCRFDCModelHandler
     void train(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
         const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs ,
         unsigned max_epoch, 
-        const std::vector<IndexSeq> *p_dev_dynamic_sents=nullptr, const std::vector<IndexSeq> *p_dev_fixed_sents=nullptr,
-        const std::vector<IndexSeq> *p_dev_postag_seqs=nullptr , const std::vector<IndexSeq> *p_dev_ner_seqs=nullptr ,
-        const std::string &conlleval_script_path = "./ner_eval.sh" , 
-        unsigned do_devel_freq=6000 ,
-        bool is_do_stat_in_training=false , 
-        unsigned trivial_report_freq=5000);
+        const std::vector<IndexSeq> *p_dev_dynamic_sents, const std::vector<IndexSeq> *p_dev_fixed_sents,
+        const std::vector<IndexSeq> *p_dev_postag_seqs , const std::vector<IndexSeq> *p_dev_ner_seqs ,
+        const std::string &conlleval_script_path , 
+        unsigned do_devel_freq ,
+        bool is_do_stat_in_training , 
+        unsigned trivial_report_freq);
     float devel(const std::vector<IndexSeq> *p_dynamic_sents, const std::vector<IndexSeq> *p_fixed_sents,
         const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs,
-        const std::string &conlleval_script_path = "./ner_eval.sh");
+        const std::string &conlleval_script_path);
     void predict(std::istream &is, std::ostream &os);
 
     // Save & Load

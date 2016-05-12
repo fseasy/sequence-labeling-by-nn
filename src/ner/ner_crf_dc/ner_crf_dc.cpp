@@ -23,8 +23,8 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("conlleval_script_path", po::value<string>(), "Use to specify the conll evaluation script path")
         ("devel_freq", po::value<unsigned>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
-        ("do_stat_in_training" , po::value<bool>()->default_value(false) , "True to calculate the acc during traing ,"
-            "which will slow down the training speed . default false .")
+        ("do_stat_in_training" , po::value<bool>()->default_value(false) , "1 to calculate the acc during traing ,"
+            "which will slow down the training speed . default 0 .")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
             "(eg , if set 1, the words of training data which frequency <= 1 may be "
@@ -94,7 +94,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     model_path = var_map["model"].as<string>();
     if (FileUtils::exists(model_path))
     {
-        fatal_error("Error : model file `" + model_path + "` has been already exists .");
+        fatal_error("Error : model file `" + model_path + "` has already exists .");
     }
     ofstream model_os(model_path);
     if (!model_os)
@@ -103,8 +103,10 @@ int train_process(int argc, char *argv[], const string &program_name)
         return -1;
     }
     // some key which has default value
+    bool is_do_stat_in_training = var_map["do_stat_in_training"].as<bool>() ;
     unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
     unsigned trivial_report_freq = var_map["trivial_report_freq"].as<unsigned>();
+
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     // others will be processed flowing 
@@ -176,7 +178,9 @@ int train_process(int argc, char *argv[], const string &program_name)
         max_epoch, 
         p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs , p_dev_ner_seqs , 
         conlleval_script_path , 
-        devel_freq , trivial_report_freq);
+        devel_freq , 
+        is_do_stat_in_training ,
+        trivial_report_freq);
 
     // save model
     model_handler.save_model(model_os);

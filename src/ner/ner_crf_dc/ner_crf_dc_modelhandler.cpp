@@ -307,7 +307,11 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
             sgd.update(1.0);
             delete cg;
             if (training_stat4trivial) training_stat4trivial->loss += loss;
-            else training_stat_per_epoch.loss += loss;
+            else
+            { 
+                training_stat_per_epoch.loss += loss;
+                training_stat_per_epoch.total_tags += p_dynamic_sent->size() ;
+            }
             if (0 == (i + 1) % trivial_report_freq) // Report 
             {
                 string trivial_header = to_string(i + 1) + " instances have been trained.";
@@ -400,7 +404,7 @@ float NERCRFDCModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_sents, 
     ostringstream tmp_sos;
     tmp_sos << "validation finished .\n"
         << "Acc = " << Acc << "% , P = " << P << "% , R = " << R << "% , F1 = " << F1 << "%";
-    BOOST_LOG_TRIVIAL(info) << tmp_sos.str() << stat.get_stat_str(tmp_sos.str()) ;
+    BOOST_LOG_TRIVIAL(info) << stat.get_stat_str(tmp_sos.str()) ;
     return F1;
 }
 
