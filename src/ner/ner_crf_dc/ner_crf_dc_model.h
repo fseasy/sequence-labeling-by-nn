@@ -79,6 +79,7 @@ struct NERCRFDCModel
     cnn::expr::Expression viterbi_train(cnn::ComputationGraph *p_cg, 
         const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_postag_seq,
         const IndexSeq *p_ner_seq ,
+        float dropout_rate , 
         Stat *p_stat = nullptr);
     void viterbi_predict(cnn::ComputationGraph *p_cg, 
         const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_postag_seq ,

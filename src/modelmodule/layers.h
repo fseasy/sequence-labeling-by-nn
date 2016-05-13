@@ -25,6 +25,8 @@ struct BILSTMLayer
     BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim);
     ~BILSTMLayer();
     void new_graph(cnn::ComputationGraph &cg);
+    inline 
+    void set_dropout(float dropout_rate) ;
     void start_new_sequence();
     void build_graph(const std::vector<cnn::expr::Expression> &X_seq , std::vector<cnn::expr::Expression> &l2r_outputs , 
         std::vector<cnn::expr::Expression> &r2l_outputs);
@@ -85,6 +87,13 @@ void BILSTMLayer::new_graph(cnn::ComputationGraph &cg)
     r2l_builder->new_graph(cg);
     SOS_EXP = parameter(cg, SOS);
     EOS_EXP = parameter(cg, EOS);
+}
+
+inline
+void BILSTMLayer::set_dropout(float dropout_rate)
+{
+    l2r_builder->set_dropout(dropout_rate) ;
+    r2l_builder->set_dropout(dropout_rate) ;
 }
 
 inline

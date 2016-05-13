@@ -21,6 +21,7 @@ int train_process(int argc, char *argv[], const string &program_name)
             "dimension should be consistent with parameter `input_dim`. Empty for using randomized initialization .")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
+        ("dropout_rate" , po::value<float>() , "dropout rate during trainging . (0. ~ 1. )")
         ("conlleval_script_path", po::value<string>(), "Use to specify the conll evaluation script path")
         ("devel_freq", po::value<unsigned>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("do_stat_in_training" , po::value<bool>()->default_value(false) , "1 to calculate the acc during traing ,"
@@ -81,11 +82,18 @@ int train_process(int argc, char *argv[], const string &program_name)
         "Error : word2vec embedding path should be specified ! \n"
         "using `" + program_name + " train -h ` to see detail parameters .\n");
     embedding_path = var_map["word2vec_embedding"].as<string>();
-    
+    if(!FileUtils::exists(embedding_path)) 
+    {
+        fatal_error(" word2vec embedding does not exists at `" + embedding_path + "`") ;
+    }
+
     varmap_key_fatal_check(var_map, "max_epoch",
         "Error : max epoch num should be specified .");
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
-
+    
+    varmap_key_fatal_check(var_map , "dropout_rate" ,
+        "Error : dropout rate should be specified .") ;
+    float dropout_rate = var_map["dropout_rate"].as<float>() ;
 
     // check model path
     string model_path;
@@ -122,7 +130,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     ifstream embedding_is(embedding_path);
     if (!embedding_is)
     {
-        fatal_error("Error : failed to open word2vec embedding : `" +  training_data_path + "` .");
+        fatal_error("Error : failed to open word2vec embedding : `" +  embedding_path + "` .");
     }
     model_handler.build_fixed_dict_from_word2vec_file(embedding_is);
     embedding_is.clear() ; // !! MUST calling before `seekg` ! even thouth using  c++ 11 .
@@ -176,6 +184,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // Train 
     model_handler.train(&dynamic_sents , &fixed_sents , &postag_seqs , &ner_seqs , 
         max_epoch, 
+        dropout_rate , 
         p_dev_dynamic_sents , p_dev_fixed_sents , p_dev_postag_seqs , p_dev_ner_seqs , 
         conlleval_script_path , 
         devel_freq , 

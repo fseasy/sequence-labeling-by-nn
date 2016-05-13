@@ -20,6 +20,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("conlleval_script_path", po::value<string>(), "Use to specify the conll evaluation script path")
+        ("dropout_rate" , po::value<float>() , "droupout rate for training")
         ("devel_freq", po::value<unsigned>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("do_stat_in_training" , po::value<bool>()->default_value(false) , "1 to calculate the acc during traing ,"
             "which will slow down the training speed . default 0 .")
@@ -80,7 +81,10 @@ int train_process(int argc, char *argv[], const string &program_name)
         "Error : max epoch num should be specified .");
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
 
-
+    varmap_key_fatal_check(var_map , "dropout_rate" ,
+        "Error : dropout rate should be specified .") ;
+    float dropout_rate = var_map["dropout_rate"].as<float>() ;
+    
     // check model path
     string model_path;
     varmap_key_fatal_check(var_map, "model",
@@ -154,6 +158,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // Train 
     model_handler.train(&sents , &postag_seqs , &ner_seqs , 
         max_epoch, 
+        dropout_rate , 
         p_dev_sents , p_dev_postag_seqs , p_dev_ner_seqs , 
         conlleval_script_path , 
         devel_freq , 

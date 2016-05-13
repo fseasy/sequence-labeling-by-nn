@@ -48,6 +48,7 @@ struct NERCRFModelHandler
     void train(const std::vector<IndexSeq> *p_sents,
         const std::vector<IndexSeq> *p_postag_seqs, const std::vector<IndexSeq> *p_ner_seqs ,
         unsigned max_epoch, 
+        float dropout_rate , 
         const std::vector<IndexSeq> *p_de_sents, 
         const std::vector<IndexSeq> *p_dev_postag_seqs , const std::vector<IndexSeq> *p_dev_ner_seqs ,
         const std::string &conlleval_script_path , 

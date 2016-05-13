@@ -66,6 +66,7 @@ void NERCRFModel::print_model_info()
 Expression NERCRFModel::viterbi_train(ComputationGraph *p_cg, 
     const IndexSeq *p_sent, const IndexSeq *p_postag_seq,
     const IndexSeq *p_ner_seq , 
+    float dropout_rate , 
     Stat *p_stat)
 {
     const unsigned sent_len = p_sent->size();
@@ -76,8 +77,8 @@ Expression NERCRFModel::viterbi_train(ComputationGraph *p_cg,
     emit_hidden_layer->new_graph(cg);
     emit_output_layer->new_graph(cg);
 
+    bilstm_layer->set_dropout(dropout_rate) ;
     bilstm_layer->start_new_sequence();
-
     // Some container
     vector<Expression> merge_dc_exp_cont(sent_len);
     vector<Expression> l2r_lstm_output_exp_cont; // for storing left to right lstm output(deepest hidden layer) expression for every timestep
@@ -124,9 +125,9 @@ Expression NERCRFModel::viterbi_train(ComputationGraph *p_cg,
         {
             Expression emit_hidden_out_exp = emit_hidden_layer->build_graph(l2r_lstm_output_exp_cont[time_step],
                 r2l_lstm_output_exp_cont[time_step], all_ner_exp_cont[ner_idx]);
-            emit_score[time_step][ner_idx] = emit_output_layer->build_graph(
-                rectify(emit_hidden_out_exp)
-            );
+            Expression non_linear_exp = rectify(emit_hidden_out_exp) ;
+            Expression dropout_exp = dropout(non_linear_exp , dropout_rate) ;
+            emit_score[time_step][ner_idx] = emit_output_layer->build_graph(dropout_exp);
         }
     }
     // viterbi docoding

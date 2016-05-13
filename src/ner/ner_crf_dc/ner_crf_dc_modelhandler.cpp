@@ -250,6 +250,7 @@ void NERCRFDCModelHandler::load_fixed_embedding(std::istream &is)
 void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const vector<IndexSeq> *p_fixed_sents,
     const vector<IndexSeq> *p_postag_seqs, const vector<IndexSeq> *p_ner_seqs ,
     unsigned max_epoch,
+    float dropout_rate , 
     const vector<IndexSeq> *p_dev_dynamic_sents, const vector<IndexSeq> *p_dev_fixed_sents,
     const vector<IndexSeq> *p_dev_postag_seqs, const vector<IndexSeq> *p_dev_ner_seqs ,
     const string &conlleval_script_path , 
@@ -301,10 +302,12 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
                     dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
             }
             dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, 
-                                        p_postag_seq, p_ner_seq ,  training_stat4trivial.get());
+                                        p_postag_seq, p_ner_seq ,  
+                                        dropout_rate , 
+                                        training_stat4trivial.get());
             cnn::real loss =  as_scalar(cg->forward());
             cg->backward();
-            sgd.update(1.0);
+            sgd.update(1.0f);
             delete cg;
             if (training_stat4trivial) training_stat4trivial->loss += loss;
             else

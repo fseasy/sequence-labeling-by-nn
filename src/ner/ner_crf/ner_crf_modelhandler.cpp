@@ -171,6 +171,7 @@ void NERCRFModelHandler::build_model()
 void NERCRFModelHandler::train(const vector<IndexSeq> *p_sents, 
     const vector<IndexSeq> *p_postag_seqs, const vector<IndexSeq> *p_ner_seqs ,
     unsigned max_epoch,
+    float dropout_rate , 
     const vector<IndexSeq> *p_dev_sents, 
     const vector<IndexSeq> *p_dev_postag_seqs, const vector<IndexSeq> *p_dev_ner_seqs ,
     const string &conlleval_script_path , 
@@ -221,7 +222,7 @@ void NERCRFModelHandler::train(const vector<IndexSeq> *p_sents,
                     dc_m.word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
             }
             dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk,
-                                        p_postag_seq, p_ner_seq ,  training_stat4trivial.get());
+                                        p_postag_seq, p_ner_seq , dropout_rate ,  training_stat4trivial.get());
             cnn::real loss =  as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.f);
