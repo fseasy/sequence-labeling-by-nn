@@ -1,12 +1,20 @@
 #ifndef UTF8PROCESSING_HPP_INCLUDED
 #define UTF8PROCESSING_HPP_INCLUDED
-#include <iostream>
 #include <string>
 #include <vector>
 
 /**
  * uint8_t , mask8 , get_length is copy from `utf8.h`
  */
+/*********************UNICODE <---> utf8 translate table******************
+unicode(U+)	              utf-8
+U+00000000 - U+0000007F:	0xxxxxxx
+U+00000080 - U+000007FF:	110xxxxx10xxxxxx
+U+00000800 - U+0000FFFF:	1110xxxx10xxxxxx10xxxxxx
+U+00010000 - U+001FFFFF:	11110xxx10xxxxxx10xxxxxx10xxxxxx
+U+00200000 - U+03FFFFFF:	111110xx10xxxxxx10xxxxxx10xxxxxx10xxxxxx
+U+04000000 - U+7FFFFFFF:	1111110x10xxxxxx10xxxxxx10xxxxxx10xxxxxx10xxxxxx
+***************************************************************************/
 namespace slnn
 {
 
