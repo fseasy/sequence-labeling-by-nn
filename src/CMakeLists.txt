@@ -13,9 +13,12 @@ set(common_headers
     ${util_directory}/stat.hpp
     ${util_directory}/dict_wrapper.hpp
     ${module_directory}/layers.h
+    ${module_directory}/hyper_layers.h
 )
 set(common_libs
     ${module_directory}/layers.cpp
+    ${module_directory}/hyper_layers.cpp
 )
 add_subdirectory(postagger)
 add_subdirectory(ner)
+add_subdirectory(segmentor)

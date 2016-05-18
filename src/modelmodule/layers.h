@@ -21,12 +21,15 @@ struct BILSTMLayer
     cnn::Parameters *EOS;
     cnn::expr::Expression SOS_EXP;
     cnn::expr::Expression EOS_EXP;
+    cnn::real default_dropout_rate ;
 
-    BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim);
+    BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
+                cnn::real default_dropout_rate=0.1);
     ~BILSTMLayer();
     void new_graph(cnn::ComputationGraph &cg);
-    inline 
     void set_dropout(float dropout_rate) ;
+    void set_dropout();
+    void disable_dropout() ;
     void start_new_sequence();
     void build_graph(const std::vector<cnn::expr::Expression> &X_seq , std::vector<cnn::expr::Expression> &l2r_outputs , 
         std::vector<cnn::expr::Expression> &r2l_outputs);
@@ -94,6 +97,20 @@ void BILSTMLayer::set_dropout(float dropout_rate)
 {
     l2r_builder->set_dropout(dropout_rate) ;
     r2l_builder->set_dropout(dropout_rate) ;
+}
+
+inline
+void BILSTMLayer::set_dropout()
+{
+    l2r_builder->set_dropout(default_dropout_rate) ;
+    r2l_builder->set_dropout(default_dropout_rate) ;
+}
+
+inline
+void BILSTMLayer::disable_dropout()
+{
+    l2r_builder->disable_dropout() ;
+    r2l_builder->disable_dropout() ;
 }
 
 inline

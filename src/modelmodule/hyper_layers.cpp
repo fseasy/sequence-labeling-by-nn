@@ -107,7 +107,7 @@ Input3::Input3(cnn::Model *m, unsigned dynamic_vocab_size1, unsigned dynamic_emb
     unsigned dynamic_vocab_size2, unsigned dynamic_embedding_dim2,
     unsigned fixed_vocab_size, unsigned fixed_embedding_dim,
     unsigned mergeout_dim,
-    NonLinearFunc *nonlinear_func = &cnn::expr::rectify)
+    NonLinearFunc *nonlinear_func)
     : dynamic_lookup_param1(m->add_lookup_parameters(dynamic_vocab_size1 , {dynamic_embedding_dim1})) ,
     dynamic_lookup_param2(m->add_lookup_parameters(dynamic_vocab_size2 , {dynamic_embedding_dim2})) ,
     fixed_lookup_param(m->add_lookup_parameters(fixed_vocab_size , {fixed_embedding_dim})) ,

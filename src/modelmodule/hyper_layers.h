@@ -69,7 +69,19 @@ struct Input3
 };
 
 
-struct SimpleOutput
+struct OutputBase
+{
+    virtual void new_graph(cnn::ComputationGraph &cg) = 0 ;
+    virtual cnn::expr::Expression
+    build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+                      const std::vector<cnn::expr::Expression> &expr_cont2,
+                      const IndexSeq &gold_seq) = 0 ;
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+                              const std::vector<cnn::expr::Expression> &expr_cont2,
+                              IndexSeq &pred_out_seq) = 0 ;
+};
+
+struct SimpleOutput : public OutputBase
 {
     Merge2Layer hidden_layer;
     DenseLayer output_layer;
@@ -88,7 +100,7 @@ struct SimpleOutput
         IndexSeq &pred_out_seq);
 };
 
-struct PretagOutput
+struct PretagOutput : public OutputBase
 {
     Merge3Layer hidden_layer;
     DenseLayer output_layer;
@@ -112,7 +124,7 @@ struct PretagOutput
                       IndexSeq &pred_out_seq) ;
 };
 
-struct CRFOutput
+struct CRFOutput : public OutputBase
 {
     Merge3Layer hidden_layer ;
     DenseLayer emit_layer ;

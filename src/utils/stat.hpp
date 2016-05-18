@@ -21,6 +21,7 @@
 #include <boost/log/expressions.hpp>
 
 #include "cnn/dict.h"
+#include "segmentor/cws_utils/cws_utils.hpp"
 
 /*************************************
  * Stat 
@@ -33,6 +34,7 @@ struct BasicStat
 {
     float loss;
     unsigned long total_tags;
+    bool is_predict ;
     std::chrono::high_resolution_clock::time_point time_start;
     std::chrono::high_resolution_clock::time_point time_end;
     std::chrono::high_resolution_clock::time_point start_time_stat() 
@@ -45,7 +47,7 @@ struct BasicStat
         time_clock_locked = true;
         return time_end = std::chrono::high_resolution_clock::now(); 
     }
-    BasicStat() :loss(0.f) , total_tags(0) , time_clock_locked(false){};
+    BasicStat(bool is_predict=false) :loss(0.f) , total_tags(0) , time_clock_locked(false) ,is_predict(is_predict) {};
     float get_sum_E(){ return loss ; }
     long long get_time_cost_in_seconds()
     {
@@ -70,9 +72,9 @@ struct BasicStat
     std::string get_stat_str(const std::string &info_header)
     {
         std::ostringstream str_os;
-        str_os << info_header << "\n"
-            << "Total E = " << get_sum_E() << "\n"
-            << "Time cost = " << get_time_cost_in_seconds() << " s\n"
+        str_os << info_header << "\n" ;
+        if( !is_predict ) str_os << "Total E = " << get_sum_E() << "\n" ;
+        str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
             << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
         return str_os.str();
     }
@@ -191,6 +193,105 @@ struct NerStat : BasicStat
         return fake_ret ;
 #endif
         return fake_ret ;
+    }
+};
+
+struct CWSStat : BasicStat
+{
+    Index B_ID,
+        M_ID,
+        E_ID,
+        S_ID ;
+    CWSStat(cnn::Dict &tag_dict)  
+    {
+        assert(tag_dict.Contains(CWSUtils::B_TAG) &&
+               tag_dict.Contains(CWSUtils::M_TAG) &&
+               tag_dict.Contains(CWSUtils::E_TAG) &&
+               tag_dict.Contains(CWSUtils::S_TAG)) ;
+        B_ID = tag_dict.Convert(CWSUtils::B_TAG) ;
+        M_ID = tag_dict.Convert(CWSUtils::M_TAG) ;
+        E_ID = tag_dict.Convert(CWSUtils::E_TAG) ;
+        S_ID = tag_dict.Convert(CWSUtils::S_TAG) ;
+    }
+
+    // return : {Acc , P , R , F1}
+    std::array<float , 4>
+    eval(const std::vector<IndexSeq> &gold_seqs, const std::vector<IndexSeq> &pred_seqs)
+    {
+        size_t seq_num = gold_seqs.size() ;
+        unsigned gold_tokens = 0,
+            found_tokens = 0,
+            correct_tokens = 0 ; // P , R , F1
+        unsigned total_tags = 0,
+            correct_tags = 0 ; // ACC
+        for( size_t i = 0 ; i < seq_num ; ++i )
+        {
+            std::array<unsigned, 3> result = eval_one_seq(gold_seqs[i], pred_seqs[i]) ;
+            correct_tokens += result[0] ;
+            gold_tokens += result[1] ;
+            found_tokens += result[2] ;
+            total_tags += gold_seqs.size() ;
+            for( size_t pos = 0 ; pos < gold_seqs[i].size() ; ++pos )
+            {
+                if( gold_seqs[i][pos] == pred_seqs[i][pos] ) ++correct_tags ;
+            }
+        }
+        float Acc = (total_tags == 0) ? 0.f : static_cast<float>(correct_tags) / total_tags ;
+        float P = (found_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / found_tokens ;
+        float R = (gold_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / gold_tokens ;
+        float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R) ;
+        return std::array<float, 4>{Acc, P, R, F1} ;
+    }
+
+    std::array<unsigned , 3>
+    eval_one_seq(const IndexSeq &gold_seq, const IndexSeq &pred_seq)
+    {
+        std::vector<std::array<unsigned, 2>> gold_words,
+            pred_words ;
+        size_t gold_word_size = gold_words.size(),
+            pred_word_size = pred_words.size() ;
+        size_t gold_pos = 0 ,
+            pred_pos = 0 ;
+        unsigned correct_cnt = 0 ;
+        while( gold_pos < gold_word_size && pred_pos < pred_word_size )
+        {
+            std::array<unsigned, 2> &gold_word = gold_words[gold_pos],
+                &pred_word = pred_words[pred_pos] ;
+            if( gold_word[0] == pred_word[0] )
+            {
+                // word is aligned
+                if( gold_word[1] == pred_word[1] )
+                {
+                    ++correct_cnt ;
+                }
+            }
+            ++gold_pos ;
+            // try to align
+            unsigned gold_char_pos = gold_words[gold_pos][0] ;
+            while( pred_pos < pred_word_size && pred_words[pred_pos][0] < gold_char_pos ) 
+                ++pred_pos ;
+        }
+        return std::array<unsigned, 3>{correct_cnt, gold_word_size, pred_word_size} ;
+    }
+    void parse_tag_seq2word_range(const IndexSeq &seq, std::vector<std::array<unsigned, 2>> &word_ranges)
+    {
+        std::vector<std::array<unsigned, 2>> tmp_word_ranges ;
+        unsigned range_s = 0 ;
+        for( unsigned i = 0 ; i < seq.size() ; ++i )
+        {
+            Index tag_id = seq.at(i) ;
+            if( tag_id == S_ID )
+            {
+                tmp_word_ranges.push_back({ i , i }) ;
+                range_s = i + 1 ;
+            }
+            else if( tag_id == E_ID )
+            {
+                tmp_word_ranges.push_back({ range_s , i }) ;
+                range_s = i + 1 ;
+            }
+        }
+        std::swap(word_ranges, tmp_word_ranges) ;
     }
 };
 

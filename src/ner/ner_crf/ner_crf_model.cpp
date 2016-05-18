@@ -223,6 +223,7 @@ void NERCRFModel::viterbi_predict(ComputationGraph *p_cg,
     emit_hidden_layer->new_graph(cg);
     emit_output_layer->new_graph(cg);
 
+    bilstm_layer->disable_dropout() ;
     bilstm_layer->start_new_sequence();
 
     // Some container
