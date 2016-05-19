@@ -39,7 +39,8 @@ struct UTF8Processing
 
 
 template<typename octet_type>
-inline uint8_t UTF8Processing::mask8(octet_type oc)
+inline
+uint8_t UTF8Processing::mask8(octet_type oc)
 {
     return static_cast<uint8_t>(oc & 0xff) ;
 }
@@ -51,6 +52,7 @@ inline uint8_t UTF8Processing::mask8(octet_type oc)
  * else , if UTF8 number , return 3
  * else , Ascii number , return 1
  */
+inline 
 std::string::difference_type UTF8Processing::get_number_byte_width(const std::string::const_iterator &pos, 
         const std::string::const_iterator &end_pos)
 {
@@ -74,6 +76,7 @@ std::string::difference_type UTF8Processing::get_number_byte_width(const std::st
     }
 }
 
+inline
 size_t UTF8Processing::get_number_byte_width(const std::string &str , size_t start_pos)
 {
     size_t len = str.length() ;
@@ -91,7 +94,7 @@ size_t UTF8Processing::get_number_byte_width(const std::string &str , size_t sta
     else return 0u ;
 }
 
-
+inline
 std::string::difference_type UTF8Processing::get_utf8_char_length(const std::string::const_iterator &start_ite , 
     const std::string::const_iterator &end_ite )
 {
@@ -106,11 +109,13 @@ std::string::difference_type UTF8Processing::get_utf8_char_length(const std::str
     else return 0 ;
 }
 
+inline
 size_t UTF8Processing::get_utf8_char_length(const std::string &str , size_t start_pos)
 {
     return get_utf8_char_length(str.cbegin() + start_pos , str.cend()) ;
 }
 
+inline
 std::string::difference_type UTF8Processing::get_utf8_char_length_checked(const std::string::const_iterator &start_iter , 
         const std::string::const_iterator &end_iter)
 {
@@ -126,6 +131,7 @@ std::string::difference_type UTF8Processing::get_utf8_char_length_checked(const 
     return utf8_char_len ;
 }
 
+inline
 size_t UTF8Processing::get_utf8_char_length_checked(const std::string &str , size_t start_pos)
 {
     return get_utf8_char_length( str.cbegin() + start_pos , str.cend() ) ;

@@ -2,9 +2,10 @@
 #define SLNN_SEGMENTOR_CWS_SINGLE_CLASSIFICATION_SINGLE_INPUT_MODELHANDLER_H
 
 #include <sstream>
-
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/archive/text_iarchive.hpp>
 #include "segmentor/base_model/single_input_model.h"
-#include "segmentor/cws_utils/cws_utils.hpp"
+#include "segmentor/cws_utils/cws_utils.h"
 
 #include "utils/stat.hpp"
 namespace slnn{
@@ -58,8 +59,13 @@ private :
 
 };
 
+} // end of namespace slnn
 
-/****************** implementation  *****************/
+/**********************************************
+    implementation for SingleModelHandler
+***********************************************/
+
+namespace slnn{
 template <typename SIModel>
 const std::string SingleInputModelHandler<SIModel>::OUT_SPLIT_DELIMITER = "\t" ;
 
@@ -184,6 +190,7 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
     {
         // do not skip empty line .
         CWSUtils::split_word(line, raw_sent) ;
+        sent.clear() ;
         for( size_t i = 0 ; i < raw_sent.size() ; ++i )
         {
             sent.push_back(word_dict.Convert(raw_sent[i])) ;
@@ -221,7 +228,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
 
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
     DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
-    vector<unsigned> access_order(nr_samples);
+    std::vector<unsigned> access_order(nr_samples);
     for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 
     cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
@@ -263,7 +270,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
             }
             if (0 == (i + 1) % trivial_report_freq) // Report 
             {
-                string trivial_header = to_string(i + 1) + " instances have been trained.";
+                std::string trivial_header = std::to_string(i + 1) + " instances have been trained.";
                 BOOST_LOG_TRIVIAL(trace) << training_stat_per_epoch.get_stat_str(trivial_header);
             }
 
@@ -283,10 +290,10 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
 
         training_stat_per_epoch.end_time_stat();
         // Output at end of every eopch
-        ostringstream tmp_sos;
-        tmp_sos << "-------- epoch " << nr_epoch + 1 << "/" << to_string(max_epoch) << " finished . ----------\n"
+        std::ostringstream tmp_sos;
+        tmp_sos << "-------- epoch " << nr_epoch + 1 << "/" << std::to_string(max_epoch) << " finished . ----------\n"
             << nr_samples << " instances has been trained . \n";
-        string info_header = tmp_sos.str();
+        std::string info_header = tmp_sos.str();
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
@@ -308,9 +315,9 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
     unsigned nr_samples = p_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
 
-    CWSStat stat(sim->get_output_dict());
+    CWSStat stat(sim->get_output_dict() , true);
     stat.start_time_stat();
-    vector<IndexSeq> predict_tag_seqs(p_tag_seqs->size());
+    std::vector<IndexSeq> predict_tag_seqs(p_tag_seqs->size());
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
         cnn::ComputationGraph cg;
@@ -321,12 +328,12 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
         stat.total_tags += predict_tag_seq.size();
     }
     stat.end_time_stat();
-    array<float , 4> eval_scores = stat.eval(*p_tag_seqs, predict_tag_seqs);
+    std::array<float , 4> eval_scores = stat.eval(*p_tag_seqs, predict_tag_seqs);
     float Acc = eval_scores[0] , 
         P = eval_scores[1] ,
         R = eval_scores[2] ,
         F1 = eval_scores[3] ;
-    ostringstream tmp_sos;
+    std::ostringstream tmp_sos;
     tmp_sos << "validation finished .\n"
         << "Acc = " << Acc << "% , P = " << P << "% , R = " << R << "% , F1 = " << F1 << "%";
     BOOST_LOG_TRIVIAL(info) << stat.get_stat_str(tmp_sos.str()) ;
@@ -342,7 +349,7 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
     read_test_data(is,raw_instances, sents );
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     cnn::Dict &tag_dict = sim->get_output_dict() ;
-    BasicStat stat;
+    BasicStat stat(true);
     stat.start_time_stat();
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
@@ -356,7 +363,7 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         IndexSeq pred_tag_seq;
         cnn::ComputationGraph cg;
         sim->predict(cg, sent, pred_tag_seq);
-        Seq pred_tag_str_seq ;
+        Seq pred_tag_str_seq(pred_tag_seq.size()) ;
         std::transform(pred_tag_seq.cbegin(), pred_tag_seq.cend(), pred_tag_str_seq.begin(),
                        [&tag_dict](Index tag_id){ return tag_dict.Convert(tag_id) ; }) ;
         Seq words ;
@@ -384,8 +391,8 @@ template <typename SIModel>
 void SingleInputModelHandler<SIModel>::load_model(std::istream &is)
 {
     sim->load_model(is) ;
+    sim->print_model_info() ;
 }
 
 } // end of namespace slnn
-
 #endif

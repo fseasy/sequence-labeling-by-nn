@@ -21,7 +21,7 @@
 #include <boost/log/expressions.hpp>
 
 #include "cnn/dict.h"
-#include "segmentor/cws_utils/cws_utils.hpp"
+#include "segmentor/cws_utils/cws_utils.h"
 
 /*************************************
  * Stat 
@@ -34,9 +34,9 @@ struct BasicStat
 {
     float loss;
     unsigned long total_tags;
-    bool is_predict ;
     std::chrono::high_resolution_clock::time_point time_start;
     std::chrono::high_resolution_clock::time_point time_end;
+    bool is_predict ;
     std::chrono::high_resolution_clock::time_point start_time_stat() 
     {
         time_clock_locked = false;
@@ -47,7 +47,7 @@ struct BasicStat
         time_clock_locked = true;
         return time_end = std::chrono::high_resolution_clock::now(); 
     }
-    BasicStat(bool is_predict=false) :loss(0.f) , total_tags(0) , time_clock_locked(false) ,is_predict(is_predict) {};
+    BasicStat(bool is_predict=false) :loss(0.f) , total_tags(0) , is_predict(is_predict) , time_clock_locked(false){};
     float get_sum_E(){ return loss ; }
     long long get_time_cost_in_seconds()
     {
@@ -87,7 +87,7 @@ struct PostagStat : public BasicStat
 {
     unsigned long correct_tags ;
     
-    PostagStat() : BasicStat() , correct_tags(0){};
+    PostagStat(bool is_predict=false) : BasicStat(is_predict) , correct_tags(0){};
     float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.f; }
     float get_E() { return total_tags != 0 ? loss / total_tags : 0.f; }
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
@@ -122,7 +122,9 @@ struct NerStat : BasicStat
 {
     std::string eval_script_path;
     std::string tmp_output_path;
-    NerStat(const std::string &eval_script_path , const std::string &tmp_output_path=std::string("eval_out.tmp")) :BasicStat(),
+    NerStat(const std::string &eval_script_path , const std::string &tmp_output_path=std::string("eval_out.tmp") , 
+            bool is_predict=false) :
+        BasicStat(is_predict),
         eval_script_path(eval_script_path), tmp_output_path(tmp_output_path)
     {}
 
@@ -202,7 +204,8 @@ struct CWSStat : BasicStat
         M_ID,
         E_ID,
         S_ID ;
-    CWSStat(cnn::Dict &tag_dict)  
+    CWSStat(cnn::Dict &tag_dict , bool is_predict=false)
+      :BasicStat(is_predict)  
     {
         assert(tag_dict.Contains(CWSUtils::B_TAG) &&
                tag_dict.Contains(CWSUtils::M_TAG) &&
@@ -248,7 +251,7 @@ struct CWSStat : BasicStat
     {
         std::vector<std::array<unsigned, 2>> gold_words,
             pred_words ;
-        size_t gold_word_size = gold_words.size(),
+        unsigned gold_word_size = gold_words.size(),
             pred_word_size = pred_words.size() ;
         size_t gold_pos = 0 ,
             pred_pos = 0 ;

@@ -139,6 +139,9 @@ void Input3::build_inputs(const IndexSeq &dseq1, const IndexSeq &dseq2, const In
     std::swap(inputs_exprs, tmp_inputs);
 }
 
+/************ OutputBase ***************/
+
+OutputBase::~OutputBase(){} // base class should implement deconstructor , even for pure virtual function
 
 /************ SimpleOutput *************/
 
@@ -201,8 +204,8 @@ PretagOutput::PretagOutput(cnn::Model *m,
     :hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
     output_layer(m , hidden_dim , output_dim) ,
     nonlinear_func(nonlinear_func) ,
-    TAG_SOS(m->add_parameters({tag_embedding_dim})) ,
-    tag_lookup_param(m->add_lookup_parameters(output_dim , {tag_embedding_dim}))
+    tag_lookup_param(m->add_lookup_parameters(output_dim , {tag_embedding_dim})) ,
+    TAG_SOS(m->add_parameters({tag_embedding_dim})) 
 {}
 
 PretagOutput::~PretagOutput(){} 
@@ -263,9 +266,9 @@ CRFOutput::CRFOutput(cnn::Model *m,
           NonLinearFunc *nonlinear_func)
     :hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
     emit_layer(m , hidden_dim , 1) ,
+    tag_lookup_param(m->add_lookup_parameters(tag_num , {tag_embedding_dim})) ,
     trans_score_lookup_param(m->add_lookup_parameters(tag_num * tag_num , {1})) ,
     init_score_lookup_param(m->add_lookup_parameters(tag_num , {1})) ,
-    tag_lookup_param(m->add_lookup_parameters(tag_num , {tag_embedding_dim})) ,
     tag_num(tag_num) ,
     dropout_rate(dropout_rate) ,
     nonlinear_func(nonlinear_func)

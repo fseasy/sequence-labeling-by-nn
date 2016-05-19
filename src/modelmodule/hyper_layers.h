@@ -71,6 +71,7 @@ struct Input3
 
 struct OutputBase
 {
+    virtual ~OutputBase() = 0 ;
     virtual void new_graph(cnn::ComputationGraph &cg) = 0 ;
     virtual cnn::expr::Expression
     build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,

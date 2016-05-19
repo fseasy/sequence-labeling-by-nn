@@ -2,8 +2,8 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-#include "cws_single_classification_model.hpp"
-#include "segmentor/model_handler/single_input_modelhandler.hpp"
+#include "cws_single_classification_model.h"
+#include "segmentor/model_handler/single_input_modelhandler.h"
 #include "utils/general.hpp"
 
 using namespace std;
@@ -23,7 +23,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
-        ("dropout_rate" , po::value<float>() , "droupout rate for training")
+        ("dropout_rate" , po::value<float>() , "droupout rate for training (Only for bi-lstm)")
         ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
@@ -70,7 +70,6 @@ int train_process(int argc, char *argv[], const string &program_name)
 
     varmap_key_fatal_check(var_map , "dropout_rate" ,
         "Error : dropout rate should be specified .") ;
-    float dropout_rate = var_map["dropout_rate"].as<float>() ;
     
     // check model path
     string model_path;

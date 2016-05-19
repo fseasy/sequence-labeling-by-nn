@@ -9,13 +9,36 @@ set(modelhandler_dir
 set(cws_utils_dir
     ${segmentor_base_dir}/cws_utils)
 
-set(single_model_headers
+# single input model
+set(single_input_model_headers
     ${base_model_dir}/single_input_model.h
 )
-set(single_modelhandler_headers
-    ${modelhandler_dir}/single_input_modelhandler.hpp
+set(single_input_model_libs
+    ${base_model_dir}/single_input_model.cpp
 )
+
+# single input model handler
+set(single_input_modelhandler_headers
+    ${modelhandler_dir}/single_input_modelhandler.h
+)
+
+# cws utils
 set(cws_utils_headers
-    ${cws_utils_dir}/cws_utils.hpp)
+    ${cws_utils_dir}/cws_utils.h
+)
+set(cws_utils_libs
+    ${cws_utils_dir}/cws_utils.cpp
+)
+
+# combine
+set(cws_common_headers
+    ${common_headers}
+    ${cws_utils_headers}
+)
+
+set(cws_common_libs
+    ${common_libs}
+    ${cws_utils_libs}    
+)
 
 add_subdirectory(cws_single_classification)
