@@ -1,4 +1,6 @@
 #include "cws_single_classification_model.h"
+#include "segmentor/cws_module/cws_output_layer.h"
+
 namespace slnn{
 
 CWSSingleClassificationModel::CWSSingleClassificationModel()
@@ -21,13 +23,15 @@ void CWSSingleClassificationModel::set_model_param(const boost::program_options:
     dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
     word_dict_size = word_dict.size() ;
     output_dim = tag_dict.size() ;
+
+    tag_sys.build(tag_dict) ; // init B_ID , M_ID and so on 
 }
 void CWSSingleClassificationModel::build_model_structure()
 {
     m = new cnn::Model() ;
     input_layer = new Input1(m, word_dict_size, word_embedding_dim) ;
     bilstm_layer = new BILSTMLayer(m, lstm_nr_stacked_layer, word_embedding_dim, lstm_h_dim, dropout_rate) ;
-    output_layer = new SimpleOutput(m, lstm_h_dim, lstm_h_dim, hidden_dim, output_dim) ;
+    output_layer = new CWSSimpleOutput(m, lstm_h_dim, lstm_h_dim, hidden_dim, output_dim , tag_sys) ;
 }
 
 void CWSSingleClassificationModel::print_model_info()

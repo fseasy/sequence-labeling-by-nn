@@ -5,7 +5,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include "segmentor/base_model/single_input_model.h"
-#include "segmentor/cws_utils/cws_utils.h"
+#include "segmentor/cws_module/cws_tagging_system.h"
 
 #include "utils/stat.hpp"
 namespace slnn{
@@ -128,7 +128,7 @@ void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &i
             tmp_tag_cont ;
         while( iss >> words_line )
         {
-            CWSUtils::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
+            CWSTaggingSystem::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
             for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
             {
                 Index word_id = word_dict_wrapper.Convert(tmp_word_cont[i]) ;
@@ -189,7 +189,7 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
     while( getline(is, line) )
     {
         // do not skip empty line .
-        CWSUtils::split_word(line, raw_sent) ;
+        CWSTaggingSystem::split_word(line, raw_sent) ;
         sent.clear() ;
         for( size_t i = 0 ; i < raw_sent.size() ; ++i )
         {
@@ -363,11 +363,8 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         IndexSeq pred_tag_seq;
         cnn::ComputationGraph cg;
         sim->predict(cg, sent, pred_tag_seq);
-        Seq pred_tag_str_seq(pred_tag_seq.size()) ;
-        std::transform(pred_tag_seq.cbegin(), pred_tag_seq.cend(), pred_tag_str_seq.begin(),
-                       [&tag_dict](Index tag_id){ return tag_dict.Convert(tag_id) ; }) ;
         Seq words ;
-        CWSUtils::parse_word_tag2words(raw_sent, pred_tag_str_seq, words) ;
+        sim->get_tag_sys().parse_word_tag2words(raw_sent, pred_tag_seq, words) ;
         os << words[0] ;
         for( size_t i = 1 ; i < words.size() ; ++i ) os << OUT_SPLIT_DELIMITER << words[i] ;
         os << "\n";

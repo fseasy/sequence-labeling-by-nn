@@ -11,6 +11,7 @@
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 #include "modelmodule/hyper_layers.h"
+#include "segmentor/cws_module/cws_tagging_system.h"
 namespace slnn{
 
 class SingleInputModel
@@ -23,16 +24,18 @@ public :
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
     
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg , 
-                                              const IndexSeq &input_seq , const IndexSeq &gold_seq) ;
+    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+                                              const IndexSeq &input_seq, const IndexSeq &gold_seq) ;
     virtual void predict(cnn::ComputationGraph &cg ,
                          const IndexSeq &input_seq, IndexSeq &pred_seq) ;
 
-    cnn::Dict& get_input_dict(){ return input_dict ;  } ;
-    cnn::Dict& get_output_dict(){ return output_dict ; } ;
-    DictWrapper& get_input_dict_wrapper(){ return input_dict_wrapper ; } ;
+    cnn::Dict& get_input_dict(){ return input_dict ;  } 
+    cnn::Dict& get_output_dict(){ return output_dict ; } 
+    DictWrapper& get_input_dict_wrapper(){ return input_dict_wrapper ; } 
     cnn::Model *get_cnn_model(){ return m ; } ;
-    void set_cnn_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } ;
+    CWSTaggingSystem& get_tag_sys(){ return tag_sys ; }
+
+    void set_cnn_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
 
     virtual void save_model(std::ostream &os) = 0 ;
     virtual void load_model(std::istream &is) = 0 ;
@@ -48,7 +51,7 @@ protected :
     Input1 *input_layer ;
     BILSTMLayer *bilstm_layer ;
     OutputBase *output_layer ;
-
+    CWSTaggingSystem tag_sys ;
 };
 
 

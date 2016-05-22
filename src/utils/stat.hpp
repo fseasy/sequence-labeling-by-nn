@@ -21,7 +21,7 @@
 #include <boost/log/expressions.hpp>
 
 #include "cnn/dict.h"
-#include "segmentor/cws_utils/cws_utils.h"
+#include "segmentor/cws_module/cws_tagging_system.h"
 
 /*************************************
  * Stat 
@@ -207,14 +207,14 @@ struct CWSStat : BasicStat
     CWSStat(cnn::Dict &tag_dict , bool is_predict=false)
       :BasicStat(is_predict)  
     {
-        assert(tag_dict.Contains(CWSUtils::B_TAG) &&
-               tag_dict.Contains(CWSUtils::M_TAG) &&
-               tag_dict.Contains(CWSUtils::E_TAG) &&
-               tag_dict.Contains(CWSUtils::S_TAG)) ;
-        B_ID = tag_dict.Convert(CWSUtils::B_TAG) ;
-        M_ID = tag_dict.Convert(CWSUtils::M_TAG) ;
-        E_ID = tag_dict.Convert(CWSUtils::E_TAG) ;
-        S_ID = tag_dict.Convert(CWSUtils::S_TAG) ;
+        assert(tag_dict.Contains(CWSTaggingSystem::B_TAG) &&
+               tag_dict.Contains(CWSTaggingSystem::M_TAG) &&
+               tag_dict.Contains(CWSTaggingSystem::E_TAG) &&
+               tag_dict.Contains(CWSTaggingSystem::S_TAG)) ;
+        B_ID = tag_dict.Convert(CWSTaggingSystem::B_TAG) ;
+        M_ID = tag_dict.Convert(CWSTaggingSystem::M_TAG) ;
+        E_ID = tag_dict.Convert(CWSTaggingSystem::E_TAG) ;
+        S_ID = tag_dict.Convert(CWSTaggingSystem::S_TAG) ;
     }
 
     // return : {Acc , P , R , F1}

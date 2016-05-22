@@ -8,6 +8,7 @@
 #include "cnn/cnn.h"
 
 #include "segmentor/base_model/single_input_model.h"
+#include "segmentor/cws_module/cws_tagging_system.h"
 namespace slnn{
 
 class CWSSingleClassificationModel : public SingleInputModel

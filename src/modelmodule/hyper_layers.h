@@ -90,13 +90,13 @@ struct SimpleOutput : public OutputBase
     cnn::ComputationGraph *pcg;
     SimpleOutput(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
         unsigned hidden_dim, unsigned output_dim , NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
-    ~SimpleOutput();
-    void new_graph(cnn::ComputationGraph &cg);
-    cnn::expr::Expression
+    virtual ~SimpleOutput();
+    virtual void new_graph(cnn::ComputationGraph &cg);
+    virtual cnn::expr::Expression
     build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
            const std::vector<cnn::expr::Expression> &expr_cont2 ,
            const IndexSeq &gold_seq);
-    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
         const std::vector<cnn::expr::Expression> &expr_cont2,
         IndexSeq &pred_out_seq);
 };
