@@ -222,7 +222,7 @@ struct CWSStat : BasicStat
             correct_tokens += result[0] ;
             gold_tokens += result[1] ;
             found_tokens += result[2] ;
-            total_tags += gold_seqs.size() ;
+            total_tags += gold_seqs[i].size() ;
             for( size_t pos = 0 ; pos < gold_seqs[i].size() ; ++pos )
             {
                 if( gold_seqs[i][pos] == pred_seqs[i][pos] ) ++correct_tags ;
@@ -238,6 +238,7 @@ struct CWSStat : BasicStat
     std::array<unsigned , 3>
     eval_one_seq(const IndexSeq &gold_seq, const IndexSeq &pred_seq)
     {
+        assert(gold_seq.size() == pred_seq.size()) ;
         std::vector<std::array<unsigned, 2>> gold_words,
             pred_words ;
         parse_tag_seq2word_range(gold_seq, gold_words) ;
@@ -260,6 +261,7 @@ struct CWSStat : BasicStat
                 }
             }
             ++gold_pos ;
+            if( gold_pos >= gold_word_size ) break ;
             // try to align
             unsigned gold_char_pos = gold_words[gold_pos][0] ;
             while( pred_pos < pred_word_size && pred_words[pred_pos][0] < gold_char_pos ) 

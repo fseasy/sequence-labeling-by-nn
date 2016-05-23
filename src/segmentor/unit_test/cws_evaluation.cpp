@@ -50,8 +50,8 @@ int main(int argc, char *argv[])
     po::options_description desc("Unit Test for CWS Evaluation");
     string gold_path, pred_path ;
     desc.add_options()
-        ("gold_file", po::value<string>(), "path to gold file")
-        ("pred_file", po::value<string>(), "path to predict file")
+        ("gold_file", po::value<string>(&gold_path), "path to gold file")
+        ("pred_file", po::value<string>(&pred_path), "path to predict file")
         ("help,h", "help") ;
     po::variables_map varmap ;
     po::store(po::command_line_parser(argc, argv).options(desc).allow_unregistered().run(), varmap) ;
@@ -64,6 +64,12 @@ int main(int argc, char *argv[])
     }
 
     ifstream gold_f(gold_path), pred_f(pred_path) ;
+
+    if( !gold_f || !pred_f )
+    {
+        cerr << "failed to load file\n" ;
+        return 1 ;
+    }
 
     cnn::Dict tag_dict ;
     vector<slnn::IndexSeq> gold_seqs, pred_seqs ;
