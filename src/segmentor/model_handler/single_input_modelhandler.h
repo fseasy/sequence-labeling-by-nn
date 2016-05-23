@@ -315,7 +315,7 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
     unsigned nr_samples = p_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
 
-    CWSStat stat(sim->get_output_dict() , true);
+    CWSStat stat(sim->get_tag_sys() , true);
     stat.start_time_stat();
     std::vector<IndexSeq> predict_tag_seqs(p_tag_seqs->size());
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
@@ -348,7 +348,6 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
     std::vector<IndexSeq> sents ;
     read_test_data(is,raw_instances, sents );
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
     BasicStat stat(true);
     stat.start_time_stat();
     for (unsigned int i = 0; i < raw_instances.size(); ++i)

@@ -200,22 +200,11 @@ struct NerStat : BasicStat
 
 struct CWSStat : BasicStat
 {
-    Index B_ID,
-        M_ID,
-        E_ID,
-        S_ID ;
-    CWSStat(cnn::Dict &tag_dict , bool is_predict=false)
-      :BasicStat(is_predict)  
-    {
-        assert(tag_dict.Contains(CWSTaggingSystem::B_TAG) &&
-               tag_dict.Contains(CWSTaggingSystem::M_TAG) &&
-               tag_dict.Contains(CWSTaggingSystem::E_TAG) &&
-               tag_dict.Contains(CWSTaggingSystem::S_TAG)) ;
-        B_ID = tag_dict.Convert(CWSTaggingSystem::B_TAG) ;
-        M_ID = tag_dict.Convert(CWSTaggingSystem::M_TAG) ;
-        E_ID = tag_dict.Convert(CWSTaggingSystem::E_TAG) ;
-        S_ID = tag_dict.Convert(CWSTaggingSystem::S_TAG) ;
-    }
+    CWSTaggingSystem &tag_sys ;
+    CWSStat(CWSTaggingSystem &tag_sys , bool is_predict=false)
+      :BasicStat(is_predict) ,
+        tag_sys(tag_sys)
+    {}
 
     // return : {Acc , P , R , F1}
     std::array<float , 4>
@@ -251,6 +240,8 @@ struct CWSStat : BasicStat
     {
         std::vector<std::array<unsigned, 2>> gold_words,
             pred_words ;
+        parse_tag_seq2word_range(gold_seq, gold_words) ;
+        parse_tag_seq2word_range(pred_seq, pred_words) ;
         unsigned gold_word_size = gold_words.size(),
             pred_word_size = pred_words.size() ;
         size_t gold_pos = 0 ,
@@ -283,12 +274,12 @@ struct CWSStat : BasicStat
         for( unsigned i = 0 ; i < seq.size() ; ++i )
         {
             Index tag_id = seq.at(i) ;
-            if( tag_id == S_ID )
+            if( tag_id == tag_sys.S_ID )
             {
                 tmp_word_ranges.push_back({ i , i }) ;
                 range_s = i + 1 ;
             }
-            else if( tag_id == E_ID )
+            else if( tag_id == tag_sys.E_ID )
             {
                 tmp_word_ranges.push_back({ range_s , i }) ;
                 range_s = i + 1 ;

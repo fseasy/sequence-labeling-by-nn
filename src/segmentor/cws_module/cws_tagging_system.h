@@ -32,7 +32,7 @@ struct CWSTaggingSystem
 
     void build(cnn::Dict &tag_dict) ;
     bool can_emit(size_t cur_pos , Index cur_tag_id) ;
-    bool can_trans(size_t pre_tag_id, size_t cur_tag_id) ;
+    bool can_trans(Index pre_tag_id, Index cur_tag_id) ;
     void parse_word_tag2words(const Seq &raw_words, const IndexSeq &tag_ids, Seq &o_words) ; // overide
 
 };

@@ -84,7 +84,7 @@ bool CWSTaggingSystem::can_emit(size_t cur_pos, Index cur_tag_id )
     return true ; // the others is all valid
 }
 
-bool CWSTaggingSystem::can_trans(size_t pre_tag_id, size_t cur_tag_id)
+bool CWSTaggingSystem::can_trans(Index pre_tag_id, Index cur_tag_id)
 {
     return (((pre_tag_id == B_ID || pre_tag_id == M_ID) && (cur_tag_id == M_ID || cur_tag_id == E_ID)) ||
         ((pre_tag_id == M_ID || pre_tag_id == S_ID) && (cur_tag_id == B_ID || cur_tag_id == S_ID))) ;
