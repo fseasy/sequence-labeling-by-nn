@@ -114,13 +114,13 @@ struct PretagOutput : public OutputBase
     PretagOutput(cnn::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
                  unsigned hidden_dim, unsigned output_dim , 
                  NonLinearFunc *nonlinear_fun=&cnn::expr::rectify);
-    ~PretagOutput();
+    virtual ~PretagOutput();
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
     build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
         const std::vector<cnn::expr::Expression> &expr_cont2,
         const IndexSeq &gold_seq);
-    void build_output(const std::vector<cnn::expr::Expression> &expr_1,
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_1,
                       const std::vector<cnn::expr::Expression> &expr_2,
                       IndexSeq &pred_out_seq) ;
 };

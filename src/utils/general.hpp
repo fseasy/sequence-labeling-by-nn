@@ -38,8 +38,10 @@ struct FileUtils
         else
         {
             // we thought it is a dir_name + file_name
+            std::string dir_name ;
             std::string::size_type split_pos = file_name.find_last_of("/\\") ;
-            std::string dir_name = file_name.substr(0 , split_pos) ;
+            if(split_pos == std::string::npos){ dir_name = "."; } // current directory
+            else { dir_name = file_name.substr(0 , split_pos); }
             return access(dir_name.c_str() , W_OK) == 0 ;
         }
     }

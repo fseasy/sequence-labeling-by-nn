@@ -25,6 +25,22 @@ protected :
 
 };
 
+struct CWSPretagOutput : PretagOutput
+{
+    CWSTaggingSystem &tag_sys ;
+    CWSPretagOutput(cnn::Model *m,
+                    unsigned tag_embedding_dim,
+                    unsigned input_dim1, unsigned input_dim2,
+                    unsigned hidden_dim, unsigned output_dim,
+                    CWSTaggingSystem &tag_sys,
+                    NonLinearFunc *nonlinear_fun = &cnn::expr::rectify);
+    void build_output(const std::vector<cnn::expr::Expression> &expr_1,
+                      const std::vector<cnn::expr::Expression> &expr_2,
+                      IndexSeq &pred_out_seq) ;
+protected :
+    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, int pos , Index pre_tag) ;
+};
+
 
 } // end of namespace slnn
 #endif 

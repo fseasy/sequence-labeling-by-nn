@@ -292,7 +292,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
         // Output at end of every eopch
         std::ostringstream tmp_sos;
         tmp_sos << "-------- epoch " << nr_epoch + 1 << "/" << std::to_string(max_epoch) << " finished . ----------\n"
-            << nr_samples << " instances has been trained . \n";
+            << nr_samples << " instances has been trained . ";
         std::string info_header = tmp_sos.str();
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
