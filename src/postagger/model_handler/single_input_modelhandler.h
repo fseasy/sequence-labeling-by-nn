@@ -160,8 +160,8 @@ void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &i
         std::vector<std::string> strpair_cont;
         boost::algorithm::split(strpair_cont, line, boost::is_any_of("\t"));
         for (std::string &strpair : strpair_cont) {
-            string::size_type  delim_pos = strpair.rfind("_");
-            assert(delim_pos != string::npos);
+            std::string::size_type  delim_pos = strpair.rfind("_");
+            assert(delim_pos != std::string::npos);
             std::string word = strpair.substr(0, delim_pos);
             // Parse Number to specific string
             word = replace_number(word);
