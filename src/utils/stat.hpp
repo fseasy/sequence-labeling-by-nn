@@ -102,9 +102,9 @@ struct PostagStat : public BasicStat
     std::string get_stat_str(const std::string &info_header)
     {
         std::ostringstream str_os;
-        str_os << info_header << "\n"
-            << "Average E = " << get_E() << "\n"
-            << "Acc = " << get_acc() * 100 << "% \n" 
+        str_os << info_header << "\n" ;
+        if( !is_predict ){ str_os << "Average E = " << get_E() << "\n" ; }
+        str_os << "Acc = " << get_acc() * 100 << "% \n" 
             << "Time cost = " << get_time_cost_in_seconds() << " s\n"
             << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s\n"
             << "Total tags = " << total_tags << " , Correct tags = " << correct_tags ;

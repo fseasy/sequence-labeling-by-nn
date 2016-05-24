@@ -24,11 +24,10 @@ void CWSSinglePretagModel::set_model_param(const boost::program_options::variabl
     dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
     word_dict_size = word_dict.size() ;
     output_dim = tag_dict.size() ;
-
-    tag_sys.build(tag_dict) ; // init B_ID , M_ID and so on 
 }
 void CWSSinglePretagModel::build_model_structure()
 {
+    tag_sys.build(tag_dict) ; // init B_ID , M_ID and so on 
     m = new cnn::Model() ;
     input_layer = new Input1(m, word_dict_size, word_embedding_dim) ;
     bilstm_layer = new BILSTMLayer(m, lstm_nr_stacked_layer, word_embedding_dim, lstm_h_dim, dropout_rate) ;
