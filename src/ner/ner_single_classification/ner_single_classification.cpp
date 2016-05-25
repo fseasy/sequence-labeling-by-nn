@@ -25,7 +25,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("dropout_rate" , po::value<float>() , "droupout rate for training (Only for bi-lstm)")
-        ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("devel_freq", po::value<unsigned>()->default_value(6000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
             "(eg , if set 1, the words of training data which frequency <= 1 may be "
@@ -168,11 +168,11 @@ int devel_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " devel <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     // set params to receive the arguments 
-    string devel_data_path, model_path , *p_conlleval_script_path ;
+    string devel_data_path, model_path , conlleval_script_path ;
     op_des.add_options()
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
-        ("conlleval_script_path" , po::value<string>(p_conlleval_script_path) , "path to conlleval script for NER")
+        ("conlleval_script_path" , po::value<string>(&conlleval_script_path) , "path to conlleval script for NER")
         ("help,h", "Show help information.");
     po::variables_map var_map;
     po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
@@ -187,10 +187,10 @@ int devel_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified !");
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
     varmap_key_fatal_check(var_map, "conlleval_script_path", "conlleval script path should be specified .") ;
-    if( !FileUtils::exists(*p_conlleval_script_path) )
+    if( !FileUtils::exists(conlleval_script_path) )
     {
         fatal_error("Error : failed to find conlleval script at `" +
-                    *p_conlleval_script_path + "`") ;
+                    conlleval_script_path + "`") ;
     }
     // Init 
     cnn::Initialize(argc, argv, 1234);
@@ -214,7 +214,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     devel_is.close();
 
     // devel
-    model_handler.devel(&sents , &postag_seqs , &ner_seqs , p_conlleval_script_path); 
+    model_handler.devel(&sents , &postag_seqs , &ner_seqs , &conlleval_script_path); 
     
     return 0;
 }

@@ -88,6 +88,7 @@ struct PostagStat : public BasicStat
     unsigned long correct_tags ;
     
     PostagStat(bool is_predict=false) : BasicStat(is_predict) , correct_tags(0){};
+    // return accuraty ( real value , not percent ! )
     float get_acc() { return total_tags != 0 ? float(correct_tags) / total_tags : 0.f; }
     float get_E() { return total_tags != 0 ? loss / total_tags : 0.f; }
     void clear() { correct_tags = 0; total_tags = 0; loss = 0.f; }
@@ -127,7 +128,8 @@ struct NerStat : BasicStat
         BasicStat(is_predict),
         eval_script_path(eval_script_path), tmp_output_path(tmp_output_path)
     {}
-
+    
+    // return {ACC , P , R , F1} ( percent !)
     std::array<float , 4>
     conlleval(const std::vector<IndexSeq> &gold_ner_seqs ,
         const std::vector<IndexSeq> &predict_ner_seqs , 
@@ -206,7 +208,7 @@ struct CWSStat : BasicStat
         tag_sys(tag_sys)
     {}
 
-    // return : {Acc , P , R , F1}
+    // return : {Acc , P , R , F1} ( percent ! )
     std::array<float , 4>
     eval(const std::vector<IndexSeq> &gold_seqs, const std::vector<IndexSeq> &pred_seqs)
     {
@@ -228,10 +230,10 @@ struct CWSStat : BasicStat
                 if( gold_seqs[i][pos] == pred_seqs[i][pos] ) ++correct_tags ;
             }
         }
-        float Acc = (total_tags == 0) ? 0.f : static_cast<float>(correct_tags) / total_tags ;
-        float P = (found_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / found_tokens ;
-        float R = (gold_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / gold_tokens ;
-        float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R) ;
+        float Acc = (total_tags == 0) ? 0.f : static_cast<float>(correct_tags) / total_tags * 100.f ;
+        float P = (found_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / found_tokens *100.f ;
+        float R = (gold_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / gold_tokens *100.f ;
+        float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R)  ;
         return std::array<float, 4>{Acc, P, R, F1} ;
     }
 

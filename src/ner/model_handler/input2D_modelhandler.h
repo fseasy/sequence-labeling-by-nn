@@ -150,9 +150,9 @@ void Input2DModelHandler<SIModel>::do_read_annotated_dataset(std::istream &is,
     cnn::Dict &ner_dict = sim->get_ner_dict() ;
     unsigned line_cnt = 0;
     std::string line;
-    vector<IndexSeq> tmp_sents,
-        tmp_postag_seqs,
-        tmp_ner_seqs;
+    std::vector<IndexSeq> tmp_sents,
+            tmp_postag_seqs,
+            tmp_ner_seqs;
     IndexSeq sent, 
         postag_seq,
         ner_seq;
