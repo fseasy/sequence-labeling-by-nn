@@ -1,3 +1,4 @@
+#include <limits>
 #include "cws_output_layer.h"
 
 namespace slnn{
@@ -35,7 +36,7 @@ void CWSSimpleOutput::build_output(const std::vector<cnn::expr::Expression> &exp
 Index CWSSimpleOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist, int pos , Index pre_tag_id)
 {
     // dist value must bigger than zero
-    cnn::real max_prob = -1.f ;
+    cnn::real max_prob = std::numeric_limits<cnn::real>::min() ;
     Index selected_tag = -1 ;
     for( size_t cur_tag_id = 0 ; cur_tag_id < dist.size() ; ++cur_tag_id )
     {
@@ -85,7 +86,7 @@ void CWSPretagOutput::build_output(const std::vector<cnn::expr::Expression> &exp
 Index CWSPretagOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist, int pos , Index pre_tag_id)
 {
     // dist value must bigger than zero
-    cnn::real max_prob = -1.f ;
+    cnn::real max_prob = std::numeric_limits<cnn::real>::min() ;
     Index selected_tag = -1 ;
     for( size_t cur_tag_id = 0 ; cur_tag_id < dist.size() ; ++cur_tag_id )
     {

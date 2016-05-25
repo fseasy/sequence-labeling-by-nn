@@ -1,5 +1,5 @@
-#ifndef SLNN_POSTAGGER_BASEMODEL_SINGLE_INPUT_MODEL_H_
-#define SLNN_POSTAGGER_BASEMODEL_SINGLE_INPUT_MODEL_H_
+#ifndef SLNN_NER_BASEMODEL_INPUT2D_MODEL_H_
+#define SLNN_NER_BASEMODEL_INPUT2D_MODEL_H_
 
 #include <iostream>
 
@@ -14,24 +14,27 @@
 
 namespace slnn{
 
-class SingleInputModel
+class Input2DModel
 {
 public :
-    SingleInputModel() ;
-    virtual ~SingleInputModel() ;
+    Input2DModel() ;
+    virtual ~Input2DModel() ;
     
     virtual void set_model_param(const boost::program_options::variables_map &var_map) = 0 ;
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
     
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
-                                              const IndexSeq &input_seq, const IndexSeq &gold_seq) ;
+                                              const IndexSeq &words_seq, const IndexSeq &postag_seq,
+                                              const IndexSeq &gold_ner_seq) ;
     virtual void predict(cnn::ComputationGraph &cg ,
-                         const IndexSeq &input_seq, IndexSeq &pred_seq) ;
+                         const IndexSeq &words_seq, const IndexSeq &postag_seq, 
+                         IndexSeq &pred_ner_seq) ;
 
-    cnn::Dict& get_input_dict(){ return input_dict ;  } 
-    cnn::Dict& get_output_dict(){ return output_dict ; } 
-    DictWrapper& get_input_dict_wrapper(){ return input_dict_wrapper ; } 
+    cnn::Dict& get_word_dict(){ return word_dict ;  } 
+    cnn::Dict& get_postag_dict() { return postag_dict ; }
+    cnn::Dict& get_ner_dict(){ return ner_dict ; } 
+    DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
     cnn::Model *get_cnn_model(){ return m ; } ;
 
 
@@ -44,11 +47,12 @@ public :
     static const std::string UNK_STR;
 protected :
     cnn::Model *m ;
-    cnn::Dict input_dict ;
-    cnn::Dict output_dict ;
-    DictWrapper input_dict_wrapper ;
+    cnn::Dict word_dict ;
+    cnn::Dict postag_dict ;
+    cnn::Dict ner_dict ;
+    DictWrapper word_dict_wrapper ;
 
-    Input1 *input_layer ;
+    Input2D *input_layer ;
     BILSTMLayer *bilstm_layer ;
     OutputBase *output_layer ;
 

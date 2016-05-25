@@ -40,6 +40,7 @@ namespace slnn {
             UNK = rd.Convert(word);
         }
         void Freeze() { rd.Freeze(); }
+        bool is_frozen() { return rd.is_frozen(); }
         int ConvertProbability(Index word_idx)
         {
             if (word_idx == UNK) return UNK; // UNK is not in freq_records

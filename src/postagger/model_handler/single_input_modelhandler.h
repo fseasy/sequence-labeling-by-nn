@@ -57,7 +57,7 @@ public :
     void save_model(std::ostream &os);
     void load_model(std::istream &is);
 private :
-    inline void save_current_best_model(float F1);
+    inline void save_current_best_model(float acc);
 
 };
 
@@ -399,7 +399,11 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         cnn::ComputationGraph cg;
         sim->predict(cg, sent, pred_tag_seq);
         os << raw_sent[0] << "_" << tag_dict.Convert(pred_tag_seq[0]) ;
-        for( size_t i = 1 ; i < raw_sent.size() ; ++i ){ os << OUT_SPLIT_DELIMITER << raw_sent[i] << "_" << pred_tag_seq[i] ; }
+        for( size_t i = 1 ; i < raw_sent.size() ; ++i )
+        { 
+            os << OUT_SPLIT_DELIMITER 
+                << raw_sent[i] << "_" << tag_dict.Convert(pred_tag_seq[i]) ; 
+        }
         os << "\n";
         stat.total_tags += pred_tag_seq.size() ;
     }
