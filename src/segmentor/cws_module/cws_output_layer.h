@@ -21,7 +21,7 @@ struct CWSSimpleOutput : SimpleOutput
                       IndexSeq &pred_out_seq);
 
 protected :
-    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, int pos , Index pre_tag) ;
+    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag) ;
 
 };
 
@@ -38,7 +38,29 @@ struct CWSPretagOutput : PretagOutput
                       const std::vector<cnn::expr::Expression> &expr_2,
                       IndexSeq &pred_out_seq) ;
 protected :
-    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, int pos , Index pre_tag) ;
+    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag) ;
+};
+
+struct CWSCRFOutput : CRFOutput
+{
+    CWSTaggingSystem &tag_sys ;
+    CWSCRFOutput(cnn::Model *m,
+                 unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
+                 unsigned hidden_dim,
+                 unsigned tag_num,
+                 cnn::real dropout_rate,
+                 CWSTaggingSystem &tag_sys,
+                 NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
+
+    cnn::expr::Expression 
+    build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+                        const std::vector<cnn::expr::Expression> &expr_cont2,
+                        const IndexSeq &gold_seq) ;
+
+    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+                      const std::vector<cnn::expr::Expression> &expr_cont2,
+                      IndexSeq &pred_seq) ;
+
 };
 
 
