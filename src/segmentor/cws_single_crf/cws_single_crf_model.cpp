@@ -36,7 +36,7 @@ void CWSSingleCRFModel::build_model_structure()
 
 void CWSSingleCRFModel::print_model_info()
 {
-    BOOST_LOG_TRIVIAL(info) << "---------------- Single Input Pretag Model -----------------\n"
+    BOOST_LOG_TRIVIAL(info) << "---------------- Single Input CRF Model -----------------\n"
         << "vocabulary size : " << word_dict_size << " with dimension : " << word_embedding_dim << "\n"
         << "tag dict size : " << output_dim << " with dimension : " << tag_embedding_dim << "\n"
         << "bi-lstm x dim : " << word_embedding_dim << " , h dim : " << lstm_h_dim
