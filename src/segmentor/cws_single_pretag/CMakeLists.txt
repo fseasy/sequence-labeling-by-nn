@@ -1,13 +1,13 @@
+set(exe_name
+    cws_single_pretag
+)
 set(specific_headers
-    cws_single_pretag_model.h
+    ${exe_name}_model.h
 )
 set(specific_libs
-    cws_single_pretag_model.cpp
+    ${exe_name}_model.cpp
 )
 
-set(exe_name
-     cws_single_pretag
-)
 
 add_executable(${exe_name}
                ${exe_name}.cpp

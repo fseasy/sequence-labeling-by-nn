@@ -75,6 +75,7 @@ void CWSPretagOutput::build_output(const std::vector<cnn::expr::Expression> &exp
                                    const std::vector<cnn::expr::Expression> &expr_cont2,
                                    IndexSeq &pred_seq)
 {
+    
     size_t len = expr_cont1.size() ;
     if( 1 == len ) // Special Condition
     {
@@ -294,7 +295,7 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
         for (size_t i = 0; i < tag_num ; ++i )
         {
             
-            size_t pre_tag_with_max_score = -1;
+            Index pre_tag_with_max_score = -1;
             cnn::real max_score = std::numeric_limits<cnn::real>::lowest() ;
             for (size_t pre_i = 0 ; pre_i < tag_num ; ++pre_i)
             {
