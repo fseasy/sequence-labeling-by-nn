@@ -19,18 +19,6 @@ class CWSDoubleClassificationModel : public Input2Model
 {
     friend class boost::serialization::access;
 public:
-    unsigned dynamic_word_dim,
-        fixed_word_dim,
-        dynamic_dict_size,
-        fixed_dict_size,
-        lstm_nr_stacked_layer,
-        lstm_x_dim,
-        lstm_h_dim,
-        hidden_dim,
-        output_dim ;
-
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
-
 
     CWSDoubleClassificationModel() ;
     ~CWSDoubleClassificationModel() ;
@@ -43,9 +31,21 @@ public:
     void save(Archive &ar, const unsigned version) const ;
     template <typename Archive>
     void load(Archive &ar, const unsigned verison) ;
-    BOOST_SERIALIZATION_SPLIT_MEMBER() ;
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 };
 
+/*************  Template Implementation *****************/
 
+template <typename Archive>
+void CWSDoubleClassificationModel::save(Archive &ar, const unsigned version) const
+{
+    boost::serialization::base_object<Input2Model>(*this) ;
+}
+
+template <typename Archive>
+void CWSDoubleClassificationModel::load(Archive &ar, const unsigned version)
+{
+    boost::serialization::base_object<Input2Model>(*this) ;
+}
 } // end of namespace slnn 
 #endif 

@@ -22,7 +22,7 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
+    cnn::real dropout_rate ;
 
     cnn::Dict &word_dict ;
     cnn::Dict &tag_dict ;

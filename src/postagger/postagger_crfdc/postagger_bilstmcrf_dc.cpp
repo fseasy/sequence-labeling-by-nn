@@ -91,7 +91,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     ifstream embedding_is(embedding_path);
     if (!embedding_is)
     {
-        BOOST_LOG_TRIVIAL(fatal) << "failed to open word2vec embedding : `" << training_data_path << "` .\n Exit! \n";
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open word2vec embedding : `" << embedding_path << "` .\n Exit! \n";
         return -1;
     }
     model_handler.build_fixed_dict_from_word2vec_file(embedding_is);

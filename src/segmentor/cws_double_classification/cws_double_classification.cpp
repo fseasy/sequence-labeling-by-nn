@@ -21,6 +21,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     op_des.add_options()
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("word2vec_embedding" , po::value<string>(), "The path to word2vec embedding")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("dropout_rate" , po::value<float>() , "droupout rate for training (Only for bi-lstm)")
@@ -32,8 +33,9 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
             " if words frequency <= replace_freq_threshold , the word will"
             " be replace in this probability")
-        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("dynamic_word_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("nr_lstm_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-LSTM.")
+        ("lstm_x_dim", po::value<unsigned>()->default_value(50), "The dimension for lstm X.")
         ("lstm_h_dim", po::value<unsigned>()->default_value(100), "The dimension for LSTM H.")
         ("tag_layer_hidden_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
@@ -64,8 +66,12 @@ int train_process(int argc, char *argv[], const string &program_name)
     if (0 == var_map.count("devel_data")) devel_data_path = "";
     else devel_data_path = var_map["devel_data"].as<string>();  
     
+    varmap_key_fatal_check(var_map, "word2vec_embedding",
+                           "Error : word2vec embedding path should be specified");
+    string word2vec_embedding_path = var_map["word2vec_embedding"].as<string>() ;
+
     varmap_key_fatal_check(var_map, "max_epoch",
-        "Error : max epoch num should be specified .");
+                           "Error : max epoch num should be specified .");
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
 
     varmap_key_fatal_check(var_map , "dropout_rate" ,
@@ -97,23 +103,41 @@ int train_process(int argc, char *argv[], const string &program_name)
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
     model_handler.set_unk_replace_threshold(replace_freq_threshold, replace_prob_threshold);
-    
+    // build fixed dict 
+    ifstream embedding_is(word2vec_embedding_path);
+    if (!embedding_is)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open word2vec embedding : `" << word2vec_embedding_path << "` .\n Exit! \n";
+        return -1;
+    }
+    model_handler.build_fixed_dict_from_word2vec_file(embedding_is);
+    embedding_is.clear() ; // !! MUST calling before `seekg` ! even thouth using  c++ 11 .
+    embedding_is.seekg(0 , embedding_is.beg); // will use in the following 
+
     ifstream train_is(training_data_path);
     if (!train_is) {
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
-    vector<IndexSeq> sents ,
+    vector<IndexSeq> dsents ,
+        fsents,
         tag_seqs;
-    model_handler.read_training_data_and_build_dicts(train_is, sents , tag_seqs);
+    model_handler.read_training_data_and_build_dicts(train_is, dsents, fsents, tag_seqs);
     train_is.close();
+
     // set model structure param 
     model_handler.finish_read_training_data(var_map);
     
     // build model structure
-    model_handler.build_model(); // passing the var_map to specify the model structure
+    model_handler.build_model(); 
     
+    // load fixed embedding 
+    model_handler.load_fixed_embedding(embedding_is);
+    embedding_is.close();
+
+
     // reading developing data
-    vector<IndexSeq> dev_sents, *p_dev_sents ,
+    vector<IndexSeq> dev_dsents, *p_dev_dsents ,
+        dev_fsents, *p_dev_fsents,
         dev_tag_seqs , *p_dev_tag_seqs;
     if ("" != devel_data_path)
     {
@@ -121,23 +145,23 @@ int train_process(int argc, char *argv[], const string &program_name)
         if (!devel_is) {
             fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
         }
-        model_handler.read_devel_data(devel_is, dev_sents , 
-             dev_tag_seqs);
+        model_handler.read_devel_data(devel_is, dev_dsents , dev_fsents, dev_tag_seqs);
         devel_is.close();
-        p_dev_sents = &dev_sents;
+        p_dev_dsents = &dev_dsents;
+        p_dev_fsents = &dev_fsents;
         p_dev_tag_seqs = &dev_tag_seqs;
     }
     else
     {
-        p_dev_sents = p_dev_tag_seqs =  nullptr;
+        p_dev_dsents = p_dev_fsents = p_dev_tag_seqs =  nullptr;
     }
 
     // Train 
-    model_handler.train(&sents , &tag_seqs , 
-        max_epoch, 
-        p_dev_sents , p_dev_tag_seqs , 
-        devel_freq , 
-        trivial_report_freq);
+    model_handler.train(&dsents, &fsents, &tag_seqs,
+                        max_epoch,
+                        p_dev_dsents, p_dev_fsents, p_dev_tag_seqs,
+                        devel_freq,
+                        trivial_report_freq);
 
     // save model
     model_handler.save_model(model_os);
@@ -185,13 +209,14 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // read devel data
     ifstream devel_is(devel_data_path) ;
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
-    vector<IndexSeq> sents,
+    vector<IndexSeq> dsents, 
+        fsents,
         tag_seqs ;
-    model_handler.read_devel_data(devel_is, sents , tag_seqs);
+    model_handler.read_devel_data(devel_is, dsents, fsents, tag_seqs);
     devel_is.close();
 
     // devel
-    model_handler.devel(&sents , &tag_seqs); 
+    model_handler.devel(&dsents, &fsents, &tag_seqs); 
     
     return 0;
 }

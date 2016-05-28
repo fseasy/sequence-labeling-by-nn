@@ -24,7 +24,7 @@ struct BILSTMLayer
     cnn::real default_dropout_rate ;
 
     BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
-                cnn::real default_dropout_rate=0.1);
+                cnn::real default_dropout_rate=0.f);
     ~BILSTMLayer();
     void new_graph(cnn::ComputationGraph &cg);
     void set_dropout(float dropout_rate) ;
