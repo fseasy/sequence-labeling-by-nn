@@ -5,6 +5,10 @@
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/assume_abstract.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include "cnn/cnn.h"
 #include "cnn/dict.h"
@@ -16,11 +20,15 @@ namespace slnn{
 
 class SingleInputModel
 {
+    friend class boost::serialization::access;
 public :
     SingleInputModel() ;
     virtual ~SingleInputModel() ;
+    SingleInputModel(const SingleInputModel&) = delete;
+    SingleInputModel& operator=(const SingleInputModel&) = delete;
     
-    virtual void set_model_param(const boost::program_options::variables_map &var_map) = 0 ;
+    virtual void set_model_param(const boost::program_options::variables_map &var_map);
+
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
     
@@ -37,11 +45,25 @@ public :
 
     void set_cnn_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
 
-    virtual void save_model(std::ostream &os) = 0 ;
-    virtual void load_model(std::istream &is) = 0 ;
+    template <typename Archive>
+    void save(Archive &ar, const unsigned versoin) const; 
+    template <typename Archive>
+    void load(Archive &ar, const unsigned version);
+    BOOST_SERIALIZATION_SPLIT_MEMBER()
 
 public :
     static const std::string UNK_STR;
+
+public:
+    unsigned word_embedding_dim,
+        word_dict_size,
+        lstm_nr_stacked_layer,
+        lstm_h_dim,
+        hidden_dim,
+        output_dim ;
+
+    cnn::real dropout_rate ; 
+
 protected :
     cnn::Model *m ;
     cnn::Dict input_dict ;
@@ -54,6 +76,31 @@ protected :
     CWSTaggingSystem tag_sys ;
 };
 
+BOOST_SERIALIZATION_ASSUME_ABSTRACT(SingleInputModel)
+
+template <typename Archive>
+void SingleInputModel::save(Archive &ar, const unsigned version) const
+{
+    ar & word_dict_size & word_embedding_dim
+        & lstm_h_dim & lstm_nr_stacked_layer
+        & hidden_dim & output_dim
+        & dropout_rate ;
+    ar & input_dict & output_dict ;
+    ar & *m ;
+}
+
+template <typename Archive>
+void SingleInputModel::load(Archive &ar, const unsigned version)
+{
+    ar & word_dict_size & word_embedding_dim
+        & lstm_h_dim & lstm_nr_stacked_layer
+        & hidden_dim & output_dim
+        & dropout_rate ;
+    ar & input_dict & output_dict ;
+    assert(input_dict.size() == word_dict_size && output_dict.size() == output_dim) ;
+    build_model_structure() ;
+    ar & *m ;
+}
 
 } // end of namespcace slnn 
 

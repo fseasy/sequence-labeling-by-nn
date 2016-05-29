@@ -376,17 +376,23 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
 template <typename SIModel>
 void SingleInputModelHandler<SIModel>::save_model(std::ostream &os)
 {
+    BOOST_LOG_TRIVIAL(info) << "saving model ...";
     if( best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail() )
     {
+        BOOST_LOG_TRIVIAL(info) << "fetch best model ...";
         sim->set_cnn_model(best_model_tmp_ss) ;
     }
-    sim->save_model(os) ;
+    boost::archive::text_oarchive to(os);
+    to << *sim;
+    BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
 template <typename SIModel>
 void SingleInputModelHandler<SIModel>::load_model(std::istream &is)
 {
-    sim->load_model(is) ;
+    BOOST_LOG_TRIVIAL(info) << "loading model ...";
+    boost::archive::text_iarchive ti(is) ;
+    ti >> *sim;
     sim->print_model_info() ;
 }
 

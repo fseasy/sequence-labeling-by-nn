@@ -369,8 +369,8 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
     unsigned nr_samples = p_dsents->size();
 
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
+
     DictWrapper &dynamic_dict_wrapper = i2m->get_dynamic_dict_wrapper() ;
-    cnn::Dict &fdict = i2m->get_fixed_dict() ;
 
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;

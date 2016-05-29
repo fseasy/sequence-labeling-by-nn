@@ -13,17 +13,10 @@ namespace slnn{
 
 class CWSSinglePretagModel : public SingleInputModel
 {
+    friend class boost::serialization::access;
 public:
-    unsigned word_embedding_dim,
-        tag_embedding_dim , 
-        word_dict_size,
-        lstm_nr_stacked_layer,
-        lstm_h_dim,
-        hidden_dim,
-        output_dim ;
-
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
-
+    unsigned tag_embedding_dim ;
+    
     cnn::Dict &word_dict ;
     cnn::Dict &tag_dict ;
 
@@ -34,10 +27,16 @@ public:
     void build_model_structure() ;
     void print_model_info() ;
 
-    void save_model(std::ostream &os) ;
-    void load_model(std::istream &is) ;
+    template<typename Archive>
+    void serialize(Archive &ar, const unsigned version);
 };
 
+template<typename Archive>
+void CWSSinglePretagModel::serialize(Archive &ar, const unsigned version)
+{
+    ar & tag_embedding_dim;
+    boost::serialization::basic_object<SingleInputModel>(*this);
+}
 
 } // end of namespace slnn 
 #endif 

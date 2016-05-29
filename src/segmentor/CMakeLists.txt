@@ -60,4 +60,6 @@ add_subdirectory(cws_single_pretag)
 add_subdirectory(cws_single_crf)
 
 add_subdirectory(cws_double_classification)
+add_subdirectory(cws_double_pretag)
+add_subdirectory(cws_double_crf)
 add_subdirectory(unit_test)

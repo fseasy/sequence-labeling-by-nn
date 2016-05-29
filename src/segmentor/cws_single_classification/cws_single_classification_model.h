@@ -4,6 +4,9 @@
 #include <boost/log/trivial.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/base_object.hpp>
+#include <boost/serialization/utility.hpp>
+#include <boost/serialization/split_member.hpp>
 
 #include "cnn/cnn.h"
 
@@ -13,16 +16,9 @@ namespace slnn{
 
 class CWSSingleClassificationModel : public SingleInputModel
 {
+    friend class boost::serialization::access;
 public:
-    unsigned word_embedding_dim,
-        word_dict_size,
-        lstm_nr_stacked_layer,
-        lstm_h_dim,
-        hidden_dim,
-        output_dim ;
-
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
-
+    
     cnn::Dict &word_dict ;
     cnn::Dict &tag_dict ;
 
@@ -35,8 +31,16 @@ public:
 
     void save_model(std::ostream &os) ;
     void load_model(std::istream &is) ;
+
+    template<typename Archive>
+    void serialize(Archive &ar, const unsigned version);
 };
 
+template<typename Archive>
+void CWSSingleClassificationModel::serialize(Archive &ar, const unsigned version)
+{
+    boost::serialization::base_object<SingleInputModel>(*this);
+}
 
 } // end of namespace slnn 
 #endif 

@@ -20,6 +20,20 @@ SingleInputModel::~SingleInputModel()
     delete m ;
 }
 
+void SingleInputModel::set_model_param(const boost::program_options::variables_map &var_map)
+{
+    assert(input_dict.is_frozen() && output_dict.is_frozen()) ;
+
+    word_embedding_dim = var_map["word_embedding_dim"].as<unsigned>() ;
+    lstm_nr_stacked_layer = var_map["nr_lstm_stacked_layer"].as<unsigned>() ;
+    lstm_h_dim = var_map["lstm_h_dim"].as<unsigned>() ;
+    hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
+
+    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    word_dict_size = input_dict.size() ;
+    output_dim = output_dict.size() ;
+}
+
 cnn::expr::Expression
 SingleInputModel::build_loss(cnn::ComputationGraph &cg ,
                              const IndexSeq &input_seq, const IndexSeq &gold_seq)
