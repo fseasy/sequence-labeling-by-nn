@@ -24,18 +24,18 @@ public :
     static const std::string OUT_SPLIT_DELIMITER ;
 
     SingleInputModelHandler() ;
-    ~SingleInputModelHandler() ;
+    virtual ~SingleInputModelHandler() ;
     // Before read data
     void set_unk_replace_threshold(int freq_thres , float prob_thres);
 
     // Reading data 
-    void do_read_annotated_dataset(std::istream &is, 
+    virtual void do_read_annotated_dataset(std::istream &is, 
                                    std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
     void read_training_data_and_build_dicts(std::istream &is, 
                                             std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
     void read_devel_data(std::istream &is, 
                          std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
-    void read_test_data(std::istream &is,
+    virtual void read_test_data(std::istream &is,
                         std::vector<Seq> &raw_test_sents, std::vector<IndexSeq> &sents);
 
     // After Reading Training data

@@ -22,6 +22,12 @@ set(single_input_modelhandler_headers
     ${modelhandler_dir}/single_input_modelhandler.h
 )
 
+# single input bigram heandler
+set(single_input_bigram_modelhandler_headers
+    ${modelhandler_dir}/single_input_bigram_modelhandler.h
+    ${single_input_modelhandler_headers}
+)
+
 # double input model
 set(input2_model_headers
     ${base_model_dir}/input2_model.h
@@ -32,6 +38,12 @@ set(input2_model_libs
 # double input modelhandler
 set(input2_modelhandler_headers
     ${modelhandler_dir}/input2_modelhandler.h
+)
+
+# double input bigram modelhandler
+set(input2_bigram_modelhandler_headers
+    ${modelhandler_dir}/input2_bigram_modelhandler.h
+    ${input2_modelhandler_headers}
 )
 
 # cws module
@@ -62,4 +74,13 @@ add_subdirectory(cws_single_crf)
 add_subdirectory(cws_double_classification)
 add_subdirectory(cws_double_pretag)
 add_subdirectory(cws_double_crf)
+
+add_subdirectory(cws_single_bigram_classification)
+add_subdirectory(cws_single_bigram_pretag)
+add_subdirectory(cws_single_bigram_crf)
+
+add_subdirectory(cws_double_bigram_classification)
+add_subdirectory(cws_double_bigram_pretag)
+add_subdirectory(cws_double_bigram_crf)
+
 add_subdirectory(unit_test)

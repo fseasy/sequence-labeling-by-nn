@@ -21,7 +21,7 @@ public :
 
 public :
     Input2ModelHandler() ;
-    ~Input2ModelHandler() ;
+    virtual ~Input2ModelHandler() ;
     Input2ModelHandler(const Input2ModelHandler &) = delete;
     Input2ModelHandler& operator=(const Input2ModelHandler &) = delete;
 
@@ -30,7 +30,7 @@ public :
     void build_fixed_dict_from_word2vec_file(std::ifstream &is);
 
     // Reading data 
-    void do_read_annotated_dataset(std::istream &is, 
+    virtual void do_read_annotated_dataset(std::istream &is, 
                                    std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
                                    std::vector<IndexSeq> &tag_seqs);
     void read_training_data_and_build_dicts(std::istream &is,
@@ -39,7 +39,7 @@ public :
     void read_devel_data(std::istream &is, 
                          std::vector<IndexSeq> &dynamic_sents, std::vector<IndexSeq> &fixed_sents,
                          std::vector<IndexSeq> &tag_seqs);
-    void read_test_data(std::istream &is, 
+    virtual void read_test_data(std::istream &is, 
                         std::vector<Seq> &raw_test_sents, 
                         std::vector<IndexSeq> &daynamic_sents, std::vector<IndexSeq> &fixed_sents);
 
