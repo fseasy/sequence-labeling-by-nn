@@ -43,14 +43,14 @@ template <typename Archive>
 void CWSDoublePretagModel::save(Archive &ar, const unsigned version) const
 {
     ar & tag_dim;
-    boost::serialization::base_object<Input2Model>(*this) ;
+    ar & boost::serialization::base_object<Input2Model>(*this) ;
 }
 
 template <typename Archive>
 void CWSDoublePretagModel::load(Archive &ar, const unsigned version)
 {
     ar & tag_dim ;
-    boost::serialization::base_object<Input2Model>(*this) ;
+    ar & boost::serialization::base_object<Input2Model>(*this) ;
 }
 } // end of namespace slnn 
 #endif 

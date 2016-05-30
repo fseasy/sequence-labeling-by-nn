@@ -383,7 +383,7 @@ void SingleInputModelHandler<SIModel>::save_model(std::ostream &os)
         sim->set_cnn_model(best_model_tmp_ss) ;
     }
     boost::archive::text_oarchive to(os);
-    to << *sim;
+    to << *(static_cast<SIModel*>(sim));
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
@@ -392,7 +392,7 @@ void SingleInputModelHandler<SIModel>::load_model(std::istream &is)
 {
     BOOST_LOG_TRIVIAL(info) << "loading model ...";
     boost::archive::text_iarchive ti(is) ;
-    ti >> *sim;
+    ti >> *(static_cast<SIModel*>(sim));
     sim->print_model_info() ;
 }
 

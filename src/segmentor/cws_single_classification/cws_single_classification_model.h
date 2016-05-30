@@ -39,7 +39,7 @@ public:
 template<typename Archive>
 void CWSSingleClassificationModel::serialize(Archive &ar, const unsigned version)
 {
-    boost::serialization::base_object<SingleInputModel>(*this);
+    ar & boost::serialization::base_object<SingleInputModel>(*this);
 }
 
 } // end of namespace slnn 

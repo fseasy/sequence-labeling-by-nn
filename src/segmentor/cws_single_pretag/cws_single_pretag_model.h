@@ -35,7 +35,7 @@ template<typename Archive>
 void CWSSinglePretagModel::serialize(Archive &ar, const unsigned version)
 {
     ar & tag_embedding_dim;
-    boost::serialization::basic_object<SingleInputModel>(*this);
+    ar & boost::serialization::base_object<SingleInputModel>(*this);
 }
 
 } // end of namespace slnn 

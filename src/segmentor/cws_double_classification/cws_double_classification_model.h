@@ -39,13 +39,13 @@ public:
 template <typename Archive>
 void CWSDoubleClassificationModel::save(Archive &ar, const unsigned version) const
 {
-    boost::serialization::base_object<Input2Model>(*this) ;
+    ar & boost::serialization::base_object<Input2Model>(*this) ;
 }
 
 template <typename Archive>
 void CWSDoubleClassificationModel::load(Archive &ar, const unsigned version)
 {
-    boost::serialization::base_object<Input2Model>(*this) ;
+    ar & boost::serialization::base_object<Input2Model>(*this) ;
 }
 } // end of namespace slnn 
 #endif 

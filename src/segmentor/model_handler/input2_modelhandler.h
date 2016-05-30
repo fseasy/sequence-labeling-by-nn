@@ -532,7 +532,7 @@ void Input2ModelHandler<I2Model>::save_model(std::ostream &os)
         i2m->set_cnn_model(best_model_tmp_ss) ;
     }
     boost::archive::text_oarchive to(os);
-    to << *i2m ;
+    to << *(static_cast<I2Model*>(i2m)) ;
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
@@ -541,7 +541,7 @@ void Input2ModelHandler<I2Model>::load_model(std::istream &is)
 {
     BOOST_LOG_TRIVIAL(info) << "loading model ...";
     boost::archive::text_iarchive ti(is) ;
-    ti >> *i2m ;
+    ti >> *(static_cast<I2Model*>(i2m)) ;
     i2m->print_model_info() ;
 }
 
