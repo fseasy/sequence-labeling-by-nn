@@ -51,14 +51,14 @@ void SingleInputBigramModelHandler<SIModel>::do_read_annotated_dataset(std::istr
     IndexSeq sent, 
         tag_seq;
     // pre-allocation
-    tmp_sents.reserve(MaxSentNum); // 2^19 =  480k pairs 
-    tmp_tag_seqs.reserve(MaxSentNum);
+    tmp_sents.reserve(SingleInputModelHandler<SIModel>::MaxSentNum); // 2^19 =  480k pairs 
+    tmp_tag_seqs.reserve(SingleInputModelHandler<SIModel>::MaxSentNum);
 
-    sent.reserve(SentMaxLen);
-    tag_seq.reserve(SentMaxLen);
+    sent.reserve(SingleInputModelHandler<SIModel>::SentMaxLen);
+    tag_seq.reserve(SingleInputModelHandler<SIModel>::SentMaxLen);
 
-    DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    DictWrapper &word_dict_wrapper = SingleInputModelHandler<SIModel>::sim->get_input_dict_wrapper() ;
+    cnn::Dict &tag_dict = SingleInputModelHandler<SIModel>::sim->get_output_dict() ;
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         sent.clear() ;
@@ -102,7 +102,7 @@ void SingleInputBigramModelHandler<SIModel>::read_test_data(std::istream &is,
                                                       std::vector<Seq> &raw_test_sents, 
                                                       std::vector<IndexSeq> &sents)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
+    cnn::Dict &word_dict = SingleInputModelHandler<SIModel>::sim->get_input_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_sents ;

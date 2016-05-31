@@ -37,7 +37,7 @@ namespace slnn{
 
 template <typename I2Model>
 Input2BigramModelHandler<I2Model>::Input2BigramModelHandler()
-    : Input2ModelHandler()
+    : Input2ModelHandler<I2Model>()
 {}
 
 template <typename I2Model>
@@ -59,17 +59,17 @@ void Input2BigramModelHandler<I2Model>::do_read_annotated_dataset(std::istream &
         fsent,
         tag_seq;
     // pre-allocation
-    tmp_dynamic_sents.reserve(MaxSentNum); // 2^19 =  480k pairs 
-    tmp_fixed_sents.reserve(MaxSentNum);
-    tmp_tag_seqs.reserve(MaxSentNum);
+    tmp_dynamic_sents.reserve(this->MaxSentNum); // 2^19 =  480k pairs 
+    tmp_fixed_sents.reserve(this->MaxSentNum);
+    tmp_tag_seqs.reserve(this->MaxSentNum);
 
-    dsent.reserve(SentMaxLen);
-    fsent.reserve(SentMaxLen);
-    tag_seq.reserve(SentMaxLen);
+    dsent.reserve(this->SentMaxLen);
+    fsent.reserve(this->SentMaxLen);
+    tag_seq.reserve(this->SentMaxLen);
 
-    DictWrapper &dynamic_dict_wrapper = i2m->get_dynamic_dict_wrapper() ;
-    cnn::Dict &fixed_dict = i2m->get_fixed_dict();
-    cnn::Dict &tag_dict = i2m->get_tag_dict();
+    DictWrapper &dynamic_dict_wrapper = this->i2m->get_dynamic_dict_wrapper() ;
+    cnn::Dict &fixed_dict = this->i2m->get_fixed_dict();
+    cnn::Dict &tag_dict = this->i2m->get_tag_dict();
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         dsent.clear();
@@ -119,8 +119,8 @@ void Input2BigramModelHandler<I2Model>::read_test_data(std::istream &is,
                                                  std::vector<IndexSeq> &dsents,
                                                  std::vector<IndexSeq> &fsents)
 {
-    cnn::Dict &dword_dict = i2m->get_dynamic_dict() ;
-    cnn::Dict &fword_dict = i2m->get_fixed_dict() ;
+    cnn::Dict &dword_dict = this->i2m->get_dynamic_dict() ;
+    cnn::Dict &fword_dict = this->i2m->get_fixed_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_dsents,

@@ -19,8 +19,8 @@ public :
     float best_F1;
     std::stringstream best_model_tmp_ss;
 
-    const size_t SentMaxLen = 256;
-    const size_t MaxSentNum = 0x8000; // 32k
+    static const size_t SentMaxLen = 256;
+    static const size_t MaxSentNum = 0x8000; // 32k
     static const std::string OUT_SPLIT_DELIMITER ;
 
     SingleInputModelHandler() ;
@@ -66,6 +66,13 @@ protected :
 ***********************************************/
 
 namespace slnn{
+
+template <typename SIModel>
+const size_t SingleInputModelHandler<SIModel>::MaxSentNum ;
+
+template <typename SIModel>
+const size_t SingleInputModelHandler<SIModel>::SentMaxLen ;
+
 template <typename SIModel>
 const std::string SingleInputModelHandler<SIModel>::OUT_SPLIT_DELIMITER = "\t" ;
 
