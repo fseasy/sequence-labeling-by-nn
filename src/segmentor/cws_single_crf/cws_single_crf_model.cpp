@@ -32,6 +32,7 @@ void CWSSingleCRFModel::print_model_info()
         << "tag dict size : " << output_dim << " with dimension : " << tag_embedding_dim << "\n"
         << "bi-lstm x dim : " << word_embedding_dim << " , h dim : " << lstm_h_dim
         << " , stacked layer num : " << lstm_nr_stacked_layer << "\n"
+        << "dropout rate : " << dropout_rate << "\n"
         << "tag hidden layer dim : " << hidden_dim << "\n"
         << "output dim : " << output_dim ;
 }

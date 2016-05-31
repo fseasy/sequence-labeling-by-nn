@@ -65,7 +65,8 @@ public :
     void load_model(std::istream &is);
 
 protected :
-    inline void save_current_best_model(float F1);
+    void save_current_best_model(float F1);
+    bool is_train_error_occurs(float cur_F1);
 
 protected :
     Input2Model *i2m ;
@@ -112,6 +113,13 @@ void Input2ModelHandler<I2Model>::save_current_best_model(float F1)
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
     to << *i2m->get_cnn_model();
+}
+
+template <typename I2Model>
+inline 
+bool Input2ModelHandler<I2Model>::is_train_error_occurs(float cur_F1)
+{
+    return  (best_F1 - cur_F1 > 20.f);
 }
 
 template<typename I2Model>
@@ -375,11 +383,12 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
+    bool is_train_ok = true;
     cnn::SimpleSGDTrainer sgd(i2m->get_cnn_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq dynamic_sent_after_replace_unk(SentMaxLen, 0);
-    for( unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch )
+    for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
@@ -427,6 +436,11 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
                 float F1 = devel(p_dev_dsents, p_dev_fsents, p_dev_tag_seqs);
                 if( F1 > best_F1 ) save_current_best_model(F1);
                 line_cnt_for_devel = 0; // avoid overflow
+                if( is_train_error_occurs(F1) )
+                {
+                    is_train_ok = false ;
+                    break;
+                }
             }
         }
 
@@ -442,14 +456,20 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
-        if( p_dev_dsents != nullptr )
+        if( p_dev_dsents != nullptr && is_train_ok)
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
             float F1 = devel(p_dev_dsents, p_dev_fsents, p_dev_tag_seqs);
             if( F1 > best_F1 ) save_current_best_model(F1);
+            if( is_train_error_occurs(F1) )
+            {
+                is_train_ok = false;
+                break;
+            }
         }
 
     }
+    if( !is_train_ok ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
     BOOST_LOG_TRIVIAL(info) << "training finished with time cost " << total_time_cost_in_seconds << " s .";
 }
 

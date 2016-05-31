@@ -54,9 +54,9 @@ public :
     // Save & Load
     void save_model(std::ostream &os);
     void load_model(std::istream &is);
-private :
-    inline void save_current_best_model(float F1);
-
+protected :
+    void save_current_best_model(float F1);
+    bool is_train_error_occurs(float cur_F1);
 };
 
 } // end of namespace slnn
@@ -91,6 +91,13 @@ void SingleInputModelHandler<SIModel>::save_current_best_model(float F1)
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
     to << *sim->get_cnn_model();
+}
+
+template <typename SIModel>
+inline 
+bool SingleInputModelHandler<SIModel>::is_train_error_occurs(float cur_F1)
+{
+    return  (best_F1 - cur_F1 > 20.f);
 }
 
 template<typename SIModel>
@@ -231,11 +238,12 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
     std::vector<unsigned> access_order(nr_samples);
     for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 
+    bool is_train_ok = true ; // when grident update error , we stop the training 
     cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq dynamic_sent_after_replace_unk(SentMaxLen , 0);
-    for (unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch)
+    for (unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch)
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
@@ -282,6 +290,11 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
                 float F1 = devel(p_dev_sents  , p_dev_tag_seqs);
                 if (F1 > best_F1) save_current_best_model(F1);
                 line_cnt_for_devel = 0; // avoid overflow
+                if( is_train_error_occurs(F1) )
+                {
+                    is_train_ok = false;
+                    break ;
+                }
             }
         }
 
@@ -297,14 +310,20 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
-        if (p_dev_sents != nullptr)
+        if (p_dev_sents != nullptr && is_train_ok)
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
             float F1 = devel(p_dev_sents , p_dev_tag_seqs);
             if (F1 > best_F1) save_current_best_model(F1);
+            if( is_train_error_occurs(F1) )
+            {
+                is_train_ok = false ;
+                break ;
+            }
         }
 
     }
+    if( !is_train_ok ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
     BOOST_LOG_TRIVIAL(info) << "training finished with time cost " << total_time_cost_in_seconds << " s .";
 }
 
@@ -332,7 +351,7 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
     float Acc = eval_scores[0] , 
         P = eval_scores[1] ,
         R = eval_scores[2] ,
-        F1 = eval_scores[3] ;
+        F1 = eval_scores[3] ; // they are all PERCENT VALUE
     std::ostringstream tmp_sos;
     tmp_sos << "validation finished .\n"
         << "Acc = " << Acc << "% , P = " << P << "% , R = " << R << "% , F1 = " << F1 << "%";

@@ -75,7 +75,7 @@ struct BasicStat
         str_os << info_header << "\n" ;
         if( !is_predict ){ str_os << "Total E = " << get_sum_E() << "\n" ; }
         str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
-            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s";
+            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s";
         return str_os.str();
     }
 protected :
@@ -107,7 +107,7 @@ struct PostagStat : public BasicStat
         if( !is_predict ){ str_os << "Average E = " << get_E() << "\n" ; }
         str_os << "Acc = " << get_acc() * 100 << "% \n" 
             << "Time cost = " << get_time_cost_in_seconds() << " s\n"
-            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tokens/s\n"
+            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
             << "Total tags = " << total_tags << " , Correct tags = " << correct_tags ;
         return str_os.str();
     }
@@ -119,7 +119,7 @@ struct PostagStat : public BasicStat
 
 using Stat = PostagStat;
 
-struct NerStat : BasicStat
+struct NerStat : public BasicStat
 {
     std::string eval_script_path;
     std::string tmp_output_path;
@@ -200,13 +200,26 @@ struct NerStat : BasicStat
     }
 };
 
-struct CWSStat : BasicStat
+struct CWSStat : public BasicStat
 {
     CWSTaggingSystem &tag_sys ;
+    unsigned total_tokens; // token is word , which is different from "tag" 
     CWSStat(CWSTaggingSystem &tag_sys , bool is_predict=false)
       :BasicStat(is_predict) ,
-        tag_sys(tag_sys)
+        tag_sys(tag_sys),
+        total_tokens(0)
     {}
+
+    std::string get_stat_str(const std::string &info_header)
+    {
+        std::ostringstream str_os;
+        str_os << info_header << "\n" ;
+        if( !is_predict ){ str_os << "Sum E = " << get_sum_E() << "\n" ; }
+        str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "Speed(tag) = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
+            << "Speed(token) = " << total_tokens / 1000.f / get_time_cost_in_seconds() << " K Tokens/s\n" ;
+        return str_os.str();
+    }
 
     // return : {Acc , P , R , F1} ( percent ! )
     std::array<float , 4>
@@ -234,6 +247,7 @@ struct CWSStat : BasicStat
         float P = (found_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / found_tokens *100.f ;
         float R = (gold_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / gold_tokens *100.f ;
         float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R)  ;
+        total_tokens = found_tokens; // use found tokens(predicted tokens) as total tokens
         return std::array<float, 4>{Acc, P, R, F1} ;
     }
 

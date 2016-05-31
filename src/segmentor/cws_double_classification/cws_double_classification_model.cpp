@@ -30,6 +30,7 @@ void CWSDoubleClassificationModel::print_model_info()
         << "bi-lstm x dim : " << lstm_x_dim << " , h dim : " << lstm_h_dim
         << " , stacked layer num : " << lstm_nr_stacked_layer << "\n"
         << "tag hidden layer dim : " << hidden_dim << "\n"
+        << "dropout rate : " << dropout_rate << "\n"
         << "output dim : " << output_dim ;
 }
 
