@@ -19,9 +19,9 @@ it is now based on [CNN library](https://github.com/clab/cnn)
 
 steps :
 
-1. postagging based on example `tag-bilstm.cc` of CNN [doing]
+1. postagging based on example `tag-bilstm.cc` of CNN [done]
 
-2. chinese segmentation(using sequence labeling method) , ner , srl
+2. chinese segmentation(using sequence labeling method) , ner [doing]
 
 3. more various structures based on CNN
 

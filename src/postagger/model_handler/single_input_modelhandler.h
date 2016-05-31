@@ -103,7 +103,7 @@ void SingleInputModelHandler<SIModel>::save_current_best_model(float acc)
 
 template<typename SIModel>
 inline 
-void SingleInputModelHandler<SIModel>::is_train_error_occurs(float cur_acc)
+bool SingleInputModelHandler<SIModel>::is_train_error_occurs(float cur_acc)
 {
     return  (best_acc - cur_acc > 20.f);
 }

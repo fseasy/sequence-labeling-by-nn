@@ -108,7 +108,7 @@ void Input2DModelHandler<SIModel>::save_current_best_model(float F1)
 
 template<typename SIModel>
 inline 
-void Input2DModelHandler<SIModel>::is_train_error_occurs(float cur_F1)
+bool Input2DModelHandler<SIModel>::is_train_error_occurs(float cur_F1)
 {
     return  (best_F1 - cur_F1 > 20.f);
 }
