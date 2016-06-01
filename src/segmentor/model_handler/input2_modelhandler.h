@@ -215,9 +215,10 @@ void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
         fixed_lookup_param->Initialize(word_id, embedding_vec);
         if(dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
     }
+    size_t fixed_dict_word_num = i2m->fixed_dict_size - 1 ; // another UNK is not word
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
-        << words_cnt_hit << "/" << i2m->fixed_dict_size  << " ("
-        << ( i2m->fixed_dict_size ? static_cast<float>(words_cnt_hit) / i2m->fixed_dict_size : 0. ) * 100 
+        << words_cnt_hit << "/" << fixed_dict_word_num << " ("
+        << ( fixed_dict_word_num ? static_cast<float>(words_cnt_hit) / fixed_dict_word_num : 0.f ) * 100 
         << " %) " ;
 }
 

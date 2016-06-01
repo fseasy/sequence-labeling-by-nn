@@ -217,7 +217,7 @@ struct CWSStat : public BasicStat
         if( !is_predict ){ str_os << "Sum E = " << get_sum_E() << "\n" ; }
         str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
             << "Speed(tag) = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
-            << "Speed(token) = " << total_tokens / 1000.f / get_time_cost_in_seconds() << " K Tokens/s\n" ;
+            << "Speed(token) = " << total_tokens / 1000.f / get_time_cost_in_seconds() << " K Tokens/s" ;
         return str_os.str();
     }
 

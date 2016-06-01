@@ -5,7 +5,7 @@ using namespace std;
 namespace slnn {
 
 // Bi-LSTM
-
+/*
 BILSTMLayer::BILSTMLayer(Model *m , unsigned nr_lstm_stacked_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
                          cnn::real default_dropout_rate)
     : l2r_builder(new LSTMBuilder(nr_lstm_stacked_layers , lstm_x_dim , lstm_h_dim , m)) ,
@@ -20,7 +20,7 @@ BILSTMLayer::~BILSTMLayer()
     if (l2r_builder) delete l2r_builder;
     if (r2l_builder) delete r2l_builder;
 }
-
+*/
 // DenseLayer
 
 DenseLayer::DenseLayer(Model *m , unsigned input_dim , unsigned output_dim)
