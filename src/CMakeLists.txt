@@ -20,5 +20,5 @@ set(common_libs
     ${module_directory}/hyper_layers.cpp
 )
 add_subdirectory(postagger)
-add_subdirectory(ner)
-add_subdirectory(segmentor)
+#add_subdirectory(ner)
+#add_subdirectory(segmentor)
