@@ -2,7 +2,7 @@
 #define UTF8PROCESSING_HPP_INCLUDED
 #include <string>
 #include <vector>
-
+#include <boost/log/trivial.hpp>
 /**
  * uint8_t , mask8 , get_length is copy from `utf8.h`
  */
@@ -34,6 +34,9 @@ struct UTF8Processing
     static std::string::difference_type get_utf8_char_length_checked(const std::string::const_iterator &start_ite , 
             const std::string::const_iterator &end_ite) ;
     static size_t get_utf8_char_length_checked(const std::string &str , size_t start_pos) ;
+
+    // utils
+    static void utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_seq) ;
 
 };
 
@@ -135,6 +138,29 @@ inline
 size_t UTF8Processing::get_utf8_char_length_checked(const std::string &str , size_t start_pos)
 {
     return get_utf8_char_length( str.cbegin() + start_pos , str.cend() ) ;
+}
+
+void UTF8Processing::utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_seq)
+{
+    Seq tmp_word_cont ;
+    std::string::const_iterator start_iter = utf8_str.cbegin() ;
+    while( start_iter < utf8_str.cend() )
+    {
+        size_t utf8_char_len = UTF8Processing::get_utf8_char_length_checked(start_iter, utf8_str.cend()) ;
+        if( utf8_char_len > 0 )
+        {
+            tmp_word_cont.emplace_back(start_iter, start_iter + utf8_char_len) ;
+            start_iter += utf8_char_len ;
+        }
+        else
+        {
+            BOOST_LOG_TRIVIAL(warning) << "illegal utf8 character at position " 
+                << start_iter - utf8_str.cbegin() + 1
+                << " of words : " << utf8_str ;
+            start_iter += 1 ; // skip this position
+        }
+    }
+    std::swap(tmp_word_cont, utf8_seq) ;
 }
 
 } // end of namespace slnn
