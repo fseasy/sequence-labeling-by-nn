@@ -39,6 +39,7 @@ set(single_input_with_feature_modelhandler_hpp
 set(pos_model_module_hpps
     ${postagger_modelmodule_dir}/pos_feature_extractor.hpp
     ${postagger_modelmodule_dir}/pos_feature_layer.hpp
+    ${postagger_modelmodule_dir}/pos_reader.hpp
 )
 
 set(pos_common_headers

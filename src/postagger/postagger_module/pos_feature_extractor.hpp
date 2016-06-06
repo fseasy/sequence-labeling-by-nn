@@ -1,6 +1,9 @@
 #ifndef POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_HPP_
 #define POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_HPP_
 #include <string>
+
+#include <boost/serialization/serialization.hpp>
+
 #include "cnn/dict.h"
 #include "utils/dict_wrapper.hpp"
 #include "utils/typedeclaration.h"
@@ -9,6 +12,7 @@ namespace slnn{
 
 class POSFeatureExtractor
 {
+    friend class boost::serialization::access;
 public:
     static const std::string FEATURE_UNK_STR ;
     static const Index FEATURE_NONE_IDX; // for padding of prefix , suffix feature when no enough chars
@@ -26,11 +30,15 @@ public:
     size_t get_nr_features() { return NR_FEATURES; }
     size_t get_prefix_suffix_dict_size(){ return prefix_suffix_fdict.size() ; }
     size_t get_length_dict_size(){ return MAX_CHARS_LENGTH; }
+    cnn::Dict& get_prefix_suffix_dict(){ return prefix_suffix_fdict; }
 
 private:
     cnn::Dict prefix_suffix_fdict; // UNK
 
     DictWrapper prefix_suffix_fdict_wrapper;
+
+    template<Archive>
+    void serialize(Archive &ar, const unsigned version);
 };
 
 const std::string POSFeatureExtractor::FEATURE_UNK_STR = "feature_unk";
@@ -96,6 +104,12 @@ void POSFeatureExtractor::freeze_dict()
 {
     prefix_suffix_fdict_wrapper.Freeze();
     prefix_suffix_fdict_wrapper.SetUnk(FEATURE_UNK_STR);
+}
+
+template <typename Archive>
+void POSFeatureExtractor::serialize(Archive &ar, const unsigned version)
+{
+    ar & prefix_suffix_fdict ;
 }
 
 } // end of namespace slnn

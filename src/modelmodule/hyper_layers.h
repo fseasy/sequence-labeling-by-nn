@@ -16,6 +16,20 @@ struct Input1
     void build_inputs(const IndexSeq &sent , std::vector<cnn::expr::Expression> &input_exprs);
 };
 
+struct Input1WithFeature
+{
+    cnn::LookupParameters *word_lookup_param;
+    Merge2Layer m2_layer;
+    cnn::ComputationGraph *pcg;
+    NonLinearFunc *nonlinear_func;
+    Input1WithFeature(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim,
+                      unsigned feature_embedding_dim, unsigned merge_out_dim,
+                      NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    void new_graph(cnn::ComputationGraph &cg);
+    void build_inputs(const IndexSeq &sent , const std::vector<cnn::expr::Expression> &feature_exprs,
+                      std::vector<cnn::expr::Expression> &input_exprs);
+};
+
 struct Input2D
 {
     cnn::LookupParameters *dynamic_lookup_param1,

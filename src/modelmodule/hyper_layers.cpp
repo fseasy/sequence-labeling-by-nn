@@ -31,6 +31,40 @@ void Input1::build_inputs(const IndexSeq &sent, std::vector<cnn::expr::Expressio
     std::swap(inputs_exprs, tmp_inputs);
 }
 
+
+/**********  Input1WithFeature  *********/
+
+Input1WithFeature::Input1WithFeature(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim,
+                                     unsigned feature_embedding_dim, unsigned merge_out_dim,
+                                     NonLinearFunc *nonlinear_func)
+    :word_lookup_param(m->add_lookup_parameters(vocab_size, { embedding_dim })),
+    m2_layer(m,embedding_dim, feature_embedding_dim, merge_out_dim),
+    nonlinear_func(nonlinear_func)
+{}
+
+void Input1WithFeature::new_graph(cnn::ComputationGraph &cg)
+{
+    pcg = &cg;
+    m2_layer.new_graph(cg);
+}
+
+void Input1WithFeature::build_inputs(const IndexSeq &sent, 
+                                     const std::vector<cnn::expr::Expression> &features_exprs,
+                                     std::vector<cnn::expr::Expression> &inputs_exprs)
+{
+    if (nullptr == pcg) throw std::runtime_error("cg should be set .");
+    size_t sent_len = sent.size();
+    std::vector<cnn::expr::Expression> tmp_inputs(sent_len);
+    for (size_t i = 0; i < sent_len; ++i)
+    {
+        cnn::expr::Expression word_expr = lookup(*pcg, word_lookup_param, sent[i]);
+        const cnn::expr::Expression &feature_expr = features_exprs[i];
+        cnn::expr::Expression merge_expr = m2_layer.build_graph(word_expr, feature_expr);
+        tmp_inputs[i] = (*nonlinear_func)(merge_expr);
+    }
+    std::swap(inputs_exprs, tmp_inputs);
+}
+
 /********** Input2D ***********/
 
 Input2D::Input2D(cnn::Model *m, unsigned vocab_size1, unsigned embedding_dim1,

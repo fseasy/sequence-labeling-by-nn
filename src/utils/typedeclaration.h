@@ -12,6 +12,15 @@ namespace slnn{
     using InstancePair = std::pair<IndexSeq, IndexSeq>;
     using Seq = std::vector<std::string>;
     template <int sz>
+    using FeatureGroup = std::array<std::string, sz>;
+    template <int sz>
+    using FeatureGroupSeq = std::vector<FeatureGroup<sz>>;
+    template <int sz>
+    using FeatureIndexGroup = std::array<Index, sz>;
+    template <int sz>
+    using FeatureIndexGroupSeq = std::vector<FeatureIndexGroup<sz>>;
+
+    template <int sz>
     using FeaturesIndex = std::array<Index, sz>;
     template <int sz>
     using FeaturesIndexSeq = std::vector<std::array<Index,sz>>;
