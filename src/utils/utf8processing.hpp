@@ -37,6 +37,9 @@ struct UTF8Processing
 
     // utils
     static void utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_seq) ;
+    static std::string replace_number(const std::string &str ,
+                                      const std::string number_transform_str="##",
+                                      const size_t length_transform_str=2);
 
 };
 
@@ -161,6 +164,34 @@ void UTF8Processing::utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_se
         }
     }
     std::swap(tmp_word_cont, utf8_seq) ;
+}
+
+std::string UTF8Processing::replace_number(const std::string &str,
+                                           const std::string number_transform_str,
+                                           const size_t length_transform_str )
+{
+    std::string tmp_str = str;
+    size_t start_pos = 0;
+    while (start_pos < tmp_str.length())
+    {
+        size_t end_pos = start_pos;
+
+        while (true)
+        {
+            size_t byte_len = UTF8Processing::get_number_byte_width(tmp_str, end_pos);
+            if (0 == byte_len) break;
+            else end_pos += byte_len;
+        }
+        size_t number_byte_len = end_pos - start_pos;
+        if (0 != number_byte_len)
+        {
+            // replace
+            tmp_str.replace(start_pos, number_byte_len, number_transform_str);
+            start_pos += length_transform_str;
+        }
+        else ++start_pos;
+    }
+    return tmp_str;
 }
 
 } // end of namespace slnn

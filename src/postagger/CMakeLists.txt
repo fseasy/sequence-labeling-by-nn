@@ -1,3 +1,5 @@
+include_directories(${source_directory})
+
 set(postagger_base_dir
     ${source_directory}/postagger
 )

@@ -12,7 +12,7 @@ namespace slnn{
 class POSReader
 {
 public:
-    static const char* PosDataDelimiter = "\t";
+    static const char* PosDataDelimiter ;
 public:
     
     POSReader(std::ifstream &is);
@@ -25,7 +25,7 @@ private :
 };
 
 
-const char* POSReader::PosDataDelimiter;
+const char* POSReader::PosDataDelimiter = "\t";
 
 POSReader::POSReader(std::ifstream &is)
     :is(is)
