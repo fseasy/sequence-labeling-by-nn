@@ -1,10 +1,10 @@
-#ifndef POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_LAYER_HPP_
-#define POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_LAYER_HPP_
+#ifndef POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_LAYER_H_
+#define POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_LAYER_H_
 
 #include <array>
 #include "cnn/cnn.h"
 #include "cnn/expr.h"
-#include "pos_feature.hpp"
+#include "pos_feature.h"
 
 namespace slnn{
 class POSFeatureLayer
@@ -32,25 +32,8 @@ private:
     cnn::expr::Expression build_char_length_feature_expr(Index idx);
 };
 
-POSFeatureLayer::POSFeatureLayer(cnn::Model *m, 
-                                 size_t prefix_suffix_len1_dict_size, size_t prefix_suffix_len1_embedding_dim,
-                                 size_t prefix_suffix_len2_dict_size, size_t prefix_suffix_len2_embedding_dim,
-                                 size_t prefix_suffix_len3_dict_size, size_t prefix_suffix_len3_embedding_dim,
-                                 size_t char_length_dict_size, size_t char_length_embedding_dim)
-    :prefix_suffix_len1_lookup_param(m->add_lookup_parameters(prefix_suffix_len1_dict_size, {prefix_suffix_len1_embedding_dim})),
-    prefix_suffix_len2_lookup_param(m->add_lookup_parameters(prefix_suffix_len2_dict_size, {prefix_suffix_len2_embedding_dim})),
-    prefix_suffix_len3_lookup_param(m->add_lookup_parameters(prefix_suffix_len3_dict_size, {prefix_suffix_len3_embedding_dim})),
-    char_length_lookup_param(m->add_lookup_parameters(char_length_dict_size, {char_length_embedding_dim}))
-{}
 
-POSFeatureLayer::POSFeatureLayer(cnn::Model *m, POSFeature &pos_feature)
-    :POSFeatureLayer(m, 
-                     pos_feature.prefix_suffix_len1_dict.size(), pos_feature.prefix_suffix_len1_embedding_dim,
-                     pos_feature.prefix_suffix_len2_dict.size(), pos_feature.prefix_suffix_len2_embedding_dim,
-                     pos_feature.prefix_suffix_len3_dict.size(), pos_feature.prefix_suffix_len3_embedding_dim,
-                     pos_feature.get_char_length_dict_size(), pos_feature.char_length_embedding_dim)
-{}
-
+inline
 void POSFeatureLayer::new_graph(cnn::ComputationGraph &cg)
 {
     pcg = &cg;
@@ -89,6 +72,7 @@ cnn::expr::Expression POSFeatureLayer::build_feature_expr(const POSFeature::POSF
     });
 }
 
+inline
 void POSFeatureLayer::build_feature_exprs(const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq,
                                           std::vector<cnn::expr::Expression> &pos_features_exprs)
 {

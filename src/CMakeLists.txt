@@ -12,6 +12,9 @@ set(common_headers
     ${util_directory}/utf8processing.hpp
     ${util_directory}/stat.hpp
     ${util_directory}/dict_wrapper.hpp
+    ${util_directory}/stash_model.hpp
+    ${util_directory}/reader.hpp
+    ${util_directory}/general.hpp
     ${module_directory}/layers.h
     ${module_directory}/hyper_layers.h
 )

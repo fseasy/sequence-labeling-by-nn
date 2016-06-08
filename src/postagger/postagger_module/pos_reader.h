@@ -6,36 +6,29 @@
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "utils/typedeclaration.h"
+#include "utils/reader.hpp"
 
 namespace slnn{
 
-class POSReader
+class POSReader : public Reader
 {
 public:
     static const char* PosDataDelimiter ;
+    static const char* WordPosDelimiter;
 public:
     
-    POSReader(std::ifstream &is);
-    bool good();
+    POSReader(std::istream &is);
     bool readline(Seq &sent, Seq &postag); // training data
     bool readline(Seq &sent); // devel data
-
-private :
-    std::ifstream &is;
 };
 
 
-const char* POSReader::PosDataDelimiter = "\t";
-
-POSReader::POSReader(std::ifstream &is)
-    :is(is)
+inline
+POSReader::POSReader(std::istream &is)
+    :Reader(is)
 {}
 
-bool POSReader::good()
-{
-    return is.good();
-}
-
+inline
 bool POSReader::readline(Seq &sent, Seq &postag_seq)
 {
     using std::swap;
@@ -53,7 +46,7 @@ bool POSReader::readline(Seq &sent, Seq &postag_seq)
     for( size_t i = 0; i < pair_len; ++i )
     {
         const std::string &str_pair = strpair_cont[i];
-        std::string::size_type  delim_pos = str_pair.rfind("_");
+        std::string::size_type  delim_pos = str_pair.rfind(WordPosDelimiter);
         assert(delim_pos != std::string::npos);
         tmp_sent[i] = str_pair.substr(0, delim_pos);
         tmp_tag_seq[i] = str_pair.substr(delim_pos + 1);
@@ -63,6 +56,7 @@ bool POSReader::readline(Seq &sent, Seq &postag_seq)
     return file_good;
 }
 
+inline
 bool POSReader::readline(Seq &sent)
 {
     using std::swap;
@@ -75,6 +69,7 @@ bool POSReader::readline(Seq &sent)
     swap(sent, word_cont);
     return file_good;
 }
+
 
 } // end of namespace slnn
 #endif

@@ -38,11 +38,20 @@ set(single_input_with_feature_modelhandler_hpp
 
 # model module (features extractor and layer)
 
-set(pos_model_module_hpps
-    ${postagger_modelmodule_dir}/pos_feature_extractor.hpp
-    ${postagger_modelmodule_dir}/pos_feature_layer.hpp
-    ${postagger_modelmodule_dir}/pos_reader.hpp
+set(pos_model_module_headers
+    ${postagger_modelmodule_dir}/pos_feature_extractor.h
+    ${postagger_modelmodule_dir}/pos_feature_layer.h
+    ${postagger_modelmodule_dir}/pos_reader.h
+    ${postagger_modelmodule_dir}/pos_feature.h
 )
+
+set(pos_model_module_libs
+    ${postagger_modelmodule_dir}/pos_feature_extractor.cpp
+    ${postagger_modelmodule_dir}/pos_feature_layer.cpp
+    ${postagger_modelmodule_dir}/pos_reader.cpp
+    ${postagger_modelmodule_dir}/pos_feature.cpp
+)
+
 
 set(pos_common_headers
     ${common_headers}

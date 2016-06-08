@@ -1,26 +1,26 @@
-#ifndef POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_HPP_
-#define POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_HPP_
+#ifndef POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_H_
+#define POSTAGGER_POSTAGGER_MODULE_POS_FEATURE_EXTRACTOR_H_
 #include <string>
 
-#include "pos_feature.hpp"
+#include "pos_feature.h"
 #include "utils/utf8processing.hpp"
 
 namespace slnn{
 
-class POSFeatureExtractor
+struct POSFeatureExtractor
 {
     static void extract(const Seq &raw_inputs, POSFeature::POSFeatureGroupSeq &feature_seq);
-
 };
 
 /* *
- *  extract features sequence from raw inputs .
- *  For postagger , there are NR_FEATURES for every words of raw inputs , 
- *  they are storing in the array , ordering like following :
- *          0 -> PREFIX_SUFFIX_MAX_LEN - 1                        : prefix feature index
- *          PREFIX_SUFFIX_MAX_LEN -> PREFIX_SUFFIX_MAX_LEN * 2 -1 : suffix feature index
- *          PREFIX_SUFFIX_MAX_LEN * 2                             : length feature index
+*  extract features sequence from raw inputs .
+*  For postagger , there are NR_FEATURES for every words of raw inputs , 
+*  they are storing in the array , ordering like following :
+*          0 -> PREFIX_SUFFIX_MAX_LEN - 1                        : prefix feature index
+*          PREFIX_SUFFIX_MAX_LEN -> PREFIX_SUFFIX_MAX_LEN * 2 -1 : suffix feature index
+*          PREFIX_SUFFIX_MAX_LEN * 2                             : length feature index
 */
+inline
 void POSFeatureExtractor::extract(const Seq &raw_inputs, POSFeature::POSFeatureGroupSeq &features_seq)
 {
     using std::swap;
@@ -42,7 +42,7 @@ void POSFeatureExtractor::extract(const Seq &raw_inputs, POSFeature::POSFeatureG
             suffix_chars = word[utf8_chars_len - len] + suffix_chars;
             cur_f[len - 1] = prefix_chars;
             cur_f[len - 1 + POSFeature::PrefixSuffixMaxLen] = suffix_chars;
-            
+
         }
         // padding
         for( size_t len = min_len + 1 ; len <= POSFeature::PrefixSuffixMaxLen; ++len )

@@ -11,13 +11,14 @@ set(specific_libs
 
 add_executable(${exe_name}
                ${exe_name}.cpp
-               ${pos_model_module_hpps}
+               ${pos_model_module_headers}
                ${single_input_with_feature_modelhandler_hpp} # model handler
                ${specific_headers} # model
                ${single_input_with_feature_model_hpp}        # base model
                ${pos_common_headers}                # common header
                ${specific_libs}
                ${pos_common_libs}
+               ${pos_model_module_libs}
                )
                
 target_link_libraries(${exe_name}

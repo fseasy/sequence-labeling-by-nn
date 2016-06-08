@@ -143,6 +143,7 @@ size_t UTF8Processing::get_utf8_char_length_checked(const std::string &str , siz
     return get_utf8_char_length( str.cbegin() + start_pos , str.cend() ) ;
 }
 
+inline
 void UTF8Processing::utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_seq)
 {
     Seq tmp_word_cont ;
@@ -166,6 +167,7 @@ void UTF8Processing::utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_se
     std::swap(tmp_word_cont, utf8_seq) ;
 }
 
+inline
 std::string UTF8Processing::replace_number(const std::string &str,
                                            const std::string number_transform_str,
                                            const size_t length_transform_str )

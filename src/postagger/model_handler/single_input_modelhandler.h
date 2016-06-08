@@ -58,7 +58,7 @@ public :
     void load_model(std::istream &is);
 protected :
     void save_current_best_model(float acc);
-    bool is_train_error_occurs(float cur_F1);
+    bool is_train_error_occurs(float cur_acc);
 };
 
 } // end of namespace slnn

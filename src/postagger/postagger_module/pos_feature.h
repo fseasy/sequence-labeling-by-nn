@@ -1,6 +1,7 @@
 #ifndef POS_POS_MODULE_POS_FEATURE_HPP_
 #define POS_POS_MODULE_POS_FEATURE_HPP_
 #include <string>
+#include <sstream>
 #include <boost/serialization/serialization.hpp>
 #include "cnn/cnn.h"
 #include "utils/dict_wrapper.hpp"
@@ -46,7 +47,7 @@ struct POSFeature
     // Dict interface
     size_t get_char_length_dict_size(){ return FeatureCharLengthLimit; }
     bool is_dict_frozen();
-    bool freeze_dict();
+    void freeze_dict();
 
     // replace word with unk interface
     void set_replace_feature_with_unk_threshold(int freq_thres, float prob_thres);
@@ -58,27 +59,16 @@ struct POSFeature
                                            POSFeatureIndexGroup &feature_index_gp);
     void feature_group_seq2feature_index_group_seq(const POSFeatureGroupSeq &feature_gp_seq,
                                                    POSFeatureIndexGroupSeq &feature_index_gp_seq);
+
+    std::string get_feature_info();
+    template <typename Archive>
+    void serialize(Archive &ar, const unsigned version);
 private:
     Index prefix_suffix_feature_str2feature_idx_and_adding2dict_in_training(DictWrapper &dw, const std::string &feature_str);
     Index char_length_feature_str2feature_idx_and_adding2dict_in_training(const std::string &feature_str);
-    
-    template <typename Archive>
-    void serialize(Archive &ar, const unsigned version);
 };
 
-const size_t POSFeature::NrFeature;
-const size_t POSFeature::FeatureCharLengthLimit;
-const size_t POSFeature::PrefixSuffixMaxLen;
-
-const std::string POSFeature::FeatureEmptyStrPlaceholder = "";
-const Index POSFeature::FeatureEmptyIndexPlaceholder = -1;
-const std::string POSFeature::FeatureUnkStr = "feature_unk_str";
-
-POSFeature::POSFeature()
-    : prefix_suffix_len1_dict_wrapper(prefix_suffix_len1_dict),
-    prefix_suffix_len2_dict_wrapper(prefix_suffix_len2_dict),
-    prefix_suffix_len3_dict_wrapper(prefix_suffix_len3_dict)
-{}
+inline
 void POSFeature::init_embedding_dim(size_t prefix_suffix_len1_embedding_dim,
                                     size_t prefix_suffix_len2_embedding_dim,
                                     size_t prefix_suffix_len3_embedding_dim,
@@ -94,19 +84,22 @@ void POSFeature::init_embedding_dim(size_t prefix_suffix_len1_embedding_dim,
         );
 }
 
+inline
 bool POSFeature::is_dict_frozen()
 {
     return (prefix_suffix_len1_dict.is_frozen() && prefix_suffix_len2_dict.is_frozen() &&
             prefix_suffix_len3_dict.is_frozen());
 }
 
-bool POSFeature::freeze_dict()
+inline
+void POSFeature::freeze_dict()
 {
     prefix_suffix_len1_dict_wrapper.Freeze(); prefix_suffix_len1_dict_wrapper.SetUnk(FeatureUnkStr);
     prefix_suffix_len2_dict_wrapper.Freeze(); prefix_suffix_len2_dict_wrapper.SetUnk(FeatureUnkStr);
     prefix_suffix_len3_dict_wrapper.Freeze(); prefix_suffix_len3_dict_wrapper.SetUnk(FeatureUnkStr);
 }
 
+inline
 void POSFeature::set_replace_feature_with_unk_threshold(int freq_thres, float prob_thres)
 {
     prefix_suffix_len1_dict_wrapper.set_threshold(freq_thres, prob_thres);
@@ -114,6 +107,7 @@ void POSFeature::set_replace_feature_with_unk_threshold(int freq_thres, float pr
     prefix_suffix_len3_dict_wrapper.set_threshold(freq_thres, prob_thres);
 }
 
+inline
 void POSFeature::do_repalce_feature_with_unk_in_copy(const POSFeatureIndexGroupSeq &gp_seq,
                                       POSFeatureIndexGroupSeq &rep_gp_seq)
 {
@@ -140,11 +134,14 @@ void POSFeature::do_repalce_feature_with_unk_in_copy(const POSFeatureIndexGroupS
     swap(rep_gp_seq, tmp_rep_gp_seq);
 }
 
+inline
 Index POSFeature::prefix_suffix_feature_str2feature_idx_and_adding2dict_in_training(DictWrapper &dw, const std::string &feature_str)
 {
     if( feature_str == FeatureEmptyStrPlaceholder ){ return FeatureEmptyIndexPlaceholder; }
     else { return dw.Convert(feature_str); }
 }
+
+inline
 Index POSFeature::char_length_feature_str2feature_idx_and_adding2dict_in_training(const std::string &feature_idx)
 {
     int char_len = std::stol(feature_idx);
@@ -152,6 +149,7 @@ Index POSFeature::char_length_feature_str2feature_idx_and_adding2dict_in_trainin
     return std::min(char_len, static_cast<int>(FeatureCharLengthLimit)) - 1 ; // `len -1` as index 
 }
 
+inline
 void POSFeature::feature_group2feature_index_group(const POSFeatureGroup &feature_gp,
                                                    POSFeatureIndexGroup &feature_index_gp)
 {
@@ -171,6 +169,7 @@ void POSFeature::feature_group2feature_index_group(const POSFeatureGroup &featur
     feature_index_gp[6] = char_length_feature_str2feature_idx_and_adding2dict_in_training(feature_gp[6]);
 }
 
+inline
 void POSFeature::feature_group_seq2feature_index_group_seq(const POSFeatureGroupSeq &feature_gp_seq,
                                                            POSFeatureIndexGroupSeq &feature_index_gp_seq)
 {
@@ -184,18 +183,17 @@ void POSFeature::feature_group_seq2feature_index_group_seq(const POSFeatureGroup
     swap(tmp_feature_index_gp_seq, feature_index_gp_seq);
 }
 
-
-template <typename Archive>
-void POSFeature::serialize(Archive &ar, const unsigned versoin) const
+inline
+std::string POSFeature::get_feature_info()
 {
-    ar & prefix_suffix_len1_embedding_dim
-        & prefix_suffix_len2_embedding_dim
-        & prefix_suffix_len3_embedding_dim
-        & char_length_embedding_dim
-        & concatenated_feature_embedding_dim
-        & prefix_suffix_len1_dict
-        & prefix_suffix_len2_dict
-        & prefix_suffix_len3_dict ;
+    std::ostringstream oss;
+
+    oss << "prefix and suffix dict size : [ " << prefix_suffix_len1_dict.size() << ", " << prefix_suffix_len2_dict.size() << ", "
+        << prefix_suffix_len3_dict.size() << " ]\n"
+        << "prefix and suffix embedding dim : [ " << prefix_suffix_len1_embedding_dim << ", " << prefix_suffix_len2_embedding_dim << ", "
+        << prefix_suffix_len2_embedding_dim << " ]\n"
+        << "character length feature dict size : " << get_char_length_dict_size() << " , dimension : " << char_length_embedding_dim ;
+    return oss.str();
 }
 
 }
