@@ -12,13 +12,13 @@ template <typename RNNDerived, typename SIModel>
 class SingleInputWithFeatureModelHandler
 {
 public :
-    SingleInputModelWithFeature<RNNDerived> *sim;
+    SingleInputWithFeatureModel<RNNDerived> *sim;
 
     static const size_t MaxSentNum = 0x8000; // 32k
     static const std::string OutputDelimiter ;
 
     SingleInputWithFeatureModelHandler();
-    ~SingleInputWithFeatureModelHandler();
+    virtual ~SingleInputWithFeatureModelHandler();
     SingleInputWithFeatureModelHandler(const SingleInputWithFeatureModelHandler&) = delete;
     SingleInputWithFeatureModelHandler& operator()(const SingleInputWithFeatureModelHandler&) = delete;
 
@@ -104,11 +104,10 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_annotated_dat
     tmp_postag_seqs.reserve(detected_line_cnt);
     tmp_features_gp_seqs.reserve(detected_line_cnt);
     size_t line_cnt = 0 ;
-    while( reader.good() )
+    Seq str_sent,
+        str_postag_seq;
+    while( reader.readline(str_sent, str_postag_seq) )
     {
-        Seq str_sent,
-            str_postag_seq;
-        reader.readline(str_sent, str_postag_seq);
         if( str_sent.size() == 0 ) continue;
         IndexSeq sent,
             postag_seq;
@@ -118,7 +117,7 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_annotated_dat
         tmp_postag_seqs.push_back(std::move(postag_seq));
         tmp_features_gp_seqs.push_back(std::move(features_gp_seq));
         ++line_cnt;
-        if( line_cnt % 10000 ) BOOST_LOG_TRIVIAL(info) << line_cnt << " lines has been preprocessed."  ;
+        if( 0 == line_cnt % 10000 ) BOOST_LOG_TRIVIAL(info) << line_cnt << " lines has been preprocessed."  ;
     }
     swap(sents, tmp_sents);
     swap(features_gp_seqs, tmp_features_gp_seqs);
@@ -169,10 +168,9 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_test_data(std
     tmp_sents.reserve(detected_line_cnt);
     tmp_feature_gp_seqs.reserve(detected_line_cnt);
     size_t line_cnt = 0 ;
-    while( reader.good() )
+    Seq raw_sent;
+    while( reader.readline(raw_sent) )
     {
-        Seq raw_sent;
-        reader.readline(raw_sent);
         IndexSeq sent;
         POSFeature::POSFeatureIndexGroupSeq feature_gp_seq;
         sim->input_seq2index_seq(raw_sent, sent, feature_gp_seq);

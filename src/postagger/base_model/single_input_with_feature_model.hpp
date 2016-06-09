@@ -20,7 +20,7 @@
 namespace slnn{
 
 template<typename RNNDerived>
-class SingleInputModelWithFeature
+class SingleInputWithFeatureModel
 {
     friend class boost::serialization::access;
 public :
@@ -29,10 +29,10 @@ public :
     static const size_t LenStrOfRepalceNumber ;
 
 public:
-    SingleInputModelWithFeature();
-    ~SingleInputModelWithFeature();
-    SingleInputModelWithFeature(const SingleInputModelWithFeature &) = delete;
-    SingleInputModelWithFeature& operator()(const SingleInputModelWithFeature&) = delete;
+    SingleInputWithFeatureModel();
+    virtual ~SingleInputWithFeatureModel();
+    SingleInputWithFeatureModel(const SingleInputWithFeatureModel &) = delete;
+    SingleInputWithFeatureModel& operator()(const SingleInputWithFeatureModel&) = delete;
 
     void set_replace_threshold(int freq_threshold, float prob_threshold);
     bool is_dict_frozen();
@@ -99,19 +99,19 @@ public:
 };
 
 //template <typename RNNDerived>
-//BOOST_SERIALIZATION_ASSUME_ABSTRACT(SingleInputModelWithFeature)
+//BOOST_SERIALIZATION_ASSUME_ABSTRACT(SingleInputWithFeatureModel)
 
 template<typename RNNDerived>
-const std::string SingleInputModelWithFeature<RNNDerived>::UNK_STR = "unk_str";
+const std::string SingleInputWithFeatureModel<RNNDerived>::UNK_STR = "unk_str";
 
 template<typename RNNDerived>
-const std::string SingleInputModelWithFeature<RNNDerived>::StrOfReplaceNumber = "##";
+const std::string SingleInputWithFeatureModel<RNNDerived>::StrOfReplaceNumber = "##";
 
 template<typename RNNDerived>
-const size_t SingleInputModelWithFeature<RNNDerived>::LenStrOfRepalceNumber = StrOfReplaceNumber.length();
+const size_t SingleInputWithFeatureModel<RNNDerived>::LenStrOfRepalceNumber = StrOfReplaceNumber.length();
 
 template<typename RNNDerived>
-SingleInputModelWithFeature<RNNDerived>::SingleInputModelWithFeature() 
+SingleInputWithFeatureModel<RNNDerived>::SingleInputWithFeatureModel() 
     :m(nullptr),
     pos_feature_layer(nullptr),
     input_layer(nullptr),
@@ -121,7 +121,7 @@ SingleInputModelWithFeature<RNNDerived>::SingleInputModelWithFeature()
 {}
 
 template <typename RNNDerived>
-SingleInputModelWithFeature<RNNDerived>::~SingleInputModelWithFeature()
+SingleInputWithFeatureModel<RNNDerived>::~SingleInputWithFeatureModel()
 {
     delete m;
     delete pos_feature_layer;
@@ -130,20 +130,20 @@ SingleInputModelWithFeature<RNNDerived>::~SingleInputModelWithFeature()
     delete output_layer;
 }
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::set_replace_threshold(int freq_threshold, float prob_threshold)
+void SingleInputWithFeatureModel<RNNDerived>::set_replace_threshold(int freq_threshold, float prob_threshold)
 {
     word_dict_wrapper.set_threshold(freq_threshold, prob_threshold);
     pos_feature.set_replace_feature_with_unk_threshold(freq_threshold, prob_threshold);
 }
 
 template <typename RNNDerived>
-bool SingleInputModelWithFeature<RNNDerived>::is_dict_frozen()
+bool SingleInputWithFeatureModel<RNNDerived>::is_dict_frozen()
 {
     return (word_dict.is_frozen() && postag_dict.is_frozen() && pos_feature.is_dict_frozen());
 }
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::freeze_dict()
+void SingleInputWithFeatureModel<RNNDerived>::freeze_dict()
 {
     word_dict_wrapper.Freeze();
     postag_dict.Freeze();
@@ -152,7 +152,7 @@ void SingleInputModelWithFeature<RNNDerived>::freeze_dict()
 }
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
+void SingleInputWithFeatureModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
 {
     assert(word_dict.is_frozen() && postag_dict.is_frozen()  && pos_feature.is_dict_frozen()) ;
 
@@ -180,7 +180,7 @@ void SingleInputModelWithFeature<RNNDerived>::set_model_param(const boost::progr
 }
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::input_seq2index_seq(const Seq &sent, 
+void SingleInputWithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sent, 
                                                                   const Seq &postag_seq,
                                                                   IndexSeq &index_sent, 
                                                                   IndexSeq &index_postag_seq,
@@ -207,7 +207,7 @@ void SingleInputModelWithFeature<RNNDerived>::input_seq2index_seq(const Seq &sen
 }
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::input_seq2index_seq(const Seq &sent, 
+void SingleInputWithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sent, 
                                                                   IndexSeq &index_sent, 
                                                                   POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq)
 {
@@ -229,7 +229,7 @@ void SingleInputModelWithFeature<RNNDerived>::input_seq2index_seq(const Seq &sen
 
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::replace_word_with_unk(const IndexSeq &sent,
+void SingleInputWithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &sent,
                                                                     const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq,
                                                                     IndexSeq &replaced_sent, 
                                                                     POSFeature::POSFeatureIndexGroupSeq &replaced_feature_gp_seq)
@@ -246,7 +246,7 @@ void SingleInputModelWithFeature<RNNDerived>::replace_word_with_unk(const IndexS
 }
 
 template <typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::postag_index_seq2postag_str_seq(const IndexSeq &postag_index_seq, Seq &postag_str_seq)
+void SingleInputWithFeatureModel<RNNDerived>::postag_index_seq2postag_str_seq(const IndexSeq &postag_index_seq, Seq &postag_str_seq)
 {
     size_t seq_len = postag_index_seq.size();
     Seq tmp_str_seq(seq_len);
@@ -258,7 +258,7 @@ void SingleInputModelWithFeature<RNNDerived>::postag_index_seq2postag_str_seq(co
 }
 
 template<typename RNNDerived>
-cnn::expr::Expression SingleInputModelWithFeature<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
+cnn::expr::Expression SingleInputWithFeatureModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
                                                                            const IndexSeq &input_seq, 
                                                                            const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
                                                                            const IndexSeq &gold_seq)
@@ -284,7 +284,7 @@ cnn::expr::Expression SingleInputModelWithFeature<RNNDerived>::build_loss(cnn::C
 }
 
 template<typename RNNDerived>
-void SingleInputModelWithFeature<RNNDerived>::predict(cnn::ComputationGraph &cg,
+void SingleInputWithFeatureModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
                                                       const IndexSeq &input_seq,
                                                       const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
                                                       IndexSeq &pred_seq)
@@ -309,7 +309,7 @@ void SingleInputModelWithFeature<RNNDerived>::predict(cnn::ComputationGraph &cg,
 }
 
 template <typename RNNDerived>template< typename Archive>
-void SingleInputModelWithFeature<RNNDerived>::save(Archive &ar, const unsigned version) const
+void SingleInputWithFeatureModel<RNNDerived>::save(Archive &ar, const unsigned version) const
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_x_dim & rnn_h_dim & nr_rnn_stacked_layer
@@ -320,7 +320,7 @@ void SingleInputModelWithFeature<RNNDerived>::save(Archive &ar, const unsigned v
 }
 
 template <typename RNNDerived>template< typename Archive>
-void SingleInputModelWithFeature<RNNDerived>::load(Archive &ar, const unsigned version)
+void SingleInputWithFeatureModel<RNNDerived>::load(Archive &ar, const unsigned version)
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_x_dim & rnn_h_dim & nr_rnn_stacked_layer
@@ -334,7 +334,7 @@ void SingleInputModelWithFeature<RNNDerived>::load(Archive &ar, const unsigned v
 
 template <typename RNNDerived>
 template<typename Archive>
-void SingleInputModelWithFeature<RNNDerived>::serialize(Archive & ar, const unsigned version)
+void SingleInputWithFeatureModel<RNNDerived>::serialize(Archive & ar, const unsigned version)
 {
     boost::serialization::split_member(ar, *this, version);
 }

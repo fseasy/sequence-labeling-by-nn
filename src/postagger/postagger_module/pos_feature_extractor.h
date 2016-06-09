@@ -38,11 +38,10 @@ void POSFeatureExtractor::extract(const Seq &raw_inputs, POSFeature::POSFeatureG
         size_t min_len = std::min(POSFeature::PrefixSuffixMaxLen, utf8_chars_len);
         for( size_t len = 1 ; len <= min_len ; ++len )
         {
-            prefix_chars += word[len - 1] ;
-            suffix_chars = word[utf8_chars_len - len] + suffix_chars;
-            cur_f[len - 1] = prefix_chars;
-            cur_f[len - 1 + POSFeature::PrefixSuffixMaxLen] = suffix_chars;
-
+            prefix_chars += utf8_chars[len - 1] ;
+            suffix_chars = utf8_chars[utf8_chars_len - len] + suffix_chars;
+            cur_f[len - 1] = "P-" + prefix_chars;
+            cur_f[len - 1 + POSFeature::PrefixSuffixMaxLen] = "S-" + suffix_chars;
         }
         // padding
         for( size_t len = min_len + 1 ; len <= POSFeature::PrefixSuffixMaxLen; ++len )

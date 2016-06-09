@@ -15,7 +15,9 @@
 using namespace std ;
 namespace po =  boost::program_options ;
 
-void read_annotated_dataset(ifstream &is , cnn::Dict &tag_dict , vector<slnn::IndexSeq> &tag_seqs)
+ofstream tmpo("tmp.out") ;
+
+void read_annotated_dataset(ifstream &is , cnn::Dict &tag_dict , vector<slnn::IndexSeq> &tag_seqs, bool is_print=false)
 {
     unsigned line_cnt = 0;
     std::string line;
@@ -31,6 +33,7 @@ void read_annotated_dataset(ifstream &is , cnn::Dict &tag_dict , vector<slnn::In
             tmp_tag_cont ;
         while( iss >> words_line )
         {
+            if(is_print) {  tmpo << words_line << endl ;  }
             slnn::CWSTaggingSystem::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
             for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
             {
@@ -73,7 +76,7 @@ int main(int argc, char *argv[])
 
     cnn::Dict tag_dict ;
     vector<slnn::IndexSeq> gold_seqs, pred_seqs ;
-    read_annotated_dataset(gold_f, tag_dict, gold_seqs) ;
+    read_annotated_dataset(gold_f, tag_dict, gold_seqs, true) ;
     read_annotated_dataset(pred_f, tag_dict, pred_seqs) ;
     
     slnn::CWSTaggingSystem tag_sys ;

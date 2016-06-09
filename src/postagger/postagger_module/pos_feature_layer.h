@@ -11,10 +11,10 @@ class POSFeatureLayer
 {
 public:
     POSFeatureLayer(cnn::Model *model, 
-                    size_t prefix_suffix_len1_dict_size, size_t prefix_suffix_len1_embedding_dim,
-                    size_t prefix_suffix_len2_dict_size, size_t prefix_suffix_len2_embedding_dim,
-                    size_t prefix_suffix_len3_dict_size, size_t prefix_suffix_len3_embedding_dim,
-                    size_t char_length_dict_size, size_t char_length_embedding_dim);
+                    size_t prefix_suffix_len1_dict_size, unsigned prefix_suffix_len1_embedding_dim,
+                    size_t prefix_suffix_len2_dict_size, unsigned prefix_suffix_len2_embedding_dim,
+                    size_t prefix_suffix_len3_dict_size, unsigned prefix_suffix_len3_embedding_dim,
+                    size_t char_length_dict_size, unsigned char_length_embedding_dim);
     POSFeatureLayer(cnn::Model *model, POSFeature &pos_feature);
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression build_feature_expr(const POSFeature::POSFeatureIndexGroup &pos_feature_gp);

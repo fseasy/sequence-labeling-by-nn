@@ -32,12 +32,11 @@ inline
 bool POSReader::readline(Seq &sent, Seq &postag_seq)
 {
     using std::swap;
-    bool file_good = is.good();
-    if( !file_good ) return file_good;
     Seq tmp_sent,
         tmp_tag_seq;
     std::string line;
-    getline(is, line);
+    bool is_good = getline(is, line).good() ;
+    if( ! is_good ) return false;
     std::vector<std::string> strpair_cont;
     boost::algorithm::split(strpair_cont, line, boost::is_any_of(PosDataDelimiter));
     size_t pair_len = strpair_cont.size();
@@ -53,21 +52,20 @@ bool POSReader::readline(Seq &sent, Seq &postag_seq)
     }
     swap(sent, tmp_sent);
     swap(postag_seq, tmp_tag_seq);
-    return file_good;
+    return true ;
 }
 
 inline
 bool POSReader::readline(Seq &sent)
 {
     using std::swap;
-    bool file_good = is.good();
-    if( !file_good ) return file_good;
     Seq word_cont;
     std::string line;
-    getline(is, line);
+    bool is_good = getline(is, line).good() ;
+    if( !is_good ) return false;
     boost::algorithm::split(word_cont, line, boost::is_any_of(PosDataDelimiter));
     swap(sent, word_cont);
-    return file_good;
+    return true;
 }
 
 

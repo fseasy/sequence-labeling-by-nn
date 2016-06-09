@@ -20,11 +20,11 @@ struct POSFeature
     static const Index FeatureEmptyIndexPlaceholder;
     static const std::string FeatureUnkStr;
 
-    size_t prefix_suffix_len1_embedding_dim;
-    size_t prefix_suffix_len2_embedding_dim;
-    size_t prefix_suffix_len3_embedding_dim;
-    size_t char_length_embedding_dim;
-    size_t concatenated_feature_embedding_dim;
+    unsigned prefix_suffix_len1_embedding_dim;
+    unsigned prefix_suffix_len2_embedding_dim;
+    unsigned prefix_suffix_len3_embedding_dim;
+    unsigned char_length_embedding_dim;
+    unsigned concatenated_feature_embedding_dim;
 
     cnn::Dict prefix_suffix_len1_dict;
     cnn::Dict prefix_suffix_len2_dict;
@@ -183,17 +183,18 @@ void POSFeature::feature_group_seq2feature_index_group_seq(const POSFeatureGroup
     swap(tmp_feature_index_gp_seq, feature_index_gp_seq);
 }
 
-inline
-std::string POSFeature::get_feature_info()
-{
-    std::ostringstream oss;
 
-    oss << "prefix and suffix dict size : [ " << prefix_suffix_len1_dict.size() << ", " << prefix_suffix_len2_dict.size() << ", "
-        << prefix_suffix_len3_dict.size() << " ]\n"
-        << "prefix and suffix embedding dim : [ " << prefix_suffix_len1_embedding_dim << ", " << prefix_suffix_len2_embedding_dim << ", "
-        << prefix_suffix_len2_embedding_dim << " ]\n"
-        << "character length feature dict size : " << get_char_length_dict_size() << " , dimension : " << char_length_embedding_dim ;
-    return oss.str();
+template <typename Archive>
+void POSFeature::serialize(Archive &ar, const unsigned versoin)
+{
+    ar & prefix_suffix_len1_embedding_dim
+        & prefix_suffix_len2_embedding_dim
+        & prefix_suffix_len3_embedding_dim
+        & char_length_embedding_dim
+        & concatenated_feature_embedding_dim
+        & prefix_suffix_len1_dict
+        & prefix_suffix_len2_dict
+        & prefix_suffix_len3_dict ;
 }
 
 }
