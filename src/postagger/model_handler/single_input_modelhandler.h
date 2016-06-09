@@ -381,7 +381,7 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
         sim->predict(cg, sent,predict_tag_seq);
 
         stat.total_tags += predict_tag_seq.size();
-        for( size_t tag_idx = 0 ; tag_idx <= gold_tag.size() ; ++tag_idx )
+        for( size_t tag_idx = 0 ; tag_idx < gold_tag.size() ; ++tag_idx )
         {
             if( gold_tag[tag_idx] == predict_tag_seq[tag_idx] ) ++stat.correct_tags ;
         }

@@ -11,7 +11,7 @@ namespace slnn{
 template <typename RNNDerived, typename SIModel>
 class SingleInputWithFeatureModelHandler
 {
-public :
+public:
     SingleInputWithFeatureModel<RNNDerived> *sim;
 
     static const size_t MaxSentNum = 0x8000; // 32k
@@ -25,38 +25,38 @@ public :
 
     // Reading data 
     void read_annotated_data(std::istream &is,
-                             std::vector<IndexSeq> &sents,
-                             std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
-                             std::vector<IndexSeq> &postags_seqs);
+        std::vector<IndexSeq> &sents,
+        std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
+        std::vector<IndexSeq> &postags_seqs);
 
-    void read_training_data(std::istream &is, 
-                            std::vector<IndexSeq> &training_sents,
-                            std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
-                            std::vector<IndexSeq> &postags_seqs);
+    void read_training_data(std::istream &is,
+        std::vector<IndexSeq> &training_sents,
+        std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
+        std::vector<IndexSeq> &postags_seqs);
 
     void read_devel_data(std::istream &is,
-                         std::vector<IndexSeq> &devel_sents,
-                         std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
-                         std::vector<IndexSeq> &postag_seqs);
-    
+        std::vector<IndexSeq> &devel_sents,
+        std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs,
+        std::vector<IndexSeq> &postag_seqs);
+
     void read_test_data(std::istream &is,
-                        std::vector<Seq> &raw_sents,
-                        std::vector<IndexSeq> &sents,
-                        std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs);
+        std::vector<Seq> &raw_sents,
+        std::vector<IndexSeq> &sents,
+        std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_seqs);
 
     void train(const std::vector<IndexSeq> *p_sents,
-               const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
-               const std::vector<IndexSeq> *p_tag_seqs,
-               unsigned max_epoch,
-               const std::vector<IndexSeq> *p_dev_sents,
-               const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_dev_features_gp_seqs,
-               const std::vector<IndexSeq> *p_dev_tag_seqs,
-               unsigned do_devel_freq,
-               unsigned trivial_report_freq);
+        const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
+        const std::vector<IndexSeq> *p_tag_seqs,
+        unsigned max_epoch,
+        const std::vector<IndexSeq> *p_dev_sents,
+        const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_dev_features_gp_seqs,
+        const std::vector<IndexSeq> *p_dev_tag_seqs,
+        unsigned do_devel_freq,
+        unsigned trivial_report_freq);
 
     float devel(const std::vector<IndexSeq> *p_sents,
-                const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
-                const std::vector<IndexSeq> *p_tag_seqs);
+        const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
+        const std::vector<IndexSeq> *p_tag_seqs);
 
     void predict(std::istream &is, std::ostream &os);
 
@@ -67,7 +67,7 @@ public :
     void set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap);
     void build_model();
 
-private :
+private:
     CNNModelStash model_stash;
 };
 
@@ -90,9 +90,9 @@ SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::~SingleInputWithFeature
 
 template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_annotated_data(std::istream &is,
-                         std::vector<IndexSeq> &sents,
-                         std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
-                         std::vector<IndexSeq> &postag_seqs)
+    std::vector<IndexSeq> &sents,
+    std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
+    std::vector<IndexSeq> &postag_seqs)
 {
     using std::swap;
     POSReader reader(is);
@@ -127,9 +127,9 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_annotated_dat
 
 template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_training_data(std::istream &is,
-                                                                                 std::vector<IndexSeq> &training_sents,
-                                                                                 std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
-                                                                                 std::vector<IndexSeq> &postag_seqs)
+    std::vector<IndexSeq> &training_sents,
+    std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
+    std::vector<IndexSeq> &postag_seqs)
 {
     assert(!sim->is_dict_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
@@ -140,9 +140,9 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_training_data
 
 template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_devel_data(std::istream &is,
-                                                                              std::vector<IndexSeq> &devel_sents,
-                                                                              std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
-                                                                              std::vector<IndexSeq> &postag_seqs)
+    std::vector<IndexSeq> &devel_sents,
+    std::vector<POSFeature::POSFeatureIndexGroupSeq> &features_gp_seqs,
+    std::vector<IndexSeq> &postag_seqs)
 {
     assert(sim->is_dict_frozen());
     BOOST_LOG_TRIVIAL(info) << "read devel data .";
@@ -152,9 +152,9 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_devel_data(st
 
 template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::read_test_data(std::istream &is,
-                                                                             std::vector<Seq> &raw_sents,
-                                                                             std::vector<IndexSeq> &sents,
-                                                                             std::vector<POSFeature::POSFeatureIndexGroupSeq> &feature_gp_seqs)
+    std::vector<Seq> &raw_sents,
+    std::vector<IndexSeq> &sents,
+    std::vector<POSFeature::POSFeatureIndexGroupSeq> &feature_gp_seqs)
 {
     using std::swap;
     assert(sim->is_dict_frozen());
@@ -204,14 +204,14 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::build_model()
 
 template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::vector<IndexSeq> *p_sents,
-                                                                    const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
-                                                                    const std::vector<IndexSeq> *p_tag_seqs,
-                                                                    unsigned max_epoch,
-                                                                    const std::vector<IndexSeq> *p_dev_sents,
-                                                                    const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_dev_feature_gp_seqs,
-                                                                    const std::vector<IndexSeq> *p_dev_tag_seqs,
-                                                                    unsigned do_devel_freq,
-                                                                    unsigned trivial_report_freq)
+    const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
+    const std::vector<IndexSeq> *p_tag_seqs,
+    unsigned max_epoch,
+    const std::vector<IndexSeq> *p_dev_sents,
+    const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_dev_feature_gp_seqs,
+    const std::vector<IndexSeq> *p_dev_tag_seqs,
+    unsigned do_devel_freq,
+    unsigned trivial_report_freq)
 {
     unsigned nr_samples = p_sents->size();
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
@@ -306,33 +306,33 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
 }
 
 
-                                                                    template <typename RNNDerived, typename SIModel>
-                                                                    float SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::devel(const std::vector<IndexSeq> *p_sents, 
-                                                                                                                                         const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
-                                              const std::vector<IndexSeq> *p_tag_seqs)
+template <typename RNNDerived, typename SIModel>
+float SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::devel(const std::vector<IndexSeq> *p_sents,
+    const std::vector<POSFeature::POSFeatureIndexGroupSeq> *p_feature_gp_seqs,
+    const std::vector<IndexSeq> *p_tag_seqs)
 {
     unsigned nr_samples = p_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
 
     Stat stat(true);
     stat.start_time_stat();
-    for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
+    for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
         cnn::ComputationGraph cg;
         IndexSeq predict_tag_seq;
-        const IndexSeq &sent = p_sents->at(access_idx) ,
+        const IndexSeq &sent = p_sents->at(access_idx),
             &gold_tag = p_tag_seqs->at(access_idx);
         const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = p_feature_gp_seqs->at(access_idx);
-        sim->predict(cg, sent,feature_gp_seq, predict_tag_seq);
+        sim->predict(cg, sent, feature_gp_seq, predict_tag_seq);
 
         stat.total_tags += predict_tag_seq.size();
-        for( size_t tag_idx = 0 ; tag_idx <= gold_tag.size() ; ++tag_idx )
+        for( size_t tag_idx = 0 ; tag_idx < gold_tag.size() ; ++tag_idx )
         {
-            if( gold_tag[tag_idx] == predict_tag_seq[tag_idx] ) ++stat.correct_tags ;
+            if( gold_tag.at(tag_idx) == predict_tag_seq.at(tag_idx) ) ++stat.correct_tags ;
         }
     }
     stat.end_time_stat();
-    
+
     std::ostringstream tmp_sos;
     tmp_sos << "validation finished ." ;
     BOOST_LOG_TRIVIAL(info) << stat.get_stat_str(tmp_sos.str()) ;
@@ -340,21 +340,21 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
 }
 
 
-                                                                    template <typename RNNDerived, typename SIModel>
-                                                                    void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::predict(std::istream &is, std::ostream &os)
+template <typename RNNDerived, typename SIModel>
+void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::predict(std::istream &is, std::ostream &os)
 {
-    
+
     std::vector<Seq> raw_instances;
     std::vector<IndexSeq> sents ;
     std::vector<POSFeature::POSFeatureIndexGroupSeq> feature_gp_seqs;
-    read_test_data(is,raw_instances, sents, feature_gp_seqs );
+    read_test_data(is, raw_instances, sents, feature_gp_seqs);
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     BasicStat stat(true);
     stat.start_time_stat();
-    for (unsigned int i = 0; i < raw_instances.size(); ++i)
+    for( unsigned int i = 0; i < raw_instances.size(); ++i )
     {
         Seq &raw_sent = raw_instances.at(i);
-        if (0 == raw_sent.size())
+        if( 0 == raw_sent.size() )
         {
             os << "\n";
             continue;
@@ -368,9 +368,9 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
         sim->postag_index_seq2postag_str_seq(pred_tag_seq, postag_seq);
         os << raw_sent[0] << "_" << postag_seq[0] ;
         for( size_t i = 1 ; i < raw_sent.size() ; ++i )
-        { 
+        {
             os << OutputDelimiter
-                << raw_sent[i] << "_" << postag_seq[i] ; 
+                << raw_sent[i] << "_" << postag_seq[i] ;
         }
         os << "\n";
         stat.total_tags += pred_tag_seq.size() ;
@@ -379,8 +379,8 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
     BOOST_LOG_TRIVIAL(info) << stat.get_stat_str("predict done.")  ;
 }
 
-                                                                    template <typename RNNDerived, typename SIModel>
-                                                                    void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::save_model(std::ostream &os)
+template <typename RNNDerived, typename SIModel>
+void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
     model_stash.load_if_exists(sim->get_cnn_model());
@@ -389,8 +389,8 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
-                                                                    template <typename RNNDerived, typename SIModel>
-                                                                    void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::load_model(std::istream &is)
+template <typename RNNDerived, typename SIModel>
+void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::load_model(std::istream &is)
 {
     BOOST_LOG_TRIVIAL(info) << "loading model ...";
     boost::archive::text_iarchive ti(is) ;
