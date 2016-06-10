@@ -84,14 +84,16 @@ void build_cnn_parameters(const std::string &program_name, unsigned cnn_mem, int
         char * cnn_mem_value_cstr = new char[cnn_mem_value.length() + 1]();
         std::copy(std::begin(cnn_mem_value), std::end(cnn_mem_value), cnn_mem_value_cstr);
         
-        cnn_argc = 3 ; // program_name --cnn-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
-        char **cnn_argv_cstr = new char*[cnn_argc+1]{ program_name_cstr, cnn_mem_key_cstr, cnn_mem_value_cstr, nullptr };
+        const int const_cnn_argc = 3 ; // program_name --cnn-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
+        char **cnn_argv_cstr = new char*[const_cnn_argc+1]{ program_name_cstr, cnn_mem_key_cstr, cnn_mem_value_cstr, nullptr };
+        cnn_argc = const_cnn_argc;
         cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
     }
     else
     {
-        cnn_argc = 1 ;
-        char **cnn_argv_cstr = new char*[cnn_argc + 1]{ program_name_cstr, nullptr };
+        const int const_cnn_argc = 1 ;
+        char **cnn_argv_cstr = new char*[const_cnn_argc + 1]{ program_name_cstr, nullptr };
+        cnn_argc = const_cnn_argc;
         cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
     }
 }
