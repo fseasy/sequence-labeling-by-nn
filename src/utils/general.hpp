@@ -1,6 +1,7 @@
 #ifndef GENERAL_H_INCLUDED_
 #define GENERAL_H_INCLUDED_
-
+#include <memory>
+#include <algorithm>
 #include <fstream>
 #include <sys/stat.h>
 #include <string>
@@ -52,12 +53,47 @@ void fatal_error(const std::string &exit_msg)
 {
         BOOST_LOG_TRIVIAL(fatal) << exit_msg << "\n"
             "Exit!" ;
+#if (defined(_WIN32)) &&  (_DEBUG)
+        system("pause");
+#endif
         exit(1) ;
 }
 
 void varmap_key_fatal_check(boost::program_options::variables_map &var_map , const std::string &key , const std::string &exit_msg)
 {
     if(0 == var_map.count(key)) fatal_error(exit_msg) ;
+}
+
+void build_cnn_parameters(const std::string &program_name, unsigned cnn_mem, int &cnn_argc, std::shared_ptr<char *> &cnn_argv_sp)
+{
+    char * program_name_cstr = new char[program_name.length() + 1](); // value initialization
+    std::copy(std::begin(program_name), std::end(program_name), program_name_cstr);
+    
+    auto deleter = [&cnn_argc](char **ptr)
+    {
+        for( int i = 0 ; i < cnn_argc ; ++i ) { delete[] ptr[i]; }
+    } ;
+    if( cnn_mem != 0 )
+    {
+        std::string cnn_mem_key = "--cnn-mem";
+        char * cnn_mem_key_cstr = new char[cnn_mem_key.length() + 1]();
+        std::copy(std::begin(cnn_mem_key), std::end(cnn_mem_key), cnn_mem_key_cstr);
+
+        std::string cnn_mem_value = "";
+        cnn_mem_value = std::to_string(cnn_mem);
+        char * cnn_mem_value_cstr = new char[cnn_mem_value.length() + 1]();
+        std::copy(std::begin(cnn_mem_value), std::end(cnn_mem_value), cnn_mem_value_cstr);
+        
+        cnn_argc = 3 ; // program_name --cnn-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
+        char **cnn_argv_cstr = new char*[cnn_argc+1]{ program_name_cstr, cnn_mem_key_cstr, cnn_mem_value_cstr, nullptr };
+        cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
+    }
+    else
+    {
+        cnn_argc = 1 ;
+        char **cnn_argv_cstr = new char*[cnn_argc + 1]{ program_name_cstr, nullptr };
+        cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
+    }
 }
 
 } // end of namespace slnn

@@ -263,6 +263,15 @@ void BIRNNLayer<RNNDerived>::set_dropout(float dropout_rate)
     r2l_builder->set_dropout(dropout_rate) ;
 }
 
+// SimpleRNNBuilder , GRUBuilder has no function `set_dropout(float)`
+template <>
+inline
+void BIRNNLayer<cnn::SimpleRNNBuilder>::set_dropout(float){ } // empty implementation
+template <>
+inline
+void BIRNNLayer<cnn::GRUBuilder>::set_dropout(float){}
+
+
 template <typename RNNDerived>
 inline
 void BIRNNLayer<RNNDerived>::set_dropout()
@@ -270,6 +279,13 @@ void BIRNNLayer<RNNDerived>::set_dropout()
     l2r_builder->set_dropout(default_dropout_rate) ;
     r2l_builder->set_dropout(default_dropout_rate) ;
 }
+// SimpleRNNBuilder, GRUBuilder has no function `set_dropout(float)`
+template <>
+inline 
+void BIRNNLayer<cnn::SimpleRNNBuilder>::set_dropout(){}
+template <>
+inline
+void BIRNNLayer<cnn::GRUBuilder>::set_dropout(){}
 
 template <typename RNNDerived>
 inline
@@ -278,6 +294,14 @@ void BIRNNLayer<RNNDerived>::disable_dropout()
     l2r_builder->disable_dropout() ;
     r2l_builder->disable_dropout() ;
 }
+// SimpleRNNBuilder , GRUBulider has no function `disable_dropout()`
+template <>
+inline 
+void BIRNNLayer<cnn::SimpleRNNBuilder>::disable_dropout(){}
+template <>
+inline
+void BIRNNLayer<cnn::GRUBuilder>::disable_dropout(){}
+
 
 template <typename RNNDerived>
 inline

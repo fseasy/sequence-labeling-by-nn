@@ -1,8 +1,12 @@
+#include <sstream>
+
 #include <boost/log/core.hpp>
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
+#include "cnn/rnn.h"
 #include "cnn/lstm.h"
+#include "cnn/gru.h"
 
 #include "pos_single_classification_with_feature_model.h"
 #include "postagger/model_handler/single_input_with_feature_modelhandler.hpp"
@@ -12,16 +16,18 @@ using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Postagger single_input-classification with feature Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger single_input-classification with feature(LSTM input) Procedure based on CNN Library";
+static const int CNNRandomSeed = 1234;
 
-
+template <typename RNNDerived>
 int train_process(int argc, char *argv[], const string &program_name)
 {
-    string description = PROGRAM_DESCRIPTION + "\n"
+    string description = ProgramHeader + "\n"
         "Training process .\n"
-        "using `" + program_name + " train <options>` to train . Training options are as following";
+        "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
+        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
@@ -91,18 +97,24 @@ int train_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : model file `" + model_path + "` has already exists .");
     }
-    ofstream model_os(model_path);
-    if( !model_os ) fatal_error("failed to open model path at '" + model_path + "'") ;
     // some key which has default value
     unsigned devel_freq = var_map["devel_freq"].as<unsigned>();
     unsigned trivial_report_freq = var_map["trivial_report_freq"].as<unsigned>();
-
     // others will be processed flowing 
     
     // Init 
-    cnn::Initialize(argc, argv, 1234); 
-    SingleInputWithFeatureModelHandler<LSTMBuilder, POSSingleClassificationWithFeatureModel<LSTMBuilder>> model_handler;
+    int cnn_argc;
+    shared_ptr<char *> cnn_argv;
+    unsigned cnn_mem = 0 ;
+    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
+    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
+    char **cnn_argv_ptr = cnn_argv.get();
+    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
 
+    // pre-open model file, avoid fail after a long time training
+    ofstream model_os(model_path);
+    if( !model_os ) fatal_error("failed to open model path at '" + model_path + "'") ;
     // reading traing data , get word dict size and output tag number
     
     ifstream train_is(training_data_path);
@@ -143,11 +155,12 @@ int train_process(int argc, char *argv[], const string &program_name)
     return 0;
 }
 
+template <typename RNNDerived>
 int devel_process(int argc, char *argv[], const string &program_name)
 {
-    string description = PROGRAM_DESCRIPTION + "\n"
+    string description = ProgramHeader + "\n"
         "Validation(develop) process "
-        "using `" + program_name + " devel <options>` to validate . devel options are as following";
+        "using `" + program_name + " devel [rnn-type] <options>` to validate . devel options are as following";
     po::options_description op_des = po::options_description(description);
     // set params to receive the arguments 
     string devel_data_path, model_path ;
@@ -169,8 +182,14 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
    
     // Init 
-    cnn::Initialize(argc, argv, 1234);
-    SingleInputWithFeatureModelHandler<LSTMBuilder, POSSingleClassificationWithFeatureModel<LSTMBuilder>> model_handler;
+    int cnn_argc;
+    shared_ptr<char *> cnn_argv;
+    unsigned cnn_mem = 0 ;
+    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
+    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
+    char **cnn_argv_ptr = cnn_argv.get();
+    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -195,12 +214,12 @@ int devel_process(int argc, char *argv[], const string &program_name)
     return 0;
 }
 
-
+template <typename RNNDerived>
 int predict_process(int argc, char *argv[], const string &program_name)
 {
-    string description = PROGRAM_DESCRIPTION + "\n"
+    string description = ProgramHeader + "\n"
         "Predict process ."
-        "using `" + program_name + " predict <options>` to predict . predict options are as following";
+        "using `" + program_name + " predict [rnn-type] <options>` to predict . predict options are as following";
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
@@ -229,8 +248,14 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
     
     // Init 
-    cnn::Initialize(argc, argv, 1234);
-    SingleInputWithFeatureModelHandler<LSTMBuilder, POSSingleClassificationWithFeatureModel<LSTMBuilder>> model_handler ;
+    int cnn_argc;
+    shared_ptr<char *> cnn_argv;
+    unsigned cnn_mem = 0 ;
+    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
+    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
+    char **cnn_argv_ptr = cnn_argv.get();
+    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler ;
 
     // load model 
     ifstream is(model_path);
@@ -271,21 +296,66 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
 int main(int argc, char *argv[])
 {
-    string usage = PROGRAM_DESCRIPTION + "\n"
-        "usage : " + string(argv[0]) + " [ train | devel | predict ] <options> \n"
-        "using  `" + string(argv[0]) + " [ train | devel | predict ] -h` to see details for specify task\n";
-    if (argc <= 1)
+    ostringstream oss;
+    string program_name = argv[0];
+    oss << ProgramHeader << "\n"
+        << "usage : " << program_name << " [task] [rnn-type] <options>" << "\n"
+        << "task : [ train, devel, predict ] , anyone of the list is optional\n"
+        << "rnn-type : [ rnn, lstm, gru] , \n"
+        << "           rnn  : simple rnn implementation for RNN\n"
+        << "           lstm : lstm implementation for RNN\n"
+        << "           gru  : gru implementation for RNN\n"
+        << "<options> : options for specific task and model .\n"
+        << "            using '" << program_name << " [task] [rnn-type] -h' for details" ;
+    string usage = oss.str();
+
+    if (argc <= 3)
     {
-        cerr << usage;
+        cerr << usage << "\n" ;
+#if (defined(_WIN32)) && (defined(_DEBUG))
+        system("pause");
+#endif
         return -1;
     }
-    else if (string(argv[1]) == "train") return train_process(argc - 1, argv + 1, argv[0]);
-    else if (string(argv[1]) == "devel") return devel_process(argc - 1, argv + 1, argv[0]);
-    else if (string(argv[1]) == "predict") return predict_process(argc - 1, argv + 1, argv[0]);
+    string task = string(argv[1]);
+    string rnn_type = string(argv[2]);
+    int ret_status ;
+    const string TrainTask = "train", DevelTask = "devel", PredictTask = "predict";
+    const string SimpleRNNType = "rnn", LSTMType = "lstm", GRUType = "gru";
+    function<void()> action_when_unknown_rnn_type = [&ret_status,&rnn_type]
+    {
+        cerr << "unknow rnn-type : '" << rnn_type << "'\n";
+        ret_status = -1;
+    } ;
+    if( TrainTask == task )
+    {
+        if( SimpleRNNType == rnn_type ){ ret_status = train_process<SimpleRNNBuilder>(argc - 2, argv + 2, program_name); }
+        else if( LSTMType == rnn_type ){ ret_status = train_process<LSTMBuilder>(argc - 2, argv + 2, program_name); }
+        else if( GRUType == rnn_type ){ ret_status = train_process<GRUBuilder>(argc - 2, argv + 2, program_name); }
+        else{ action_when_unknown_rnn_type(); }
+    }
+    else if( DevelTask == task )
+    {
+        if( SimpleRNNType == rnn_type ){ ret_status = devel_process<SimpleRNNBuilder>(argc - 2, argv + 2, program_name); }
+        else if( LSTMType == rnn_type ){ ret_status = devel_process<LSTMBuilder>(argc - 2, argv + 2, program_name); }
+        else if( GRUType == rnn_type ){ ret_status = devel_process<GRUBuilder>(argc - 2, argv + 2, program_name); }
+        else { action_when_unknown_rnn_type(); }
+    }
+    else if( PredictTask == task )
+    {
+        if( SimpleRNNType == rnn_type ){ ret_status = predict_process<SimpleRNNBuilder>(argc - 2, argv + 2, program_name); }
+        else if( LSTMType == rnn_type ){ ret_status = predict_process<LSTMBuilder>(argc - 2, argv + 2, program_name); }
+        else if( GRUType == rnn_type ){ ret_status = predict_process<GRUBuilder>(argc - 2, argv + 2, program_name); }
+        else { action_when_unknown_rnn_type() ; }
+    }
     else
     {
-        cerr << "unknown mode : " << argv[1] << "\n"
+        cerr << "unknown task : " << task << "\n"
             << usage;
-        return -1;
+        ret_status = -1;
     }
+#if (defined(_WIN32)) && (_DEBUG)
+    system("pause");
+#endif
+    return ret_status;
 }

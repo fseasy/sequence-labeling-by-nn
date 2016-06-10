@@ -13,7 +13,7 @@ struct CNNModelStash
 {
     float best_score;
     std::stringstream best_model_tmp_ss;
-    CNNModelStash(float train_error_threshold);
+    CNNModelStash(float train_error_threshold=20.f);
     bool save_when_best(cnn::Model *best_model, float best_score);
     bool load_if_exists(cnn::Model *cnn_model);
     bool is_train_error_occurs(float cur_score);
@@ -23,7 +23,7 @@ private :
 };
 
 inline
-CNNModelStash::CNNModelStash(float train_error_threshold=20.f)
+CNNModelStash::CNNModelStash(float train_error_threshold)
     :best_score(0.f),
     best_model_tmp_ss(""),
     train_error_threshold(train_error_threshold)
