@@ -111,8 +111,8 @@ void Input1F2IModel<RNNDerived>::set_model_param(const boost::program_options::v
     this->pos_feature.init_embedding_dim(prefix_suffix_len1_embedding_dim, prefix_suffix_len2_embedding_dim,
                                    prefix_suffix_len3_embedding_dim, char_length_embedding_dim);
     
-    word_dict_size = word_dict.size() ;
-    output_dim = postag_dict.size() ;
+    word_dict_size = this->word_dict.size() ;
+    output_dim = this->postag_dict.size() ;
 }
 
 

@@ -494,7 +494,7 @@ SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_d
 
 SimpleOutputWithFeature::~SimpleOutputWithFeature() {};
 
-void SimpleOutput::new_graph(cnn::ComputationGraph &cg)
+void SimpleOutputWithFeature::new_graph(cnn::ComputationGraph &cg)
 {
     hidden_layer.new_graph(cg);
     output_layer.new_graph(cg);

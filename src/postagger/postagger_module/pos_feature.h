@@ -13,7 +13,7 @@ struct POSFeature
 {
     friend class boost::serialization::access;
     static const size_t NrFeature = 7 ;
-    static const size_t FeatureCharLengthLimit = 5 ;
+    static const size_t FeatureCharLengthLimit = 10 ;
     static const size_t PrefixSuffixMaxLen = 3;
 
     static const std::string FeatureEmptyStrPlaceholder;
