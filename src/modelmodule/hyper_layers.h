@@ -168,6 +168,43 @@ struct CRFOutput : public OutputBase
                       IndexSeq &pred_seq) ;
 };
 
+// Output Base Layer With Feature input
+
+struct OutputBaseWithFeature
+{
+    virtual ~OutputBaseWithFeature() = 0 ;
+    virtual void new_graph(cnn::ComputationGraph &cg) = 0 ;
+    virtual cnn::expr::Expression
+    build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        const IndexSeq &gold_seq) = 0 ;
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_out_seq) = 0 ;
+};
+
+struct SimpleOutputWithFeature : public OutputBaseWithFeature
+{
+    Merge3Layer hidden_layer;
+    DenseLayer output_layer;
+    NonLinearFunc *nonlinear_func;
+    cnn::ComputationGraph *pcg;
+    SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+        unsigned hidden_dim, unsigned output_dim , NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    virtual ~SimpleOutputWithFeature();
+    virtual void new_graph(cnn::ComputationGraph &cg);
+    virtual cnn::expr::Expression
+        build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+            const std::vector<cnn::expr::Expression> &expr_cont2 ,
+            const std::vector<cnn::expr::Expression> &feature_expr_cont,
+            const IndexSeq &gold_seq);
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_out_seq);
+};
 
 } // end of namespace slnn
 #endif

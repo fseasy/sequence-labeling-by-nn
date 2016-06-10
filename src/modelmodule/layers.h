@@ -14,31 +14,6 @@
 
 namespace slnn {
 
-/*
-struct BILSTMLayer
-{
-    cnn::LSTMBuilder *l2r_builder;
-    cnn::LSTMBuilder *r2l_builder;
-    cnn::Parameters *SOS;
-    cnn::Parameters *EOS;
-    cnn::expr::Expression SOS_EXP;
-    cnn::expr::Expression EOS_EXP;
-    cnn::real default_dropout_rate ;
-
-    BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
-                cnn::real default_dropout_rate=0.f);
-    ~BILSTMLayer();
-    void new_graph(cnn::ComputationGraph &cg);
-    void set_dropout(float dropout_rate) ;
-    void set_dropout();
-    void disable_dropout() ;
-    void start_new_sequence();
-    void build_graph(const std::vector<cnn::expr::Expression> &X_seq , std::vector<cnn::expr::Expression> &l2r_outputs , 
-        std::vector<cnn::expr::Expression> &r2l_outputs);
-
-};
-*/
-
 template<typename RNNDerived>
 struct BIRNNLayer
 {
@@ -112,63 +87,6 @@ struct Merge3Layer
 
 
 // ------------------- inline function definition --------------------
-/*
-inline
-void BILSTMLayer::new_graph(cnn::ComputationGraph &cg)
-{
-    l2r_builder->new_graph(cg);
-    r2l_builder->new_graph(cg);
-    SOS_EXP = parameter(cg, SOS);
-    EOS_EXP = parameter(cg, EOS);
-}
-
-inline
-void BILSTMLayer::set_dropout(float dropout_rate)
-{
-    l2r_builder->set_dropout(dropout_rate) ;
-    r2l_builder->set_dropout(dropout_rate) ;
-}
-
-inline
-void BILSTMLayer::set_dropout()
-{
-    l2r_builder->set_dropout(default_dropout_rate) ;
-    r2l_builder->set_dropout(default_dropout_rate) ;
-}
-
-inline
-void BILSTMLayer::disable_dropout()
-{
-    l2r_builder->disable_dropout() ;
-    r2l_builder->disable_dropout() ;
-}
-
-inline
-void BILSTMLayer::start_new_sequence()
-{
-    l2r_builder->start_new_sequence();
-    r2l_builder->start_new_sequence();
-}
-
-inline
-void BILSTMLayer::build_graph(const std::vector<cnn::expr::Expression> &X_seq, std::vector<cnn::expr::Expression> &l2r_outputs,
-    std::vector<cnn::expr::Expression> &r2l_outputs)
-{
-    size_t seq_len = X_seq.size();
-    std::vector<cnn::expr::Expression> tmp_l2r_outputs(seq_len),
-        tmp_r2l_outputs(seq_len);
-    l2r_builder->add_input(SOS_EXP);
-    r2l_builder->add_input(EOS_EXP);
-    for (int pos = 0; pos < static_cast<int>(seq_len); ++pos)
-    {
-        tmp_l2r_outputs[pos] = l2r_builder->add_input(X_seq[pos]);
-        int reverse_pos = seq_len - pos - 1;
-        tmp_r2l_outputs[reverse_pos] = r2l_builder->add_input(X_seq[reverse_pos]);
-    }
-    swap(l2r_outputs, tmp_l2r_outputs);
-    swap(r2l_outputs, tmp_r2l_outputs);
-}
-*/
 // DenseLayer
 inline 
 void DenseLayer::new_graph(cnn::ComputationGraph &cg)

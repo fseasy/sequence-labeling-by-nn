@@ -478,4 +478,65 @@ void CRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont
     std::swap(tmp_predict_ner_seq, pred_seq);
 }
 
+/************* OutputBaseWithFeature ***************/
+
+OutputBaseWithFeature::~OutputBaseWithFeature(){}
+
+/************ SimpleOutputWithFeature *************/
+
+SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
+    unsigned feature_dim, unsigned hidden_dim, unsigned output_dim , 
+    NonLinearFunc *nonlinear_func)
+    : hidden_layer(m , input_dim1 , input_dim2 , hidden_dim, feature_dim) ,
+    output_layer(m , hidden_dim , output_dim) ,
+    nonlinear_func(nonlinear_func)
+{}
+
+SimpleOutputWithFeature::~SimpleOutputWithFeature() {};
+
+void SimpleOutput::new_graph(cnn::ComputationGraph &cg)
+{
+    hidden_layer.new_graph(cg);
+    output_layer.new_graph(cg);
+    pcg = &cg;
+}
+
+Expression SimpleOutputWithFeature::build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+    const std::vector<cnn::expr::Expression> &expr_cont2 , 
+    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+    const IndexSeq &gold_seq)
+{
+    size_t len = expr_cont1.size();
+    std::vector<cnn::expr::Expression> loss_cont(len);
+    for (size_t i = 0; i < len; ++i)
+    {
+        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1.at(i), expr_cont2.at(i), feature_expr_cont.at(i));
+        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        loss_cont[i] = cnn::expr::pickneglogsoftmax(out_expr, gold_seq.at(i));
+    }
+    return cnn::expr::sum(loss_cont);
+}
+
+void SimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+    const std::vector<cnn::expr::Expression> &expr_cont2,
+    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+    IndexSeq &pred_out_seq)
+{
+    size_t len = expr_cont1.size();
+    std::vector<Index> tmp_pred_out(len);
+    for (size_t i = 0; i < len; ++i)
+    {
+        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1.at(i), expr_cont2.at(i), feature_expr_cont.at(i));
+        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        Index idx_of_max_prob = std::distance(out_probs.cbegin(),
+            std::max_element(out_probs.cbegin(), out_probs.cend()));
+        tmp_pred_out[i] = idx_of_max_prob;
+    }
+    std::swap(pred_out_seq, tmp_pred_out);
+}
+
+
 } // end of namespace slnn

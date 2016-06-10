@@ -7,10 +7,10 @@
 
 #include "cnn/cnn.h"
 
-#include "postagger/base_model/single_input_with_feature_model.hpp"
+#include "postagger/base_model/input1_feature2input_layer_model.hpp"
 namespace slnn{
 template<typename RNNDerived>
-class POSSingleClassificationWithFeatureModel : public SingleInputWithFeatureModel<RNNDerived>
+class POSSingleClassificationWithFeatureModel : public Input1F2IModel<RNNDerived>
 {
     friend class boost::serialization::access;
 public:
@@ -25,7 +25,7 @@ public:
 
 template <typename RNNDerived>
 POSSingleClassificationWithFeatureModel<RNNDerived>::POSSingleClassificationWithFeatureModel()
-    : SingleInputWithFeatureModel<RNNDerived>()
+    : Input1F2IModel<RNNDerived>()
 {}
 
 template <typename RNNDerived>
@@ -35,7 +35,7 @@ POSSingleClassificationWithFeatureModel<RNNDerived>::~POSSingleClassificationWit
 template <typename RNNDerived>
 void POSSingleClassificationWithFeatureModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
 {
-    POSSingleClassificationWithFeatureModel<RNNDerived>::SingleInputWithFeatureModel::set_model_param(var_map);
+    POSSingleClassificationWithFeatureModel<RNNDerived>::Input1F2IModel::set_model_param(var_map);
 }
 
 template <typename RNNDerived>
