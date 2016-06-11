@@ -165,6 +165,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
+        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -223,6 +224,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
+        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
