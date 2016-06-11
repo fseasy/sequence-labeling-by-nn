@@ -484,11 +484,11 @@ OutputBaseWithFeature::~OutputBaseWithFeature(){}
 
 /************ SimpleOutputWithFeature *************/
 
-SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
-    unsigned feature_dim, unsigned hidden_dim, unsigned output_dim , 
+SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2,
+    unsigned feature_dim, unsigned hidden_dim, unsigned output_dim,
     NonLinearFunc *nonlinear_func)
-    : hidden_layer(m , input_dim1 , input_dim2 , hidden_dim, feature_dim) ,
-    output_layer(m , hidden_dim , output_dim) ,
+    : hidden_layer(m, input_dim1, input_dim2, feature_dim, hidden_dim),
+    output_layer(m, hidden_dim, output_dim),
     nonlinear_func(nonlinear_func)
 {}
 
