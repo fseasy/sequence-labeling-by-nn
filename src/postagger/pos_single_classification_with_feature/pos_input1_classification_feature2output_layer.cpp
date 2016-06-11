@@ -8,7 +8,7 @@
 #include "cnn/lstm.h"
 #include "cnn/gru.h"
 
-#include "pos_single_classification_with_feature_model.h"
+#include "pos_input1_classification_feature2output_layer_model.h"
 #include "postagger/model_handler/single_input_with_feature_modelhandler.hpp"
 #include "utils/general.hpp"
 
@@ -16,7 +16,7 @@ using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger single_input-classification with feature(LSTM input) Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger Input1-Classification F2I Procedure based on CNN Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>
@@ -110,7 +110,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -189,7 +189,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -255,7 +255,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler ;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler ;
 
     // load model 
     ifstream is(model_path);

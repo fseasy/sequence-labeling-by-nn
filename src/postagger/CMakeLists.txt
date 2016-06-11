@@ -30,6 +30,15 @@ set(single_input_modelhandler_headers
 set(single_input_with_feature_model_hpp
     ${postagger_base_model_dir}/single_input_with_feature_model.hpp
 )
+set(input1_feature2input_layer_model_hpp
+    ${single_input_with_feature_model_hpp}
+    ${postagger_base_model_dir}/input1_feature2input_layer_model.hpp
+)
+set(input1_feature2output_layer_model_hpp
+    ${single_input_with_feature_model_hpp}
+    ${postagger_base_model_dir}/input1_feature2output_layer_model.hpp
+)
+
 
 # single input with feature modelhandler
 set(single_input_with_feature_modelhandler_hpp

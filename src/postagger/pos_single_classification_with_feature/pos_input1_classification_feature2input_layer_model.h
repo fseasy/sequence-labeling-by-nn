@@ -1,5 +1,5 @@
-#ifndef SLNN_POSTAGGER_POS_SINGLE_INPUT_CLASSIFICATION_WITH_FEATURE_MODEL_H_
-#define SLNN_POSTAGGER_POS_SINGLE_INPUT_CLASSIFICATION_WITH_FEATURE_MODEL_H_
+#ifndef SLNN_POSTAGGER_POS_INPUT1_CLASSIFICATION_FEATURE2INPUT_LAYER_MODEL_H_
+#define SLNN_POSTAGGER_POS_INPUT1_CLASSIFICATION_FEATURE2INPUT_LAYER_MODEL_H_
 
 #include <boost/log/trivial.hpp>
 #include <boost/archive/text_iarchive.hpp>
@@ -10,13 +10,13 @@
 #include "postagger/base_model/input1_feature2input_layer_model.hpp"
 namespace slnn{
 template<typename RNNDerived>
-class POSSingleClassificationWithFeatureModel : public Input1F2IModel<RNNDerived>
+class POSInput1ClassificationF2IModel : public Input1F2IModel<RNNDerived>
 {
     friend class boost::serialization::access;
 public:
    
-    POSSingleClassificationWithFeatureModel() ;
-    ~POSSingleClassificationWithFeatureModel();
+    POSInput1ClassificationF2IModel() ;
+    ~POSInput1ClassificationF2IModel();
 
     void set_model_param(const boost::program_options::variables_map &var_map) ;
     void build_model_structure() ;
@@ -24,22 +24,22 @@ public:
 };
 
 template <typename RNNDerived>
-POSSingleClassificationWithFeatureModel<RNNDerived>::POSSingleClassificationWithFeatureModel()
+POSInput1ClassificationF2IModel<RNNDerived>::POSInput1ClassificationF2IModel()
     : Input1F2IModel<RNNDerived>()
 {}
 
 template <typename RNNDerived>
-POSSingleClassificationWithFeatureModel<RNNDerived>::~POSSingleClassificationWithFeatureModel()
+POSInput1ClassificationF2IModel<RNNDerived>::~POSInput1ClassificationF2IModel()
 {}
 
 template <typename RNNDerived>
-void POSSingleClassificationWithFeatureModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
+void POSInput1ClassificationF2IModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
 {
-    POSSingleClassificationWithFeatureModel<RNNDerived>::Input1F2IModel::set_model_param(var_map);
+    POSInput1ClassificationF2IModel<RNNDerived>::Input1F2IModel::set_model_param(var_map);
 }
 
 template <typename RNNDerived>
-void POSSingleClassificationWithFeatureModel<RNNDerived>::build_model_structure()
+void POSInput1ClassificationF2IModel<RNNDerived>::build_model_structure()
 {
     this->m = new cnn::Model() ;
     this->pos_feature_layer = new POSFeatureLayer(this->m, this->pos_feature);
@@ -52,9 +52,9 @@ void POSSingleClassificationWithFeatureModel<RNNDerived>::build_model_structure(
 }
 
 template <typename RNNDerived>
-void POSSingleClassificationWithFeatureModel<RNNDerived>::print_model_info()
+void POSInput1ClassificationF2IModel<RNNDerived>::print_model_info()
 {
-    BOOST_LOG_TRIVIAL(info) << "---------------- Single Input Classification With Feature Model -----------------\n"
+    BOOST_LOG_TRIVIAL(info) << "---------------- POS Input1 Classification F2I Model -----------------\n"
         << "vocabulary size : " << this->word_dict_size << " with dimension : " << this->word_embedding_dim << "\n"
         << "birnn x dim : " << this->rnn_x_dim << " , h dim : " << this->rnn_h_dim
         << " , stacked layer num : " << this->nr_rnn_stacked_layer << "\n"

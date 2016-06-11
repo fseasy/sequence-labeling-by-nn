@@ -11,12 +11,7 @@
 #include "cnn/cnn.h"
 #include "cnn/dict.h"
 
-#include "postagger/postagger_module/pos_feature.h"
-#include "postagger/postagger_module/pos_feature_extractor.h"
-#include "postagger/postagger_module/pos_feature_layer.h"
-#include "utils/dict_wrapper.hpp"
-#include "utils/utf8processing.hpp"
-#include "modelmodule/hyper_layers.h"
+#include "single_input_with_feature_model.hpp"
 namespace slnn{
 
 template<typename RNNDerived>
@@ -112,8 +107,8 @@ void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::v
     this->pos_feature.init_embedding_dim(prefix_suffix_len1_embedding_dim, prefix_suffix_len2_embedding_dim,
         prefix_suffix_len3_embedding_dim, char_length_embedding_dim);
 
-    word_dict_size = word_dict.size() ;
-    output_dim = postag_dict.size() ;
+    word_dict_size = this->word_dict.size() ;
+    output_dim = this->postag_dict.size() ;
 }
 
 
