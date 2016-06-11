@@ -48,7 +48,8 @@ void POSInput1ClassificationF2OModel<RNNDerived>::build_model_structure()
                                                    this->word_embedding_dim, this->rnn_h_dim, this->dropout_rate) ;
     this->output_layer = new SimpleOutputWithFeature(this->m, this->rnn_h_dim, this->rnn_h_dim, 
         this->pos_feature.concatenated_feature_embedding_dim,
-        this->hidden_dim, this->output_dim) ;
+        this->hidden_dim, this->output_dim,
+        this->dropout_rate) ;
 }
 
 template <typename RNNDerived>

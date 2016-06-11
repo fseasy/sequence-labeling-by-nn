@@ -85,6 +85,7 @@ struct Input3
 
 struct OutputBase
 {
+    OutputBase(cnn::real dropout_rate, NonLinearFunc *nonlinear_func);
     virtual ~OutputBase() = 0 ;
     virtual void new_graph(cnn::ComputationGraph &cg) = 0 ;
     virtual cnn::expr::Expression
@@ -94,16 +95,18 @@ struct OutputBase
     virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
                               const std::vector<cnn::expr::Expression> &expr_cont2,
                               IndexSeq &pred_out_seq) = 0 ;
+    cnn::real dropout_rate;
+    NonLinearFunc *nonlinear_func;
 };
 
 struct SimpleOutput : public OutputBase
 {
     Merge2Layer hidden_layer;
     DenseLayer output_layer;
-    NonLinearFunc *nonlinear_func;
     cnn::ComputationGraph *pcg;
     SimpleOutput(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
-        unsigned hidden_dim, unsigned output_dim , NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+        unsigned hidden_dim, unsigned output_dim , 
+        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
     virtual ~SimpleOutput();
     virtual void new_graph(cnn::ComputationGraph &cg);
     virtual cnn::expr::Expression
@@ -119,15 +122,13 @@ struct PretagOutput : public OutputBase
 {
     Merge3Layer hidden_layer;
     DenseLayer output_layer;
-    NonLinearFunc *nonlinear_func;
     cnn::LookupParameters *tag_lookup_param ;
     cnn::Parameters *TAG_SOS ;
     cnn::ComputationGraph *pcg;
 
-
     PretagOutput(cnn::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
                  unsigned hidden_dim, unsigned output_dim , 
-                 NonLinearFunc *nonlinear_fun=&cnn::expr::rectify);
+                 cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_fun=&cnn::expr::rectify);
     virtual ~PretagOutput();
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
@@ -148,8 +149,6 @@ struct CRFOutput : public OutputBase
     cnn::LookupParameters *init_score_lookup_param ;
     cnn::ComputationGraph *pcg ;
     size_t tag_num ;
-    cnn::real dropout_rate ;
-    NonLinearFunc *nonlinear_func ;
     CRFOutput(cnn::Model *m,
               unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
               unsigned hidden_dim,
@@ -172,6 +171,7 @@ struct CRFOutput : public OutputBase
 
 struct OutputBaseWithFeature
 {
+    OutputBaseWithFeature(cnn::real dropout_rate, NonLinearFunc *nonlinear_func);
     virtual ~OutputBaseWithFeature() = 0 ;
     virtual void new_graph(cnn::ComputationGraph &cg) = 0 ;
     virtual cnn::expr::Expression
@@ -183,16 +183,18 @@ struct OutputBaseWithFeature
         const std::vector<cnn::expr::Expression> &expr_cont2,
         const std::vector<cnn::expr::Expression> &feature_expr_cont,
         IndexSeq &pred_out_seq) = 0 ;
+    cnn::real dropout_rate;
+    NonLinearFunc *nonlinear_func;
 };
 
 struct SimpleOutputWithFeature : public OutputBaseWithFeature
 {
     Merge3Layer hidden_layer;
     DenseLayer output_layer;
-    NonLinearFunc *nonlinear_func;
     cnn::ComputationGraph *pcg;
     SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
-        unsigned hidden_dim, unsigned output_dim , NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+        unsigned hidden_dim, unsigned output_dim,
+        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
     virtual ~SimpleOutputWithFeature();
     virtual void new_graph(cnn::ComputationGraph &cg);
     virtual cnn::expr::Expression

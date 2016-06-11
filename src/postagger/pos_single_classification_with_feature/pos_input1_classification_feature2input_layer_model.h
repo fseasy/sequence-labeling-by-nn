@@ -48,7 +48,8 @@ void POSInput1ClassificationF2IModel<RNNDerived>::build_model_structure()
                                               this->rnn_x_dim) ;
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, 
                                                    this->rnn_x_dim, this->rnn_h_dim, this->dropout_rate) ;
-    this->output_layer = new SimpleOutput(this->m, this->rnn_h_dim, this->rnn_h_dim, this->hidden_dim, this->output_dim) ;
+    this->output_layer = new SimpleOutput(this->m, this->rnn_h_dim, this->rnn_h_dim, this->hidden_dim, this->output_dim,
+        this->dropout_rate) ;
 }
 
 template <typename RNNDerived>

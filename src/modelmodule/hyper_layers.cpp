@@ -175,16 +175,22 @@ void Input3::build_inputs(const IndexSeq &dseq1, const IndexSeq &dseq2, const In
 
 /************ OutputBase ***************/
 
+OutputBase::OutputBase(cnn::real dropout_rate, NonLinearFunc *nonlinear_func) : 
+    dropout_rate(dropout_rate),
+    nonlinear_func(nonlinear_func)
+{}
+
 OutputBase::~OutputBase(){} // base class should implement deconstructor , even for pure virtual function
 
 /************ SimpleOutput *************/
 
 SimpleOutput::SimpleOutput(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
     unsigned hidden_dim, unsigned output_dim , 
+    cnn::real dropout_rate,
     NonLinearFunc *nonlinear_func)
-    : hidden_layer(m , input_dim1 , input_dim2 , hidden_dim) ,
-    output_layer(m , hidden_dim , output_dim) ,
-    nonlinear_func(nonlinear_func)
+    : OutputBase(dropout_rate, nonlinear_func),
+    hidden_layer(m , input_dim1 , input_dim2 , hidden_dim) ,
+    output_layer(m , hidden_dim , output_dim) 
 {}
 
 SimpleOutput::~SimpleOutput() {};
@@ -204,8 +210,9 @@ Expression SimpleOutput::build_output_loss(const std::vector<cnn::expr::Expressi
     for (size_t i = 0; i < len; ++i)
     {
         cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i]);
-        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
+        cnn::expr::Expression dropout_expr = cnn::expr::dropout(nonlinear_expr, dropout_rate);
+        cnn::expr::Expression out_expr = output_layer.build_graph(dropout_expr);
         loss_cont[i] = cnn::expr::pickneglogsoftmax(out_expr, gold_seq.at(i));
     }
     return cnn::expr::sum(loss_cont);
@@ -233,11 +240,11 @@ void SimpleOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
 /*************** PretagOutput **************/
 PretagOutput::PretagOutput(cnn::Model *m,
                            unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
-                           unsigned hidden_dim, unsigned output_dim ,
-                           NonLinearFunc *nonlinear_func)
-    :hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
+                           unsigned hidden_dim, unsigned output_dim , 
+    cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
+    :OutputBase(dropout_rate, nonlinear_func),
+    hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
     output_layer(m , hidden_dim , output_dim) ,
-    nonlinear_func(nonlinear_func) ,
     tag_lookup_param(m->add_lookup_parameters(output_dim , {tag_embedding_dim})) ,
     TAG_SOS(m->add_parameters({tag_embedding_dim})) 
 {}
@@ -263,7 +270,8 @@ PretagOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_c
     {
         cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i] , pretag_exp);
         cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        cnn::expr::Expression dropout_expr = cnn::expr::dropout(nonlinear_expr, dropout_rate);
+        cnn::expr::Expression out_expr = output_layer.build_graph(dropout_expr);
         loss_cont[i] = cnn::expr::pickneglogsoftmax(out_expr, gold_seq.at(i));
         pretag_exp = lookup(*pcg, tag_lookup_param, gold_seq.at(i)) ;
     }
@@ -298,14 +306,13 @@ CRFOutput::CRFOutput(cnn::Model *m,
           unsigned tag_num,
           cnn::real dropout_rate ,
           NonLinearFunc *nonlinear_func)
-    :hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
+    :OutputBase(dropout_rate, nonlinear_func),
+    hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
     emit_layer(m , hidden_dim , 1) ,
     tag_lookup_param(m->add_lookup_parameters(tag_num , {tag_embedding_dim})) ,
     trans_score_lookup_param(m->add_lookup_parameters(tag_num * tag_num , {1})) ,
     init_score_lookup_param(m->add_lookup_parameters(tag_num , {1})) ,
-    tag_num(tag_num) ,
-    dropout_rate(dropout_rate) ,
-    nonlinear_func(nonlinear_func)
+    tag_num(tag_num) 
 {}
 
 CRFOutput::~CRFOutput(){} 
@@ -480,16 +487,22 @@ void CRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont
 
 /************* OutputBaseWithFeature ***************/
 
+OutputBaseWithFeature::OutputBaseWithFeature(cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
+    :dropout_rate(dropout_rate),
+    nonlinear_func(nonlinear_func)
+{}
+
 OutputBaseWithFeature::~OutputBaseWithFeature(){}
 
 /************ SimpleOutputWithFeature *************/
 
 SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2,
     unsigned feature_dim, unsigned hidden_dim, unsigned output_dim,
+    cnn::real dropout_rate,
     NonLinearFunc *nonlinear_func)
-    : hidden_layer(m, input_dim1, input_dim2, feature_dim, hidden_dim),
-    output_layer(m, hidden_dim, output_dim),
-    nonlinear_func(nonlinear_func)
+    :OutputBaseWithFeature(dropout_rate, nonlinear_func),
+    hidden_layer(m, input_dim1, input_dim2, feature_dim, hidden_dim),
+    output_layer(m, hidden_dim, output_dim)
 {}
 
 SimpleOutputWithFeature::~SimpleOutputWithFeature() {};
@@ -512,7 +525,8 @@ Expression SimpleOutputWithFeature::build_output_loss(const std::vector<cnn::exp
     {
         cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1.at(i), expr_cont2.at(i), feature_expr_cont.at(i));
         cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        cnn::expr::Expression dropout_expr = cnn::expr::dropout(nonlinear_expr, dropout_rate);
+        cnn::expr::Expression out_expr = output_layer.build_graph(dropout_expr);
         loss_cont[i] = cnn::expr::pickneglogsoftmax(out_expr, gold_seq.at(i));
     }
     return cnn::expr::sum(loss_cont);
