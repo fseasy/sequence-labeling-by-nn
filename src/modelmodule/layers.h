@@ -11,6 +11,7 @@
 #include "cnn/gru.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "utils/typedeclaration.h"
 
 namespace slnn {
 
@@ -49,8 +50,8 @@ struct DenseLayer
         b_exp;
     DenseLayer(cnn::Model *m , unsigned input_dim , unsigned output_dim );
     ~DenseLayer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(const cnn::expr::Expression &e);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e);
 };
 
 struct Merge2Layer
@@ -63,8 +64,8 @@ struct Merge2Layer
         b_exp;
     Merge2Layer(cnn::Model *model , unsigned input1_dim, unsigned input2_dim, unsigned output_dim );
     ~Merge2Layer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2);
 };
 
 struct Merge3Layer
@@ -79,11 +80,23 @@ struct Merge3Layer
         b_exp;
     Merge3Layer(cnn::Model *model ,unsigned input1_dim , unsigned input2_dim , unsigned input3_dim , unsigned output_dim);
     ~Merge3Layer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
 };
 
-
+struct MLPHiddenLayer
+{
+    unsigned nr_hidden_layer;
+    std::vector<cnn::Parameters *> w_list;
+    std::vector<cnn::Parameters *> b_list;
+    std::vector<cnn::expr::Expression> w_expr_list;
+    std::vector<cnn::expr::Expression> b_expr_list;
+    MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::initializer_list<unsigned> &hidden_layer_dim_list, 
+        NonLinearFunc *nonlinear_func=cnn::expr::tanh);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression
+        build_graph(const cnn::expr::Expression &input_expr);
+};
 
 
 // ------------------- inline function definition --------------------

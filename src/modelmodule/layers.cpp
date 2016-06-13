@@ -4,23 +4,6 @@ using namespace cnn;
 using namespace std;
 namespace slnn {
 
-// Bi-LSTM
-/*
-BILSTMLayer::BILSTMLayer(Model *m , unsigned nr_lstm_stacked_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
-                         cnn::real default_dropout_rate)
-    : l2r_builder(new LSTMBuilder(nr_lstm_stacked_layers , lstm_x_dim , lstm_h_dim , m)) ,
-    r2l_builder(new LSTMBuilder(nr_lstm_stacked_layers , lstm_x_dim , lstm_h_dim , m)) ,
-    SOS(m->add_parameters({lstm_x_dim})) ,
-    EOS(m->add_parameters({lstm_x_dim})) ,
-    default_dropout_rate(default_dropout_rate)
-{}
-
-BILSTMLayer::~BILSTMLayer()
-{ 
-    if (l2r_builder) delete l2r_builder;
-    if (r2l_builder) delete r2l_builder;
-}
-*/
 // DenseLayer
 
 DenseLayer::DenseLayer(Model *m , unsigned input_dim , unsigned output_dim)
@@ -52,6 +35,50 @@ Merge3Layer::Merge3Layer(Model *m ,unsigned input1_dim , unsigned input2_dim , u
 
 Merge3Layer::~Merge3Layer(){}
 
+// MLPHiddenLayer
 
+MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const initializer_list<unsigned> &layers_dim)
+    :nr_hidden_layer(layers_dim.size()),
+    w_list(nr_hidden_layer),
+    b_list(nr_hidden_layer),
+    w_expr_list(nr_hidden_layer),
+    b_expr_list(nr_hidden_layer)
+{
+    assert(nr_hidden_layer > 0);
+    initializer_list<unsigned>::const_iterator dim_iter = layers_dim.begin();
+    w_list[0] = m->add_parameters({ *dim_iter, input_dim });
+    b_list[0] = m->add_parameters({ *dim_iter });
+    for( unsigned i = 1; i < nr_hidden_layer ; ++i)
+    {
+        ++dim_iter;
+        assert(dim_iter != layers_dim.end());
+        w_list[i] = m->add_parameters({ *dim_iter, layers_dim[i - 1] });
+        b_list[i] = m->add_parameters({ *dim_iter });
+    }
+}
+
+inline
+void MLPHiddenLayer::new_graph(ComputationGraph &cg)
+{
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        w_expr_list[i] = parameter(cg, w_list[i]);
+        b_expr_list[i] = parameter(cg, b_list[i]);
+    }
+}
+
+inline
+cnn::expr::Expression
+MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
+{
+    cnn::expr::Expression tmp_expr = tmp_expr = input_expr;
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        cnn::expr::Expression net_expr = affine_transform({
+            b_expr_list[i],
+            w_expr_list[i], tmp_expr });
+
+    }
+}
 
 } // end namespace slnn
