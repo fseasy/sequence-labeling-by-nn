@@ -91,11 +91,13 @@ struct MLPHiddenLayer
     std::vector<cnn::Parameters *> b_list;
     std::vector<cnn::expr::Expression> w_expr_list;
     std::vector<cnn::expr::Expression> b_expr_list;
+    NonLinearFunc *nonlinear_func;
     MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::initializer_list<unsigned> &hidden_layer_dim_list, 
         NonLinearFunc *nonlinear_func=cnn::expr::tanh);
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
         build_graph(const cnn::expr::Expression &input_expr);
+    void build_graph(const std::vector<cnn::expr::Expression> &input_exprs, std::vector<cnn::expr::Expression> &output_exprs);
 };
 
 
@@ -153,6 +155,46 @@ cnn::expr::Expression Merge3Layer::build_graph(const cnn::expr::Expression &e1, 
         w2_exp, e2 ,
         w3_exp, e3
     });
+}
+
+// MLPHiddenLayer
+
+inline
+void MLPHiddenLayer::new_graph(ComputationGraph &cg)
+{
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        w_expr_list[i] = parameter(cg, w_list[i]);
+        b_expr_list[i] = parameter(cg, b_list[i]);
+    }
+}
+
+inline
+cnn::expr::Expression
+MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
+{
+    cnn::expr::Expression tmp_expr = input_expr;
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        cnn::expr::Expression net_expr = affine_transform({
+            b_expr_list[i],
+            w_expr_list[i], tmp_expr });
+        tmp_expr = (*nonlinear_func)(net_expr);
+    }
+    return tmp_expr;
+}
+
+inline
+void MLPHiddenLayer::build_graph(const std::vector<cnn::expr::Expression> &input_exprs,
+    std::vector<cnn::expr::Expression> &output_exprs)
+{
+    unsigned sz = input_exprs.size();
+    std::vector<cnn::expr::Expression> tmp_output_exprs(sz);
+    for( unsigned i = 0; i < sz; ++i )
+    {
+        tmp_output_exprs.at(i) = build_graph(input_exprs.at(i));
+    }
+    swap(output_exprs, tmp_output_exprs);
 }
 
 /*****************************

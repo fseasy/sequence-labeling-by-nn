@@ -37,12 +37,13 @@ Merge3Layer::~Merge3Layer(){}
 
 // MLPHiddenLayer
 
-MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const initializer_list<unsigned> &layers_dim)
+MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const initializer_list<unsigned> &layers_dim, NonLinearFunc *nonlinear_func)
     :nr_hidden_layer(layers_dim.size()),
     w_list(nr_hidden_layer),
     b_list(nr_hidden_layer),
     w_expr_list(nr_hidden_layer),
-    b_expr_list(nr_hidden_layer)
+    b_expr_list(nr_hidden_layer),
+    nonlinear_func(nonlinear_func)
 {
     assert(nr_hidden_layer > 0);
     initializer_list<unsigned>::const_iterator dim_iter = layers_dim.begin();
@@ -57,28 +58,6 @@ MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const initializer_l
     }
 }
 
-inline
-void MLPHiddenLayer::new_graph(ComputationGraph &cg)
-{
-    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
-    {
-        w_expr_list[i] = parameter(cg, w_list[i]);
-        b_expr_list[i] = parameter(cg, b_list[i]);
-    }
-}
 
-inline
-cnn::expr::Expression
-MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
-{
-    cnn::expr::Expression tmp_expr = tmp_expr = input_expr;
-    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
-    {
-        cnn::expr::Expression net_expr = affine_transform({
-            b_expr_list[i],
-            w_expr_list[i], tmp_expr });
-
-    }
-}
 
 } // end namespace slnn

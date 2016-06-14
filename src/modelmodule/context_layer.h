@@ -1,6 +1,0 @@
-#ifndef MODELMODULE_CONTEXT_LAYER_H_
-#define MODELMODULE_CONTEXT_LAYER_H_
-
-
-
-#endif
