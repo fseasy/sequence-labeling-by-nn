@@ -37,12 +37,15 @@ Merge3Layer::~Merge3Layer(){}
 
 // MLPHiddenLayer
 
-MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const initializer_list<unsigned> &layers_dim, NonLinearFunc *nonlinear_func)
+MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsigned> &layers_dim, 
+    cnn::real dropout_rate,
+    NonLinearFunc *nonlinear_func)
     :nr_hidden_layer(layers_dim.size()),
     w_list(nr_hidden_layer),
     b_list(nr_hidden_layer),
     w_expr_list(nr_hidden_layer),
     b_expr_list(nr_hidden_layer),
+    dropout_rate(dropout_rate),
     nonlinear_func(nonlinear_func)
 {
     assert(nr_hidden_layer > 0);

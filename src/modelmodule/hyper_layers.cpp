@@ -291,6 +291,12 @@ void CRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont
     std::swap(tmp_predict_ner_seq, pred_seq);
 }
 
+/************* SoftmaxLayer ***********/
+
+SoftmaxLayer::SoftmaxLayer(cnn::Model *model, unsigned input_dim, unsigned output_dim)
+    :output_layer(model, input_dim, output_dim)
+{}
+
 /************* OutputBaseWithFeature ***************/
 
 OutputBaseWithFeature::OutputBaseWithFeature(cnn::real dropout_rate, NonLinearFunc *nonlinear_func)

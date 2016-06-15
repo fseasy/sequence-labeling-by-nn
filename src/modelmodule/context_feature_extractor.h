@@ -5,13 +5,16 @@
 
 namespace slnn{
 
+
 struct ContextFeatureExtractor
 {
-    void extract(const IndexSeq &sent, ContextFeature::ContexFeatureIndexGroupSeq &context_feature_gp_seq);
+    template <size_t N>
+    static void extract(const IndexSeq &sent, ContextFeature<N>::ContextFeatureIndexGroupSeq &context_feature_gp_seq);
 };
 
+template <size_t N>
 inline
-void ContextFeatureExtractor::extract(const IndexSeq &sent, ContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq)
+void ContextFeatureExtractor::extract(const IndexSeq &sent, ContextFeature<N>::ContextFeatureIndexGroupSeq &context_feature_gp_seq)
 {
     using std::swap;
     unsigned sent_len = sent.size();

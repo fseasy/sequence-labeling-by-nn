@@ -91,8 +91,10 @@ struct MLPHiddenLayer
     std::vector<cnn::Parameters *> b_list;
     std::vector<cnn::expr::Expression> w_expr_list;
     std::vector<cnn::expr::Expression> b_expr_list;
+    cnn::real dropout_rate;
     NonLinearFunc *nonlinear_func;
-    MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::initializer_list<unsigned> &hidden_layer_dim_list, 
+    MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::vector<unsigned> &hidden_layer_dim_list, 
+        cnn::real dropout_rate=0.f,
         NonLinearFunc *nonlinear_func=cnn::expr::tanh);
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
@@ -179,6 +181,7 @@ MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
         cnn::expr::Expression net_expr = affine_transform({
             b_expr_list[i],
             w_expr_list[i], tmp_expr });
+        if( std::abs(dropout_rate - 0.f) > 1e-6 ) { net_expr = cnn::expr::dropout(net_expr, dropout_rate); }
         tmp_expr = (*nonlinear_func)(net_expr);
     }
     return tmp_expr;

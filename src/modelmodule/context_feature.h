@@ -2,22 +2,24 @@
 #define MODELMODULE_CONTEXT_FEATURE_H_
 
 #include <vector>
+#include <sstream>
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 namespace slnn{
 
+template <size_t N>
 struct ContextFeature
 {
-    const unsigned ContextSize; // left + right size 
-    const unsigned ContextLeftSize ;
-    const unsigned ContextRightSize;
+    static const unsigned ContextSize; // left + right size 
+    static const unsigned ContextLeftSize ;
+    static const unsigned ContextRightSize;
 
     using ContextFeatureIndexGroup = std::vector<Index>;
     using ContextFeatureIndexGroupSeq = std::vector<ContextFeatureIndexGroup>;
 
     Index WordSOSId = -1;
     Index WordEOSId = -2;
-    ContextFeature(unsigned context_size, DictWrapper &word_dict_wrapper);
+    ContextFeature(DictWrapper &word_dict_wrapper);
 
     unsigned calc_context_feature_dim(unsigned word_embedding_dim);
     void replace_feature_index_group_with_unk(const ContextFeatureIndexGroup &context_feature_gp,
@@ -25,18 +27,36 @@ struct ContextFeature
     void replace_feature_index_group_seq_with_unk(const ContextFeatureIndexGroupSeq &context_feature_gp_seq,
         ContextFeatureIndexGroupSeq &context_feature_unk_replaced_gp_seq);
 
+    std::string get_context_info();
+
 private:
     DictWrapper &word_dict_wrapper; // for unk_replace
 };
 
+template <size_t N>
+const unsigned ContextFeature<N>::ContextSize = N ;
+
+template <size_t N>
+const unsigned ContextFeature<N>::ContextLeftSize = ContextSize / 2;
+
+template <size_t N>
+const unsigned ContextFeature<N>::ContextRightSize = ContextSize - ContextLeftSize ;
+
+template <size_t N>
+ContextFeature<N>::ContextFeature(DictWrapper &word_dict_wrapper)
+    :word_dict_wrapper(word_dict_wrapper)
+{}
+
+template <size_t N>
 inline
-unsigned ContextFeature::calc_context_feature_dim(unsigned word_embedding_dim)
+unsigned ContextFeature<N>::calc_context_feature_dim(unsigned word_embedding_dim)
 {
     return ContextSize * word_embedding_dim;
 }
 
+template <size_t N>
 inline
-void ContextFeature::replace_feature_index_group_with_unk(const ContextFeatureIndexGroup &context_feature_gp,
+void ContextFeature<N>::replace_feature_index_group_with_unk(const ContextFeatureIndexGroup &context_feature_gp,
     ContextFeatureIndexGroup &context_feature_replaced_gp)
 {
     using std::swap;
@@ -49,8 +69,9 @@ void ContextFeature::replace_feature_index_group_with_unk(const ContextFeatureIn
     swap(tmp_feature_replaced_gp, context_feature_replaced_gp);
 }
 
+template <size_t N>
 inline 
-void ContextFeature::replace_feature_index_group_seq_with_unk(const ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+void ContextFeature<N>::replace_feature_index_group_seq_with_unk(const ContextFeatureIndexGroupSeq &context_feature_gp_seq,
     ContextFeatureIndexGroupSeq &context_feature_unk_replaced_gp_seq)
 {
     using std::swap;
@@ -61,6 +82,15 @@ void ContextFeature::replace_feature_index_group_seq_with_unk(const ContextFeatu
         replace_feature_index_group_with_unk(context_feature_gp_seq.at(i), tmp_replaced_gp_seq.at(i));
     }
     swap(context_feature_unk_replaced_gp_seq, tmp_replaced_gp_seq);
+}
+
+template <size_t N>
+std::string ContextFeature<N>::get_context_info()
+{
+    ostringstream oss;
+    oss << "total context size : " << ContextSize << " , left context size : " << ContextLeftSize
+        << " , right context size : " << ContextRightSize ;
+    return oss.str();
 }
 
 } // end of namespace slnn

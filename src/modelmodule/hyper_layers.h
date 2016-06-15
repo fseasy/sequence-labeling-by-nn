@@ -182,6 +182,22 @@ struct CRFOutput : public OutputBase
                       IndexSeq &pred_seq) ;
 };
 
+// softmax layer
+
+struct SoftmaxLayer
+{
+    cnn::ComputationGraph *pcg;
+    DenseLayer output_layer;
+    SoftmaxLayer(cnn::Model *m, unsigned input_dim, unsigned output_dim);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression
+        build_output_loss(const std::vector<cnn::expr::Expression> &input_expr_cont,
+            const IndexSeq &gold_seq);
+    void build_output(const std::vector<cnn::expr::Expression> &input_expr_cont,
+        IndexSeq &predicted_seq);
+};
+
+
 // Output Base Layer With Feature input
 
 struct OutputBaseWithFeature
@@ -480,6 +496,48 @@ void CRFOutput::new_graph(cnn::ComputationGraph &cg)
     pcg = &cg ;
     hidden_layer.new_graph(cg) ;
     emit_layer.new_graph(cg) ;
+}
+
+
+/******* Softmax layer **********/
+
+inline
+void SoftmaxLayer::new_graph(cnn::ComputationGraph &cg)
+{
+    pcg = &cg;
+    output_layer.new_graph(cg);
+}
+
+inline
+cnn::expr::Expression
+SoftmaxLayer::build_output_loss(const std::vector<cnn::expr::Expression> &input_expr_cont,
+    const IndexSeq &gold_seq)
+{
+    unsigned sz = input_expr_cont.size();
+    std::vector<cnn::expr::Expression> loss_expr_cont(sz);
+    for( unsigned i = 0 ; i < sz ; ++i )
+    {
+        cnn::expr::Expression output_expr = output_layer.build_graph(input_expr_cont.at(i));
+        loss_expr_cont.at(i) = cnn::expr::pickneglogsoftmax(output_expr, gold_seq.at(i));
+    }
+    return cnn::expr::sum(loss_expr_cont);
+}
+
+inline
+void SoftmaxLayer::build_output(const std::vector<cnn::expr::Expression> &input_expr_cont,
+    IndexSeq &predicted_seq)
+{
+    size_t len = input_expr_cont.size();
+    std::vector<Index> tmp_pred_out(len);
+    for (size_t i = 0; i < len; ++i)
+    {
+        cnn::expr::Expression out_expr = output_layer.build_graph(input_expr_cont.at(i));
+        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        Index idx_of_max_prob = std::distance(out_probs.cbegin(),
+            std::max_element(out_probs.cbegin(), out_probs.cend()));
+        tmp_pred_out.at(i) = idx_of_max_prob;
+    }
+    std::swap(predicted_seq, tmp_pred_out);
 }
 
 /******* simple output with feature ********/

@@ -40,10 +40,11 @@ struct POSFeature
     using POSFeatureGroupSeq = FeatureGroupSeq<NrFeature>;
     POSFeature();
 
-    void init_embedding_dim(size_t prefix_suffix_len1_embedding_dim,
-                            size_t prefix_suffix_len2_embedding_dim,
-                            size_t prefix_suffix_len3_embedding_dim,
-                            size_t char_length_embedding_dim);
+    void init_embedding_dim(unsigned prefix_suffix_len1_embedding_dim,
+                            unsigned prefix_suffix_len2_embedding_dim,
+                            unsigned prefix_suffix_len3_embedding_dim,
+                            unsigned char_length_embedding_dim);
+    unsigned get_pos_feature_dim(){ return concatenated_feature_embedding_dim ; }
     // Dict interface
     size_t get_char_length_dict_size(){ return FeatureCharLengthLimit; }
     bool is_dict_frozen();
