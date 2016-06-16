@@ -24,16 +24,16 @@ void ContextFeatureExtractor::extract(const IndexSeq &sent, typename ContextFeat
     {
         typename ContextFeature<N>::ContextFeatureIndexGroup &feature_gp = tmp_feature_gp_seq.at(i);
         unsigned feature_idx = 0 ;
-        for( Index left_context_offset = 1 ; left_context_offset <= ContextFeature<N>::ContextLeftSize ; ++left_context_offset )
+        for( Index left_context_offset = 1 ; left_context_offset <= static_cast<Index>(ContextFeature<N>::ContextLeftSize) ; ++left_context_offset )
         {
             Index word_idx = i - left_context_offset;
             feature_gp.at(feature_idx) = (word_idx < 0 ? ContextFeature<N>::WordSOSId : word_idx) ;
             ++feature_idx;
         }
-        for( Index right_context_offset = 1 ; right_context_offset <= ContextFeature<N>::ContextRightSize; ++right_context_offset )
+        for( Index right_context_offset = 1 ; right_context_offset <= static_cast<Index>(ContextFeature<N>::ContextRightSize); ++right_context_offset )
         {
             Index word_idx = i + right_context_offset;
-            feature_gp.at(feature_idx) = (word_idx >= sent_len ? ContextFeature<N>::WordEOSId : word_idx);
+            feature_gp.at(feature_idx) = (word_idx >= static_cast<Index>(sent_len) ? ContextFeature<N>::WordEOSId : word_idx);
             ++feature_idx;
         }
     }
