@@ -22,6 +22,19 @@ set(common_libs
     ${module_directory}/layers.cpp
     ${module_directory}/hyper_layers.cpp
 )
+
+# context module
+
+set(context_module
+    ${module_directory}/context_feature.h
+    ${module_directory}/context_feature.cpp
+    ${module_directory}/context_feature_extractor.h
+    ${module_directory}/context_feature_extractor.cpp
+    ${module_directory}/context_feature_layer.h
+    ${module_directory}/context_feature_layer.cpp
+)
+
+
 add_subdirectory(postagger)
 #add_subdirectory(ner)
 #add_subdirectory(segmentor)

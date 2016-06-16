@@ -4,23 +4,6 @@ using namespace cnn;
 using namespace std;
 namespace slnn {
 
-// Bi-LSTM
-/*
-BILSTMLayer::BILSTMLayer(Model *m , unsigned nr_lstm_stacked_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
-                         cnn::real default_dropout_rate)
-    : l2r_builder(new LSTMBuilder(nr_lstm_stacked_layers , lstm_x_dim , lstm_h_dim , m)) ,
-    r2l_builder(new LSTMBuilder(nr_lstm_stacked_layers , lstm_x_dim , lstm_h_dim , m)) ,
-    SOS(m->add_parameters({lstm_x_dim})) ,
-    EOS(m->add_parameters({lstm_x_dim})) ,
-    default_dropout_rate(default_dropout_rate)
-{}
-
-BILSTMLayer::~BILSTMLayer()
-{ 
-    if (l2r_builder) delete l2r_builder;
-    if (r2l_builder) delete r2l_builder;
-}
-*/
 // DenseLayer
 
 DenseLayer::DenseLayer(Model *m , unsigned input_dim , unsigned output_dim)
@@ -51,6 +34,29 @@ Merge3Layer::Merge3Layer(Model *m ,unsigned input1_dim , unsigned input2_dim , u
 {}
 
 Merge3Layer::~Merge3Layer(){}
+
+// MLPHiddenLayer
+
+MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsigned> &layers_dim, 
+    cnn::real dropout_rate,
+    NonLinearFunc *nonlinear_func)
+    :nr_hidden_layer(layers_dim.size()),
+    w_list(nr_hidden_layer),
+    b_list(nr_hidden_layer),
+    w_expr_list(nr_hidden_layer),
+    b_expr_list(nr_hidden_layer),
+    dropout_rate(dropout_rate),
+    nonlinear_func(nonlinear_func)
+{
+    assert(nr_hidden_layer > 0);
+    w_list[0] = m->add_parameters({ layers_dim.at(0), input_dim });
+    b_list[0] = m->add_parameters({ layers_dim.at(0) });
+    for( unsigned i = 1 ; i < nr_hidden_layer ; ++i )
+    {
+        w_list.at(i) = m->add_parameters({ layers_dim.at(i), layers_dim.at(i - 1) });
+        b_list.at(i) = m->add_parameters({ layers_dim.at(i) });
+    }
+}
 
 
 

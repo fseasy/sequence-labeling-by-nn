@@ -8,7 +8,7 @@
 #include "cnn/lstm.h"
 #include "cnn/gru.h"
 
-#include "pos_single_classification_with_feature_model.h"
+#include "pos_input1_classification_feature2output_layer_model.h"
 #include "postagger/model_handler/single_input_with_feature_modelhandler.hpp"
 #include "utils/general.hpp"
 
@@ -16,7 +16,7 @@ using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger single_input-classification with feature(LSTM input) Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger Input1-Classification F2I Procedure based on CNN Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>
@@ -43,7 +43,7 @@ int train_process(int argc, char *argv[], const string &program_name)
           " be replace in this probability")
           ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("prefix_suffix_len1_embedding_dim", po::value<unsigned>()->default_value(20), "The dimension for prefix suffix len1 feature .")
-        ("prefix_suffix_len2_embedding_dim", po::value<unsigned>()->default_value(30), "The dimension for prefix suffix len2 feature .")
+        ("prefix_suffix_len2_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len2 feature .")
         ("prefix_suffix_len3_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len3 feature .")
         ("char_length_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for character length feature .")
         ("nr_rnn_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-rnn.")
@@ -110,7 +110,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -165,6 +165,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
+        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -189,7 +190,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -223,6 +224,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
+        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
@@ -255,7 +257,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSSingleClassificationWithFeatureModel<RNNDerived>> model_handler ;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler ;
 
     // load model 
     ifstream is(model_path);

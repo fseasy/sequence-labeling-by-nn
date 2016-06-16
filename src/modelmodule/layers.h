@@ -11,33 +11,9 @@
 #include "cnn/gru.h"
 #include "cnn/dict.h"
 #include "cnn/expr.h"
+#include "utils/typedeclaration.h"
 
 namespace slnn {
-
-/*
-struct BILSTMLayer
-{
-    cnn::LSTMBuilder *l2r_builder;
-    cnn::LSTMBuilder *r2l_builder;
-    cnn::Parameters *SOS;
-    cnn::Parameters *EOS;
-    cnn::expr::Expression SOS_EXP;
-    cnn::expr::Expression EOS_EXP;
-    cnn::real default_dropout_rate ;
-
-    BILSTMLayer(cnn::Model *model , unsigned nr_lstm_stack_layers, unsigned lstm_x_dim, unsigned lstm_h_dim ,
-                cnn::real default_dropout_rate=0.f);
-    ~BILSTMLayer();
-    void new_graph(cnn::ComputationGraph &cg);
-    void set_dropout(float dropout_rate) ;
-    void set_dropout();
-    void disable_dropout() ;
-    void start_new_sequence();
-    void build_graph(const std::vector<cnn::expr::Expression> &X_seq , std::vector<cnn::expr::Expression> &l2r_outputs , 
-        std::vector<cnn::expr::Expression> &r2l_outputs);
-
-};
-*/
 
 template<typename RNNDerived>
 struct BIRNNLayer
@@ -74,8 +50,8 @@ struct DenseLayer
         b_exp;
     DenseLayer(cnn::Model *m , unsigned input_dim , unsigned output_dim );
     ~DenseLayer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(const cnn::expr::Expression &e);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e);
 };
 
 struct Merge2Layer
@@ -88,8 +64,8 @@ struct Merge2Layer
         b_exp;
     Merge2Layer(cnn::Model *model , unsigned input1_dim, unsigned input2_dim, unsigned output_dim );
     ~Merge2Layer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2);
 };
 
 struct Merge3Layer
@@ -104,71 +80,30 @@ struct Merge3Layer
         b_exp;
     Merge3Layer(cnn::Model *model ,unsigned input1_dim , unsigned input2_dim , unsigned input3_dim , unsigned output_dim);
     ~Merge3Layer();
-    inline void new_graph(cnn::ComputationGraph &cg);
-    inline Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
+};
+
+struct MLPHiddenLayer
+{
+    unsigned nr_hidden_layer;
+    std::vector<cnn::Parameters *> w_list;
+    std::vector<cnn::Parameters *> b_list;
+    std::vector<cnn::expr::Expression> w_expr_list;
+    std::vector<cnn::expr::Expression> b_expr_list;
+    cnn::real dropout_rate;
+    NonLinearFunc *nonlinear_func;
+    MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::vector<unsigned> &hidden_layer_dim_list, 
+        cnn::real dropout_rate=0.f,
+        NonLinearFunc *nonlinear_func=cnn::expr::tanh);
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression
+        build_graph(const cnn::expr::Expression &input_expr);
+    void build_graph(const std::vector<cnn::expr::Expression> &input_exprs, std::vector<cnn::expr::Expression> &output_exprs);
 };
 
 
-
-
 // ------------------- inline function definition --------------------
-/*
-inline
-void BILSTMLayer::new_graph(cnn::ComputationGraph &cg)
-{
-    l2r_builder->new_graph(cg);
-    r2l_builder->new_graph(cg);
-    SOS_EXP = parameter(cg, SOS);
-    EOS_EXP = parameter(cg, EOS);
-}
-
-inline
-void BILSTMLayer::set_dropout(float dropout_rate)
-{
-    l2r_builder->set_dropout(dropout_rate) ;
-    r2l_builder->set_dropout(dropout_rate) ;
-}
-
-inline
-void BILSTMLayer::set_dropout()
-{
-    l2r_builder->set_dropout(default_dropout_rate) ;
-    r2l_builder->set_dropout(default_dropout_rate) ;
-}
-
-inline
-void BILSTMLayer::disable_dropout()
-{
-    l2r_builder->disable_dropout() ;
-    r2l_builder->disable_dropout() ;
-}
-
-inline
-void BILSTMLayer::start_new_sequence()
-{
-    l2r_builder->start_new_sequence();
-    r2l_builder->start_new_sequence();
-}
-
-inline
-void BILSTMLayer::build_graph(const std::vector<cnn::expr::Expression> &X_seq, std::vector<cnn::expr::Expression> &l2r_outputs,
-    std::vector<cnn::expr::Expression> &r2l_outputs)
-{
-    size_t seq_len = X_seq.size();
-    std::vector<cnn::expr::Expression> tmp_l2r_outputs(seq_len),
-        tmp_r2l_outputs(seq_len);
-    l2r_builder->add_input(SOS_EXP);
-    r2l_builder->add_input(EOS_EXP);
-    for (int pos = 0; pos < static_cast<int>(seq_len); ++pos)
-    {
-        tmp_l2r_outputs[pos] = l2r_builder->add_input(X_seq[pos]);
-        int reverse_pos = seq_len - pos - 1;
-        tmp_r2l_outputs[reverse_pos] = r2l_builder->add_input(X_seq[reverse_pos]);
-    }
-    swap(l2r_outputs, tmp_l2r_outputs);
-    swap(r2l_outputs, tmp_r2l_outputs);
-}
-*/
 // DenseLayer
 inline 
 void DenseLayer::new_graph(cnn::ComputationGraph &cg)
@@ -222,6 +157,47 @@ cnn::expr::Expression Merge3Layer::build_graph(const cnn::expr::Expression &e1, 
         w2_exp, e2 ,
         w3_exp, e3
     });
+}
+
+// MLPHiddenLayer
+
+inline
+void MLPHiddenLayer::new_graph(cnn::ComputationGraph &cg)
+{
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        w_expr_list[i] = parameter(cg, w_list[i]);
+        b_expr_list[i] = parameter(cg, b_list[i]);
+    }
+}
+
+inline
+cnn::expr::Expression
+MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
+{
+    cnn::expr::Expression tmp_expr = input_expr;
+    for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
+    {
+        cnn::expr::Expression net_expr = affine_transform({
+            b_expr_list[i],
+            w_expr_list[i], tmp_expr });
+        if( std::abs(dropout_rate - 0.f) > 1e-6 ) { net_expr = cnn::expr::dropout(net_expr, dropout_rate); }
+        tmp_expr = (*nonlinear_func)(net_expr);
+    }
+    return tmp_expr;
+}
+
+inline
+void MLPHiddenLayer::build_graph(const std::vector<cnn::expr::Expression> &input_exprs,
+    std::vector<cnn::expr::Expression> &output_exprs)
+{
+    unsigned sz = input_exprs.size();
+    std::vector<cnn::expr::Expression> tmp_output_exprs(sz);
+    for( unsigned i = 0; i < sz; ++i )
+    {
+        tmp_output_exprs.at(i) = build_graph(input_exprs.at(i));
+    }
+    swap(output_exprs, tmp_output_exprs);
 }
 
 /*****************************
