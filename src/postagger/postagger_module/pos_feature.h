@@ -70,10 +70,10 @@ private:
 };
 
 inline
-void POSFeature::init_embedding_dim(size_t prefix_suffix_len1_embedding_dim,
-                                    size_t prefix_suffix_len2_embedding_dim,
-                                    size_t prefix_suffix_len3_embedding_dim,
-                                    size_t char_length_embedding_dim)
+void POSFeature::init_embedding_dim(unsigned prefix_suffix_len1_embedding_dim,
+                                    unsigned prefix_suffix_len2_embedding_dim,
+                                    unsigned prefix_suffix_len3_embedding_dim,
+                                    unsigned char_length_embedding_dim)
 {
     this->prefix_suffix_len1_embedding_dim = prefix_suffix_len1_embedding_dim ;
     this->prefix_suffix_len2_embedding_dim = prefix_suffix_len2_embedding_dim ;

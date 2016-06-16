@@ -47,7 +47,7 @@ cnn::expr::Expression ContextFeatureLayer::build_word_expr(Index word_id)
 
 template <size_t N>
 inline 
-cnn::expr::Expression ContextFeatureLayer::build_feature_expr(typename const ContextFeature<N>::ContextFeatureIndexGroup &context_feature_gp)
+cnn::expr::Expression ContextFeatureLayer::build_feature_expr(const typename ContextFeature<N>::ContextFeatureIndexGroup &context_feature_gp)
 {
     std::vector<cnn::expr::Expression> context_word_exprs(ContextFeature<N>::ContextSize);
     for( unsigned i = 0 ; i < ContextFeature<N>::ContextSize ; ++i )
@@ -59,7 +59,7 @@ cnn::expr::Expression ContextFeatureLayer::build_feature_expr(typename const Con
 
 template <size_t N>
 inline 
-void ContextFeatureLayer::build_feature_exprs(typename const ContextFeature<N>::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+void ContextFeatureLayer::build_feature_exprs(const typename ContextFeature<N>::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
     std::vector<cnn::expr::Expression> &context_feature_exprs)
 {
     using std::swap;
@@ -67,9 +67,9 @@ void ContextFeatureLayer::build_feature_exprs(typename const ContextFeature<N>::
     std::vector<cnn::expr::Expression> tmp_context_feature_exprs(seq_len);
     for( unsigned i = 0; i < seq_len; ++i )
     {
-        tmp_context_feature_exprs.at(i) = bulid_feature_expr<N>(context_feature_gp_seq.at(i));
+        tmp_context_feature_exprs.at(i) = build_feature_expr<N>(context_feature_gp_seq.at(i));
     }
-    swap(contxt_feature_exprs, tmp_context_feature_exprs);
+    swap(context_feature_exprs, tmp_context_feature_exprs);
 }
 
 } // end of namespace slnn
