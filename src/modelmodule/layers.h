@@ -162,7 +162,7 @@ cnn::expr::Expression Merge3Layer::build_graph(const cnn::expr::Expression &e1, 
 // MLPHiddenLayer
 
 inline
-void MLPHiddenLayer::new_graph(ComputationGraph &cg)
+void MLPHiddenLayer::new_graph(cnn::ComputationGraph &cg)
 {
     for( unsigned i = 0 ; i < nr_hidden_layer; ++i )
     {

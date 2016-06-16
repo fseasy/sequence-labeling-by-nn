@@ -81,6 +81,14 @@ public:
     // print
     std::string get_mlp_hidden_layer_dim_info();
 
+    // serialization
+    template <typename Archive>
+    void save(Archive &ar, unsigned version) const ;
+    template <typename Archive>
+    void load(Archive &ar, unsigned version);
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned version);
+
 protected:
     cnn::Model *m;
 
@@ -105,18 +113,20 @@ using POSContextFeature = Input1MLPModel::POSContextFeature;
 /*********** inline funtion implemantation **********/
 
 // for short and frequently called functions
-
+inline
 void Input1MLPModel::set_replace_threshold(int freq_threshold, float prob_threshold)
 {
     word_dict_wrapper.set_threshold(freq_threshold, prob_threshold);
     pos_feature.set_replace_feature_with_unk_threshold(freq_threshold, prob_threshold);
 }
 
+inline
 bool Input1MLPModel::is_dict_frozen()
 {
     return (word_dict.is_frozen() && postag_dict.is_frozen() && pos_feature.is_dict_frozen());
 }
 
+inline
 void Input1MLPModel::freeze_dict()
 {
     word_dict_wrapper.Freeze();
@@ -156,6 +166,36 @@ void Input1MLPModel::postag_index_seq2postag_str_seq(const IndexSeq &postag_inde
         tmp_str_seq[i] = postag_dict.Convert(postag_index_seq[i]);
     }
     swap(postag_str_seq, tmp_str_seq);
+}
+
+template <typename Archive>
+void Input1MLPModel::save(Archive &ar, unsigned version) const 
+{
+    ar & word_embedding_dim &word_dict_size
+        &input_dim &output_dim
+        &mlp_hidden_dim_list
+        &dropout_rate;
+    ar &word_dict &postag_dict &pos_feature;
+    ar &*m;
+}
+
+template <typename Archive>
+void Input1MLPModel::load(Archive &ar, unsigned version)
+{
+    ar &word_embedding_dim &word_dict_size
+        &input_dim &output_dim
+        &mlp_hidden_dim_list
+        &dropout_rate;
+    ar &word_dict &postag_dict &pos_feature;
+    assert(word_dict.size() == word_dict_size && postag_dict.size() == output_dim);
+    build_model_structure();
+    ar &*m;
+}
+
+template <typename Archive>
+void Input1MLPModel::serialize(Archive &ar, unsigned version)
+{
+    boost::serialization::split_member(ar, *this, version);
 }
 
 } // end of namespace slnn

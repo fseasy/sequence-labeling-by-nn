@@ -290,12 +290,14 @@ void Input1WithFeature::build_inputs(const IndexSeq &sent,
     std::swap(inputs_exprs, tmp_inputs);
 }
 /******* input 2d  *******/
+inline
 void Input2D::new_graph(cnn::ComputationGraph &cg)
 {
     pcg = &cg;
     m2_layer.new_graph(cg);
 }
 
+inline
 void Input2D::build_inputs(const IndexSeq &seq1, const IndexSeq &seq2, std::vector<cnn::expr::Expression> &inputs_exprs )
 {
     size_t seq_len = seq1.size();

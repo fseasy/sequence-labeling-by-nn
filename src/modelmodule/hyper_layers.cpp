@@ -72,7 +72,7 @@ Input3::~Input3(){}
 
 BareInput1::BareInput1(cnn::Model *m, unsigned vocabulary_size, unsigned word_embedding_dim, unsigned nr_extra_feature_expr)
     :word_lookup_param(m->add_lookup_parameters(vocabulary_size, {word_embedding_dim})),
-    exprs(nr_extra_feature_expr+1) // pre-allocate memory
+    nr_exprs(nr_extra_feature_expr+1),    exprs(nr_exprs) // pre-allocate memory
 {}
 
 /************ OutputBase ***************/

@@ -9,6 +9,7 @@ namespace slnn{
 
 class Input1MLPWithoutTagModel : public Input1MLPModel
 {
+    friend class boost::serialization::access;
 public :
     Input1MLPWithoutTagModel();
     ~Input1MLPWithoutTagModel();
@@ -29,6 +30,10 @@ public :
         const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         IndexSeq &pred_seq) override ;
+
+    template <typename Archive>
+    void serialize(Archive &ar, unsigned version);
+
 private :
     BareInput1 *input_layer;
     MLPHiddenLayer *mlp_hidden_layer;
@@ -37,6 +42,11 @@ private :
     ContextFeatureLayer *pos_context_feature_layer;
 };
 
+template <typename Archive>
+void Input1MLPWithoutTagModel::serialize(Archive &ar, unsigned version)
+{
+    ar & boost::serialization::base_object<Input1MLPModel>(*this);
+}
 
 }
 

@@ -17,8 +17,8 @@ struct ContextFeature
     using ContextFeatureIndexGroup = std::vector<Index>;
     using ContextFeatureIndexGroupSeq = std::vector<ContextFeatureIndexGroup>;
 
-    Index WordSOSId = -1;
-    Index WordEOSId = -2;
+    static const Index WordSOSId = -1;
+    static const Index WordEOSId = -2;
     ContextFeature(DictWrapper &word_dict_wrapper);
 
     unsigned calc_context_feature_dim(unsigned word_embedding_dim);
@@ -43,6 +43,12 @@ template <size_t N>
 const unsigned ContextFeature<N>::ContextRightSize = ContextSize - ContextLeftSize ;
 
 template <size_t N>
+const Index ContextFeature<N>::WordSOSId ;
+
+template <size_t N>
+const Index ContextFeature<N>::WordEOSId ;
+
+template <size_t N>
 ContextFeature<N>::ContextFeature(DictWrapper &word_dict_wrapper)
     :word_dict_wrapper(word_dict_wrapper)
 {}
@@ -63,8 +69,9 @@ void ContextFeature<N>::replace_feature_index_group_with_unk(const ContextFeatur
     ContextFeatureIndexGroup tmp_feature_replaced_gp(context_feature_gp);
     for( unsigned i = 0 ; i < ContextSize; ++i )
     {
+        Index word_id = tmp_feature_replaced_gp.at(i);
         if( word_id == WordSOSId || word_id == WordEOSId ){ continue; }
-        else { tmp_feature_replaced_gp.at(i) = word_dict_wrapper.ConvertProbability(tmp_feature_repalced_gp.at(i)); }
+        else { tmp_feature_replaced_gp.at(i) = word_dict_wrapper.ConvertProbability(word_id); }
     }
     swap(tmp_feature_replaced_gp, context_feature_replaced_gp);
 }
@@ -87,7 +94,7 @@ void ContextFeature<N>::replace_feature_index_group_seq_with_unk(const ContextFe
 template <size_t N>
 std::string ContextFeature<N>::get_context_info()
 {
-    ostringstream oss;
+    std::ostringstream oss;
     oss << "total context size : " << ContextSize << " , left context size : " << ContextLeftSize
         << " , right context size : " << ContextRightSize ;
     return oss.str();

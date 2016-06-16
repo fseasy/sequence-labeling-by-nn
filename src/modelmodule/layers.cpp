@@ -49,15 +49,12 @@ MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsign
     nonlinear_func(nonlinear_func)
 {
     assert(nr_hidden_layer > 0);
-    initializer_list<unsigned>::const_iterator dim_iter = layers_dim.begin();
-    w_list[0] = m->add_parameters({ *dim_iter, input_dim });
-    b_list[0] = m->add_parameters({ *dim_iter });
-    for( unsigned i = 1; i < nr_hidden_layer ; ++i)
+    w_list[0] = m->add_parameters({ layers_dim.at(0), input_dim });
+    b_list[0] = m->add_parameters({ layers_dim.at(0) });
+    for( unsigned i = 1 ; i < nr_hidden_layer ; ++i )
     {
-        ++dim_iter;
-        assert(dim_iter != layers_dim.end());
-        w_list[i] = m->add_parameters({ *dim_iter, layers_dim[i - 1] });
-        b_list[i] = m->add_parameters({ *dim_iter });
+        w_list.at(i) = m->add_parameters({ layers_dim.at(i), layers_dim.at(i - 1) });
+        b_list.at(i) = m->add_parameters({ layers_dim.at(i) });
     }
 }
 
