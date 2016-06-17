@@ -36,19 +36,19 @@ private:
 };
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextSize ;
+constexpr unsigned ContextFeature<N>::ContextSize ;
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextLeftSize ;
+constexpr unsigned ContextFeature<N>::ContextLeftSize ;
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextRightSize ;
+constexpr unsigned ContextFeature<N>::ContextRightSize ;
 
 template <size_t N>
-const Index ContextFeature<N>::WordSOSId ;
+constexpr Index ContextFeature<N>::WordSOSId ;
 
 template <size_t N>
-const Index ContextFeature<N>::WordEOSId ;
+constexpr Index ContextFeature<N>::WordEOSId ;
 
 template <size_t N>
 ContextFeature<N>::ContextFeature(DictWrapper &word_dict_wrapper)

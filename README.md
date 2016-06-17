@@ -1,10 +1,10 @@
-#Sequence Labeling by Neural Network
+# Sequence Labeling by Neural Network
 
-The repository is for sequence labeling through neural negwork (deep learning) methods .
+The repository is for sequence labeling through neural network (deep learning) methods .
 
-# Build
+## Build
 
-## Under MSVC
+### Under MSVC
 
 1. open git bash
 4. git checkout msvc
@@ -15,16 +15,24 @@ The repository is for sequence labeling through neural negwork (deep learning) m
 
 
 
+
+### Under Linux
+
+1. get eigen3
+
+2. `cmake .. -DEIGEN3_INCLUDE_DIR=/eigen/path -DBoost_USE_STATIC_LIBS=On`(assume boost has already exists in global environment)
+
+## Plan 
+
+
 it is now based on [CNN library](https://github.com/clab/cnn)
 
 steps :
 
 1. postagging based on example `tag-bilstm.cc` of CNN [done]
 
-2. chinese segmentation(using sequence labeling method) , ner [doing]
+2. chinese segmentation(using sequence labeling method) , ner [done]
 
-3. more various structures based on CNN
+3. more various structures based on CNN [doing]
 
-4. (almost)from scratch ?
-
-
+4. (almost)from scratch ?? -> NO , need more time to think about it !
