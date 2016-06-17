@@ -32,7 +32,7 @@ void Input1MLPWithoutTagModel::build_model_structure()
     mlp_hidden_layer = new MLPHiddenLayer(m, input_dim, mlp_hidden_dim_list, dropout_rate);
     output_layer = new SoftmaxLayer(m, mlp_hidden_dim_list.at(mlp_hidden_dim_list.size() - 1), output_dim);
     pos_feature_layer = new POSFeatureLayer(m, pos_feature);
-    pos_context_feature_layer = new ContextFeatureLayer(m, input_layer->word_lookup_param);
+    pos_context_feature_layer = new ContextFeatureLayer<POSContextFeature::ContextSize>(m, input_layer->word_lookup_param);
 }
 
 void Input1MLPWithoutTagModel::print_model_info()
@@ -67,7 +67,7 @@ Input1MLPWithoutTagModel::build_loss(cnn::ComputationGraph &cg,
     std::vector<cnn::expr::Expression> tmp_feature_cont(2) ;
     for( unsigned i = 0 ; i < sent_len; ++i )
     {
-        tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr<PostaggerContextSize>(
+        tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr(
             context_feature_gp_seq.at(i)
             ) ;
         tmp_feature_cont.at(1) = pos_feature_layer->build_feature_expr(features_gp_seq.at(i));
@@ -96,7 +96,7 @@ Input1MLPWithoutTagModel::predict(cnn::ComputationGraph &cg,
     std::vector<cnn::expr::Expression> tmp_feature_cont(2) ;
     for( unsigned i = 0 ; i < sent_len; ++i )
     {
-        tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr<PostaggerContextSize>(
+        tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr(
             context_feature_gp_seq.at(i)
             ) ;
         tmp_feature_cont.at(1) = pos_feature_layer->build_feature_expr(features_gp_seq.at(i));

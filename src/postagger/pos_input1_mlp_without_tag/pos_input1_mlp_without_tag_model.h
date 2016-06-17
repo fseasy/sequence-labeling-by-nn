@@ -39,7 +39,7 @@ private :
     MLPHiddenLayer *mlp_hidden_layer;
     SoftmaxLayer *output_layer;
     POSFeatureLayer *pos_feature_layer;
-    ContextFeatureLayer *pos_context_feature_layer;
+    ContextFeatureLayer<POSContextFeature::ContextSize> *pos_context_feature_layer;
 };
 
 template <typename Archive>
