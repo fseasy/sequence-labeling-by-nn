@@ -26,14 +26,15 @@ void ContextFeatureExtractor::extract(const IndexSeq &sent, typename ContextFeat
         unsigned feature_idx = 0 ;
         for( Index left_context_offset = 1 ; left_context_offset <= static_cast<Index>(ContextFeature<N>::ContextLeftSize) ; ++left_context_offset )
         {
-            Index word_idx = i - left_context_offset;
-            feature_gp.at(feature_idx) = (word_idx < 0 ? ContextFeature<N>::WordSOSId : word_idx) ;
+            int word_pos = i - left_context_offset;
+            feature_gp.at(feature_idx) = (word_pos < 0 ? ContextFeature<N>::WordSOSId : sent.at(word_pos)) ;
             ++feature_idx;
         }
         for( Index right_context_offset = 1 ; right_context_offset <= static_cast<Index>(ContextFeature<N>::ContextRightSize); ++right_context_offset )
         {
-            Index word_idx = i + right_context_offset;
-            feature_gp.at(feature_idx) = (word_idx >= static_cast<Index>(sent_len) ? ContextFeature<N>::WordEOSId : word_idx);
+            int word_pos = i + right_context_offset;
+            feature_gp.at(feature_idx) = ( word_pos >= static_cast<Index>(sent_len) 
+                ? ContextFeature<N>::WordEOSId : sent.at(word_pos) );
             ++feature_idx;
         }
     }

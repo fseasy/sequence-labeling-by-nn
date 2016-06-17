@@ -3,22 +3,24 @@
 
 #include <vector>
 #include <sstream>
+#include "cnn/cnn.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 namespace slnn{
 
+
 template <size_t N>
 struct ContextFeature
 {
-    static const unsigned ContextSize; // left + right size 
-    static const unsigned ContextLeftSize ;
-    static const unsigned ContextRightSize;
+    static constexpr unsigned ContextSize = N; // left + right size 
+    static constexpr unsigned ContextLeftSize = N / 2;
+    static constexpr unsigned ContextRightSize = N - N / 2;
 
     using ContextFeatureIndexGroup = std::vector<Index>;
     using ContextFeatureIndexGroupSeq = std::vector<ContextFeatureIndexGroup>;
 
-    static const Index WordSOSId = -1;
-    static const Index WordEOSId = -2;
+    static constexpr Index WordSOSId = -1;
+    static constexpr Index WordEOSId = -2;
     ContextFeature(DictWrapper &word_dict_wrapper);
 
     unsigned calc_context_feature_dim(unsigned word_embedding_dim);
@@ -34,13 +36,13 @@ private:
 };
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextSize = N ;
+const unsigned ContextFeature<N>::ContextSize ;
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextLeftSize = ContextSize / 2;
+const unsigned ContextFeature<N>::ContextLeftSize ;
 
 template <size_t N>
-const unsigned ContextFeature<N>::ContextRightSize = ContextSize - ContextLeftSize ;
+const unsigned ContextFeature<N>::ContextRightSize ;
 
 template <size_t N>
 const Index ContextFeature<N>::WordSOSId ;
