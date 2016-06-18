@@ -1,5 +1,5 @@
 set(exe_name
-    pos_input1_mlp_without_tag
+    pos_input1_mlp_without_tag_no_feature
 )
 
 set(specific_headers
@@ -11,13 +11,11 @@ set(specific_libs
 
 add_executable(${exe_name}
                ${exe_name}.cpp
-               ${pos_feature_module_headers} # pos model module addition
-               ${input1_mlp_headers} # base model and handler
+               ${input1_mlp_no_feature_headers} # base model and handler
                ${specific_headers}   # model
                ${pos_common_headers}                # common header
                ${context_module}
-               ${pos_feature_module_libs}
-               ${input1_mlp_libs}
+               ${input1_mlp_no_feature_libs}
                ${specific_libs}
                ${pos_common_libs}
                ${pos_reader_module}

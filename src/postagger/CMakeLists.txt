@@ -55,23 +55,35 @@ set(input1_mlp_libs
     ${postagger_modelhandler_dir}/input1_mlp_modelhandler.cpp
 )
 
+# mlp input1 without tag NO FEATURE
+set(input1_mlp_no_feature_headers
+    ${postagger_base_model_dir}/input1_mlp_model_no_feature.h
+    ${postagger_modelhandler_dir}/input1_mlp_modelhandler_no_feature.h
+)
+set(input1_mlp_no_feature_libs
+    ${postagger_base_model_dir}/input1_mlp_model_no_feature.cpp
+)
+
 
 # model module (features extractor and layer)
 
-set(pos_model_module_headers
+set(pos_feature_module_headers
     ${postagger_modelmodule_dir}/pos_feature_extractor.h
     ${postagger_modelmodule_dir}/pos_feature_layer.h
-    ${postagger_modelmodule_dir}/pos_reader.h
     ${postagger_modelmodule_dir}/pos_feature.h
 )
 
-set(pos_model_module_libs
+set(pos_feature_module_libs
     ${postagger_modelmodule_dir}/pos_feature_extractor.cpp
     ${postagger_modelmodule_dir}/pos_feature_layer.cpp
-    ${postagger_modelmodule_dir}/pos_reader.cpp
     ${postagger_modelmodule_dir}/pos_feature.cpp
 )
 
+# reader specifics
+set(pos_reader_module
+    ${postagger_modelmodule_dir}/pos_reader.h
+    ${postagger_modelmodule_dir}/pos_reader.cpp
+)
 
 set(pos_common_headers
     ${common_headers}
@@ -89,3 +101,4 @@ set(pos_common_libs
 
 add_subdirectory(pos_single_classification_with_feature)
 add_subdirectory(pos_input1_mlp_without_tag)
+add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)
