@@ -84,6 +84,25 @@ struct Merge3Layer
     cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3);
 };
 
+struct Merge4Layer
+{
+    cnn::Parameters *w1 ,
+        *w2, 
+        *w3,
+        *w4,
+        *b;
+    cnn::expr::Expression w1_exp,
+        w2_exp,
+        w3_exp,
+        w4_exp,
+        b_exp;
+    Merge4Layer(cnn::Model *model ,unsigned input1_dim , unsigned input2_dim , unsigned input3_dim , unsigned input4_dim, unsigned output_dim);
+    ~Merge4Layer();
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2, const cnn::expr::Expression &e3,
+        const cnn::expr::Expression &e4);
+};
+
 struct MLPHiddenLayer
 {
     unsigned nr_hidden_layer;
@@ -156,6 +175,30 @@ cnn::expr::Expression Merge3Layer::build_graph(const cnn::expr::Expression &e1, 
         w1_exp, e1 ,
         w2_exp, e2 ,
         w3_exp, e3
+    });
+}
+
+// Merge4Layer
+inline 
+void Merge4Layer::new_graph(cnn::ComputationGraph &cg)
+{
+    b_exp = parameter(cg, b);
+    w1_exp = parameter(cg, w1);
+    w2_exp = parameter(cg, w2);
+    w3_exp = parameter(cg, w3);
+    w4_exp = parameter(cg, w4);
+}
+
+inline 
+cnn::expr::Expression Merge4Layer::build_graph(const cnn::expr::Expression &e1, const cnn::expr::Expression &e2,
+    const cnn::expr::Expression &e3, const cnn::expr::Expression &e4)
+{
+    return affine_transform({
+        b_exp,
+        w1_exp, e1 ,
+        w2_exp, e2 ,
+        w3_exp, e3,
+        w4_exp, e4
     });
 }
 

@@ -35,6 +35,19 @@ Merge3Layer::Merge3Layer(Model *m ,unsigned input1_dim , unsigned input2_dim , u
 
 Merge3Layer::~Merge3Layer(){}
 
+
+// Merge 4 Layer
+Merge4Layer::Merge4Layer(Model *m ,unsigned input1_dim , unsigned input2_dim , unsigned input3_dim ,
+    unsigned input4_dim, unsigned output_dim )
+    :w1(m->add_parameters({output_dim , input1_dim})) ,
+    w2(m->add_parameters({output_dim , input2_dim})) ,
+    w3(m->add_parameters({output_dim , input3_dim})) ,
+    w4(m->add_parameters({output_dim, input4_dim})),
+    b(m->add_parameters({output_dim}))
+{}
+
+Merge4Layer::~Merge4Layer(){}
+
 // MLPHiddenLayer
 
 MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsigned> &layers_dim, 

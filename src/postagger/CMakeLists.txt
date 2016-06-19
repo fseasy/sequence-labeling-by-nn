@@ -100,5 +100,6 @@ set(pos_common_libs
 #add_subdirectory(pos_single_classification)
 
 add_subdirectory(pos_single_classification_with_feature)
+add_subdirectory(pos_single_pretag_with_feature)
 add_subdirectory(pos_input1_mlp_without_tag)
 add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)

@@ -239,7 +239,30 @@ struct SimpleOutputWithFeature : public OutputBaseWithFeature
         IndexSeq &pred_out_seq);
 };
 
+struct PretagOutputWithFeature : public OutputBaseWithFeature
+{
+    Merge4Layer hidden_layer;
+    DenseLayer output_layer;
+    cnn::LookupParameters *tag_lookup_param ;
+    cnn::Parameters *TAG_SOS ;
+    cnn::ComputationGraph *pcg;
 
+    PretagOutputWithFeature(cnn::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2, 
+        unsigned feature_dim,
+        unsigned hidden_dim, unsigned output_dim , 
+        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_fun=&cnn::expr::rectify);
+    virtual ~PretagOutputWithFeature();
+    void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression
+        build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+            const std::vector<cnn::expr::Expression> &expr_cont2,
+            const std::vector<cnn::expr::Expression> &feature_expr_cont,
+            const IndexSeq &gold_seq);
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_1,
+        const std::vector<cnn::expr::Expression> &expr_2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_out_seq) ;
+};
 
 /******* inline function implementation ******/
 
@@ -590,6 +613,62 @@ void SimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expressi
         tmp_pred_out[i] = idx_of_max_prob;
     }
     std::swap(pred_out_seq, tmp_pred_out);
+}
+
+/* pretag output with feature  */
+
+inline 
+void PretagOutputWithFeature::new_graph(cnn::ComputationGraph &cg)
+{
+    hidden_layer.new_graph(cg) ;
+    output_layer.new_graph(cg) ;
+    pcg = &cg ;
+}
+
+
+inline
+cnn::expr::Expression
+PretagOutputWithFeature::build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+    const std::vector<cnn::expr::Expression> &expr_cont2,
+    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+    const IndexSeq &gold_seq)
+{
+    size_t len = expr_cont1.size() ;
+    std::vector<cnn::expr::Expression> loss_cont(len);
+    cnn::expr::Expression pretag_exp = parameter(*pcg, TAG_SOS) ;
+    for( size_t i = 0; i < len; ++i )
+    {
+        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1.at(i), expr_cont2.at(i), feature_expr_cont.at(i),
+            pretag_exp);
+        cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
+        cnn::expr::Expression dropout_expr = cnn::expr::dropout(nonlinear_expr, dropout_rate);
+        cnn::expr::Expression out_expr = output_layer.build_graph(dropout_expr);
+        loss_cont[i] = cnn::expr::pickneglogsoftmax(out_expr, gold_seq.at(i));
+        pretag_exp = lookup(*pcg, tag_lookup_param, gold_seq.at(i)) ;
+    }
+    return cnn::expr::sum(loss_cont);
+}
+
+inline
+void PretagOutputWithFeature::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+    const std::vector<cnn::expr::Expression> &expr_cont2,
+    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+    IndexSeq &pred_seq)
+{
+    size_t len = expr_cont1.size() ;
+    IndexSeq tmp_pred(len) ;
+    cnn::expr::Expression pretag_exp = parameter(*pcg, TAG_SOS) ;
+    for( size_t i = 0; i < len; ++i )
+    {
+        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1.at(i), expr_cont2.at(i), feature_expr_cont.at(i), pretag_exp);
+        cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
+        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<cnn::real> dist = as_vector(pcg->get_value(out_expr)) ;
+        Index id_of_max_prob = std::distance(dist.cbegin(), std::max_element(dist.cbegin(), dist.cend())) ;
+        tmp_pred[i] = id_of_max_prob ;
+        pretag_exp = lookup(*pcg, tag_lookup_param,id_of_max_prob) ;
+    }
+    std::swap(pred_seq, tmp_pred) ;
 }
 
 } // end of namespace slnn

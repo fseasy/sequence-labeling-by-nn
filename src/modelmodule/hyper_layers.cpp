@@ -319,4 +319,18 @@ SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_d
 
 SimpleOutputWithFeature::~SimpleOutputWithFeature() {};
 
+/*  PretagOutputWithFeature */
+PretagOutputWithFeature::PretagOutputWithFeature(cnn::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2, 
+    unsigned feature_dim,
+    unsigned hidden_dim, unsigned output_dim , 
+    cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
+    :OutputBaseWithFeature(dropout_rate, nonlinear_func),
+    hidden_layer(m, input_dim1, input_dim2, feature_dim, tag_embedding_dim, hidden_dim),
+    output_layer(m, hidden_dim, output_dim),
+    tag_lookup_param(m->add_lookup_parameters(output_dim , {tag_embedding_dim})) ,
+    TAG_SOS(m->add_parameters({tag_embedding_dim})) 
+{}
+
+PretagOutputWithFeature::~PretagOutputWithFeature(){}
+
 } // end of namespace slnn
