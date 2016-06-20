@@ -78,7 +78,7 @@ template <typename Archive>
 void POSInput1PretagF2IModel<RNNDerived>::serialize(Archive &ar, unsigned version)
 {
     ar & tag_embedding_dim;
-    ar & boost::serialization::base_object<Input1F2IModel>(*this);
+    ar & boost::serialization::base_object<Input1F2IModel<RNNDerived>>(*this);
 }
 
 } // end of namespace slnn 
