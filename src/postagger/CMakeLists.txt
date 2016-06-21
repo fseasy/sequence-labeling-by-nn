@@ -12,6 +12,7 @@ set(postagger_modelhandler_dir
 set(postagger_modelmodule_dir
     ${postagger_base_dir}/postagger_module
 )
+
 # single input model
 set(single_input_model_headers
     ${postagger_base_model_dir}/single_input_model.h
@@ -45,6 +46,20 @@ set(single_input_with_feature_modelhandler_hpp
     ${postagger_modelhandler_dir}/single_input_with_feature_modelhandler.hpp
 )
 
+# input2 with feature
+set(input2_with_feature_model_hpp 
+${postagger_base_model_dir}/input2_with_feature_model.hpp )
+
+set(input2_feature2input_layer_model_hpp
+    ${input2_with_feature_model_hpp}
+    ${postagger_base_model_dir}/input2_feature2input_layer_model.hpp)
+set(input2_feature2output_layer_model_hpp
+    ${input2_with_feature_model_hpp}
+    ${postagger_base_model_dir}/input2_feature2output_layer_model.hpp)
+# input2 with feature modelhandler
+set(input2_with_feature_modelhandler_hpp
+    ${postagger_modelhandler_dir}/input2_with_feature_modelhandler.hpp)
+
 # mlp input1 without tag
 set(input1_mlp_headers
     ${postagger_base_model_dir}/input1_mlp_model.h
@@ -65,7 +80,7 @@ set(input1_mlp_no_feature_libs
 )
 
 
-# model module (features extractor and layer)
+# with feature model module (features extractor and layer)
 
 set(pos_feature_module_headers
     ${postagger_modelmodule_dir}/pos_feature_extractor.h
@@ -100,8 +115,10 @@ set(pos_common_libs
 #add_subdirectory(pos_single_classification)
 
 add_subdirectory(pos_single_classification_with_feature)
-add_subdirectory(pos_single_pretag_with_feature)
-add_subdirectory(pos_single_crf_with_feature)
+#add_subdirectory(pos_single_pretag_with_feature)
+#add_subdirectory(pos_single_crf_with_feature)
 
-add_subdirectory(pos_input1_mlp_without_tag)
-add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)
+add_subdirectory(pos_input2_classification_with_feature)
+
+#add_subdirectory(pos_input1_mlp_without_tag)
+#add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)

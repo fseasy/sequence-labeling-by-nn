@@ -23,6 +23,12 @@ set(common_libs
     ${module_directory}/hyper_layers.cpp
 )
 
+set(additional_base_modules
+   # word2vec embedding helper 
+   ${util_directory}/word2vec_embedding_helper.h
+   ${util_directory}/word2vec_embedding_helper.cpp
+)
+
 # context module
 
 set(context_module
