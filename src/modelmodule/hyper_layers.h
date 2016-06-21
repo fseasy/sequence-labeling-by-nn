@@ -264,6 +264,36 @@ struct PretagOutputWithFeature : public OutputBaseWithFeature
         IndexSeq &pred_out_seq) ;
 };
 
+struct CRFOutputWithFeature : public  OutputBaseWithFeature
+{
+    Merge4Layer hidden_layer ;
+    DenseLayer emit_layer ;
+    cnn::LookupParameters *tag_lookup_param ;
+    cnn::LookupParameters *trans_score_lookup_param ;
+    cnn::LookupParameters *init_score_lookup_param ;
+    cnn::ComputationGraph *pcg ;
+    size_t tag_num ;
+    CRFOutputWithFeature(cnn::Model *m,
+        unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
+        unsigned feature_dim,
+        unsigned hidden_dim,
+        unsigned tag_num,
+        cnn::real dropout_rate , 
+        NonLinearFunc *nonlinear_func=&cnn::expr::rectify) ;
+    ~CRFOutputWithFeature() ;
+    void new_graph(cnn::ComputationGraph &cg) ;
+    cnn::expr::Expression
+        build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
+            const std::vector<cnn::expr::Expression> &expr_cont2,
+            const std::vector<cnn::expr::Expression> &feature_expr_cont,
+            const IndexSeq &gold_seq) ;
+
+    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_seq) ;
+};
+
 /******* inline function implementation ******/
 
 /****** input1 ******/
@@ -669,6 +699,15 @@ void PretagOutputWithFeature::build_output(const std::vector<cnn::expr::Expressi
         pretag_exp = lookup(*pcg, tag_lookup_param,id_of_max_prob) ;
     }
     std::swap(pred_seq, tmp_pred) ;
+}
+
+/* CRF output with feature */
+inline
+void CRFOutputWithFeature::new_graph(cnn::ComputationGraph &cg)
+{
+    pcg = &cg ;
+    hidden_layer.new_graph(cg) ;
+    emit_layer.new_graph(cg) ;
 }
 
 } // end of namespace slnn
