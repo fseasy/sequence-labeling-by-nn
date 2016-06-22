@@ -16,7 +16,7 @@ using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger Input1-Classification F2I Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger Input1-Classification F2O Procedure based on CNN Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>

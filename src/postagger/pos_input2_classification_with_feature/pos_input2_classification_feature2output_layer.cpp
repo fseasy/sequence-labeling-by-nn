@@ -8,15 +8,15 @@
 #include "cnn/lstm.h"
 #include "cnn/gru.h"
 
-#include "pos_input1_classification_feature2output_layer_model.h"
-#include "postagger/model_handler/single_input_with_feature_modelhandler.hpp"
+#include "pos_input2_classification_feature2output_layer_model.h"
+#include "postagger/model_handler/input2_with_feature_modelhandler.hpp"
 #include "utils/general.hpp"
 
 using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger Input1-Classification F2I Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger Input2-Classification F2O Procedure based on CNN Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>
@@ -30,6 +30,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("word2vec_embedding" , po::value<string>(), "The path to word2vec embedding")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("model", po::value<string>(), "Use to specify the model name(path)")
         ("dropout_rate", po::value<float>(), "droupout rate for training (Only for bi-lstm)")
@@ -41,7 +42,7 @@ int train_process(int argc, char *argv[], const string &program_name)
          ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
           " if words frequency <= replace_freq_threshold , the word will"
           " be replace in this probability")
-          ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("dynamic_word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("prefix_suffix_len1_embedding_dim", po::value<unsigned>()->default_value(20), "The dimension for prefix suffix len1 feature .")
         ("prefix_suffix_len2_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len2 feature .")
         ("prefix_suffix_len3_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len3 feature .")
@@ -81,6 +82,10 @@ int train_process(int argc, char *argv[], const string &program_name)
                            "using `" + program_name + " train -h ` to see detail parameters .");
     devel_data_path = var_map["devel_data"].as<string>();  
     
+    varmap_key_fatal_check(var_map, "word2vec_embedding",
+        "Error : word2vec embedding path should be specified");
+    string word2vec_embedding_path = var_map["word2vec_embedding"].as<string>() ;
+
     varmap_key_fatal_check(var_map, "max_epoch",
         "Error : max epoch num should be specified .");
     unsigned max_epoch = var_map["max_epoch"].as<unsigned>();
@@ -110,7 +115,17 @@ int train_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
+    Input2WithFeatureModelHandler<RNNDerived, POSInput2ClassificationF2OModel<RNNDerived>> model_handler;
+
+    ifstream embedding_is(word2vec_embedding_path);
+    if (!embedding_is)
+    {
+        BOOST_LOG_TRIVIAL(fatal) << "failed to open word2vec embedding : `" << word2vec_embedding_path << "` .\n Exit! \n";
+        return -1;
+    }
+    model_handler.build_fixed_dict(embedding_is);
+    embedding_is.clear() ; // !! MUST calling before `seekg` ! even thouth using  c++ 11 .
+    embedding_is.seekg(0); // will use in the following 
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -121,10 +136,11 @@ int train_process(int argc, char *argv[], const string &program_name)
     if (!train_is) {
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
-    vector<IndexSeq> sents ,
+    vector<IndexSeq> dynamic_sents ,
+        fixed_sents,
         tag_seqs;
     vector<POSFeature::POSFeatureIndexGroupSeq> feature_gp_seqs;
-    model_handler.read_training_data(train_is, sents ,feature_gp_seqs, tag_seqs);
+    model_handler.read_training_data(train_is, dynamic_sents, fixed_sents, feature_gp_seqs, tag_seqs);
     train_is.close();
     // set model structure param 
     model_handler.set_model_param_after_reading_training_data(var_map);
@@ -132,20 +148,22 @@ int train_process(int argc, char *argv[], const string &program_name)
     // build model structure
     model_handler.build_model(); // passing the var_map to specify the model structure
     
+    model_handler.load_fixed_embedding(embedding_is);
+    embedding_is.close();
     // reading developing data
-    vector<IndexSeq> dev_sents, dev_tag_seqs ;
+    vector<IndexSeq> dev_dynamic_sents, dev_fixed_sents, dev_tag_seqs ;
     vector<POSFeature::POSFeatureIndexGroupSeq> dev_feature_gp_seqs ;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
     }
-    model_handler.read_devel_data(devel_is, dev_sents , dev_feature_gp_seqs, dev_tag_seqs);
+    model_handler.read_devel_data(devel_is, dev_dynamic_sents, dev_fixed_sents, dev_feature_gp_seqs, dev_tag_seqs);
     devel_is.close();
 
     // Train 
-    model_handler.train(&sents, &feature_gp_seqs, &tag_seqs , 
+    model_handler.train(&dynamic_sents, &fixed_sents, &feature_gp_seqs, &tag_seqs , 
         max_epoch, 
-        &dev_sents ,&dev_feature_gp_seqs, &dev_tag_seqs , 
+        &dev_dynamic_sents, &dev_fixed_sents, &dev_feature_gp_seqs, &dev_tag_seqs , 
         devel_freq , 
         trivial_report_freq);
 
@@ -190,7 +208,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
+    Input2WithFeatureModelHandler<RNNDerived, POSInput2ClassificationF2OModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -203,14 +221,15 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // read devel data
     ifstream devel_is(devel_data_path) ;
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
-    vector<IndexSeq> sents,
+    vector<IndexSeq> dynamic_sents,
+        fixed_sents,
         tag_seqs ;
     vector<POSFeature::POSFeatureIndexGroupSeq> feature_gp_seqs;
-    model_handler.read_devel_data(devel_is, sents, feature_gp_seqs, tag_seqs);
+    model_handler.read_devel_data(devel_is, dynamic_sents, fixed_sents, feature_gp_seqs, tag_seqs);
     devel_is.close();
 
     // devel
-    model_handler.devel(&sents , &feature_gp_seqs, &tag_seqs); 
+    model_handler.devel(&dynamic_sents, &fixed_sents, &feature_gp_seqs, &tag_seqs); 
     
     return 0;
 }
@@ -257,7 +276,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler ;
+    Input2WithFeatureModelHandler<RNNDerived, POSInput2ClassificationF2OModel<RNNDerived>> model_handler ;
 
     // load model 
     ifstream is(model_path);

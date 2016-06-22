@@ -64,6 +64,25 @@ struct Input2
         std::vector<cnn::expr::Expression> &inputs_exprs);
 };
 
+struct Input2WithFeature
+{
+    cnn::LookupParameters *dynamic_lookup_param,
+        *fixed_lookup_param;
+    Merge3Layer m3_layer;
+    cnn::ComputationGraph *pcg;
+    NonLinearFunc *nonlinear_func;
+
+    Input2WithFeature(cnn::Model *m, unsigned dynamic_vocab_size, unsigned dynamic_embedding_dim,
+        unsigned fixed_vocab_size, unsigned fixed_embedding_dim,
+        unsigned feature_embedding_dim,
+        unsigned mergeout_dim , NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    ~Input2WithFeature();
+    void new_graph(cnn::ComputationGraph &cg);
+    void build_inputs(const IndexSeq &dynamic_sent, const IndexSeq &fixed_sent, 
+        const std::vector<cnn::expr::Expression> &feature_exprs,
+        std::vector<cnn::expr::Expression> &inputs_exprs);
+};
+
 struct Input3
 {
     cnn::LookupParameters *dynamic_lookup_param1,
@@ -389,6 +408,32 @@ void Input2::build_inputs(const IndexSeq &dynamic_seq, const IndexSeq &fixed_seq
     }
     std::swap(inputs_exprs, tmp_inputs);
 }
+
+/* input2 with  feature */
+inline
+void Input2WithFeature::new_graph(cnn::ComputationGraph &cg)
+{
+    pcg = &cg;
+    m3_layer.new_graph(cg);
+}
+inline
+void Input2WithFeature::build_inputs(const IndexSeq &dynamic_sent, const IndexSeq &fixed_sent, 
+    const std::vector<cnn::expr::Expression> &feature_exprs,
+    std::vector<cnn::expr::Expression> &inputs_exprs)
+{
+    size_t seq_len = dynamic_sent.size();
+    std::vector<cnn::expr::Expression> tmp_inputs(seq_len);
+    for (size_t i = 0; i < seq_len; ++i)
+    {
+        cnn::expr::Expression expr1 = lookup(*pcg, dynamic_lookup_param, dynamic_sent.at(i));
+        cnn::expr::Expression expr2 = lookup(*pcg, fixed_lookup_param, fixed_sent.at(i));
+        cnn::expr::Expression linear_merge_expr = m3_layer.build_graph(expr1, expr2, feature_exprs.at(i));
+        cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(linear_merge_expr);
+        tmp_inputs[i] = nonlinear_expr;
+    }
+    std::swap(inputs_exprs, tmp_inputs);
+}
+
 /******* input 3  ********/
 inline
 void Input3::new_graph(cnn::ComputationGraph &cg)

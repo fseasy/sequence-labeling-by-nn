@@ -31,6 +31,7 @@ public:
     Input2WithFeatureModel& operator()(const Input2WithFeatureModel&) = delete;
 
     void set_replace_threshold(int freq_threshold, float prob_threshold);
+    bool is_fixed_dict_frozen(){ return fixed_word_dict.is_frozen(); }
     bool is_dict_frozen();
     void freeze_dict();
     virtual void build_fixed_dict(std::ifstream &is) = 0; // bacause paremeter about size is in derived class
@@ -38,7 +39,7 @@ public:
     virtual void set_model_param(const boost::program_options::variables_map &var_map) = 0;
     
     virtual void build_model_structure() = 0 ;
-    virtual void load_fixed_embedding() = 0;
+    virtual void load_fixed_embedding(std::ifstream &is) = 0;
     virtual void print_model_info() = 0 ;
 
     void input_seq2index_seq(const Seq &sent, const Seq &postag_seq, 
@@ -107,7 +108,7 @@ Input2WithFeatureModel<RNNDerived>::~Input2WithFeatureModel()
 template <typename RNNDerived>
 void Input2WithFeatureModel<RNNDerived>::set_replace_threshold(int freq_threshold, float prob_threshold)
 {
-    word_dict_wrapper.set_threshold(freq_threshold, prob_threshold);
+    dynamic_word_dict_wrapper.set_threshold(freq_threshold, prob_threshold);
     pos_feature.set_replace_feature_with_unk_threshold(freq_threshold, prob_threshold);
 }
 
@@ -121,9 +122,9 @@ bool Input2WithFeatureModel<RNNDerived>::is_dict_frozen()
 template <typename RNNDerived>
 void Input2WithFeatureModel<RNNDerived>::freeze_dict()
 {
-    word_dict_wrapper.Freeze();
+    dynamic_word_dict_wrapper.Freeze();
     postag_dict.Freeze();
-    word_dict_wrapper.SetUnk(UNK_STR);
+    dynamic_word_dict_wrapper.SetUnk(UNK_STR);
     pos_feature.freeze_dict();
 }
 
@@ -173,7 +174,7 @@ void Input2WithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sent,
     using std::swap;
     size_t seq_len = sent.size();
     IndexSeq tmp_dynamic_index_sent(seq_len),
-        tmp_fixed_index_sent(seq_len),;
+        tmp_fixed_index_sent(seq_len);
     for( size_t i = 0 ; i < seq_len; ++i )
     {
         std::string replaced_word = UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber);
@@ -200,7 +201,7 @@ void Input2WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &d
     IndexSeq tmp_rep_sent(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_rep_sent[i] = word_dict_wrapper.ConvertProbability(sent[i]);
+        tmp_rep_sent[i] = dynamic_word_dict_wrapper.ConvertProbability(dynamic_sent[i]);
     }
     swap(replaced_dynamic_sent, tmp_rep_sent);
     pos_feature.do_repalce_feature_with_unk_in_copy(feature_gp_seq, replaced_feature_gp_seq);

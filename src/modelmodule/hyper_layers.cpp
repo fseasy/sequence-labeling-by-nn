@@ -52,6 +52,20 @@ NonLinearFunc *nonlinear_func)
 
 Input2::~Input2() {};
 
+/* Input2 with Feature */
+
+Input2WithFeature::Input2WithFeature(cnn::Model *m, unsigned dynamic_vocab_size, unsigned dynamic_embedding_dim,
+    unsigned fixed_vocab_size, unsigned fixed_embedding_dim,
+    unsigned feature_embedding_dim,
+    unsigned mergeout_dim , NonLinearFunc *nonlinear_func)
+    :dynamic_lookup_param(m->add_lookup_parameters(dynamic_vocab_size, {dynamic_embedding_dim})) ,
+    fixed_lookup_param(m->add_lookup_parameters(fixed_vocab_size , {fixed_embedding_dim})) ,
+    m3_layer(m,dynamic_embedding_dim, fixed_embedding_dim, feature_embedding_dim, mergeout_dim),
+    nonlinear_func(nonlinear_func)
+{}
+
+Input2WithFeature::~Input2WithFeature(){};
+
 /*********** Input3 *********/
 
 Input3::Input3(cnn::Model *m, unsigned dynamic_vocab_size1, unsigned dynamic_embedding_dim1,

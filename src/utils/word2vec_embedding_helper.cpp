@@ -103,7 +103,7 @@ float Word2vecEmbeddingHelper::calc_hit_rate(cnn::Dict &fixed_dict, cnn::Dict &d
     BOOST_LOG_TRIVIAL(info) << "intersected words num : " << nr_hit_word << "\t"
         << "dynamic word num : " << dynamic_dict_sz << "\t"
         << "fixed word num : " << fixed_dict_sz - 1 << "\n"
-        << "hit rate = nr_intersected_word / nr_dynamic_word = " << hit_rate ;
+        << "hit rate = nr_intersected_word / nr_dynamic_word = " << hit_rate << " %" ;
     return hit_rate;
 }
 
