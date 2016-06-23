@@ -63,10 +63,11 @@ public:
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         IndexSeq &pred_seq) = 0 ;
 
+
     cnn::Dict& get_dynamic_word_dict(){ return dynamic_word_dict ;  } 
     cnn::Dict& get_fixed_word_dict(){ return fixed_word_dict; }
     cnn::Dict& get_postag_dict(){ return postag_dict ; } 
-    DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
+    DictWrapper& get_word_dict_wrapper(){ return dynamic_word_dict_wrapper ; } 
     cnn::Model *get_cnn_model(){ return m ; } 
 
 

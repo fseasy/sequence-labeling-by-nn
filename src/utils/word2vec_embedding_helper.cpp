@@ -64,7 +64,6 @@ void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, cnn::Dict 
     std::vector<std::string> split_cont;
     getline(is, line); // first line is the infomation , skip
     unsigned long line_cnt = 0; // for warning when read embedding error
-    unsigned long words_cnt_hit = 0;
     std::vector<cnn::real> embedding_vec(fixed_word_dim, 0.f);
     while( getline(is, line) )
     {
@@ -93,10 +92,11 @@ float Word2vecEmbeddingHelper::calc_hit_rate(cnn::Dict &fixed_dict, cnn::Dict &d
         dynamic_dict_sz = dynamic_dict.size() - 1; // except the fdynamic dict unk str
     unsigned nr_hit_word = 0 ;
     Index fixed_unk = fixed_dict.Convert(fixed_dict_unk_str);
-    for( unsigned word_id = 0; word_id < fixed_dict_sz; ++word_id )
+    for( unsigned word_key = 0; word_key < fixed_dict_sz; ++word_key )
     {
-        if( word_id == fixed_unk ){ continue; }
-        string word = fixed_dict.Convert(word_id);
+        Index word_idx = word_key; // in fact, to avoid compare between signed and unsigned
+        if( word_idx == fixed_unk ){ continue; }
+        string word = fixed_dict.Convert(word_idx);
         if( dynamic_dict.Contains(word) ){ ++nr_hit_word; }
     }
     float hit_rate = (dynamic_dict_sz ? static_cast<float>(nr_hit_word) / dynamic_dict_sz : 0.f) * 100 ;

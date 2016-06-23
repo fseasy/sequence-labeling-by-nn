@@ -198,7 +198,7 @@ void Input2F2OModel<RNNDerived>::save(Archive &ar, const unsigned version) const
         & rnn_x_dim & rnn_h_dim & nr_rnn_stacked_layer
         & hidden_dim & output_dim
         & dropout_rate ;
-    ar & this->dynamic_word_dict & fixed_word_dict & this->postag_dict & this->pos_feature ;
+    ar & this->dynamic_word_dict & this->fixed_word_dict & this->postag_dict & this->pos_feature ;
     ar & *this->m ;
 }
 
