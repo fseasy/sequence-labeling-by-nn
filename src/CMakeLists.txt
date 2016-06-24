@@ -17,10 +17,14 @@ set(common_headers
     ${util_directory}/general.hpp
     ${module_directory}/layers.h
     ${module_directory}/hyper_layers.h
+    ${module_directory}/hyper_input_layers.h
+    ${module_directory}/hyper_output_layers.h
 )
 set(common_libs
     ${module_directory}/layers.cpp
     ${module_directory}/hyper_layers.cpp
+    ${module_directory}/hyper_input_layers.cpp
+    ${module_directory}/hyper_output_layers.cpp
 )
 
 set(additional_base_modules

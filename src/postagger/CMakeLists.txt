@@ -40,6 +40,14 @@ set(input1_feature2output_layer_model_hpp
     ${postagger_base_model_dir}/input1_feature2output_layer_model.hpp
 )
 
+# bare input1 with feature no merge
+set(bareinput1_feature2input_layer_no_merge_model_hpp
+    ${single_input_with_feature_model_hpp}
+    ${postagger_base_model_dir}/bareinput1_f2i_no_merge_model.hpp)
+    
+set(bareinput1_feature2output_layer_no_merge_model_hpp
+    ${single_input_with_feature_model_hpp}
+    ${postagger_base_model_dir}/bareinput1_f2o_no_merge_model.hpp)
 
 # single input with feature modelhandler
 set(single_input_with_feature_modelhandler_hpp
@@ -118,8 +126,11 @@ set(pos_common_libs
 #add_subdirectory(pos_single_pretag_with_feature)
 #add_subdirectory(pos_single_crf_with_feature)
 
-add_subdirectory(pos_input2_classification_with_feature)
-add_subdirectory(pos_input2_pretag_with_feature)
-add_subdirectory(pos_input2_crf_with_feature)
+#add_subdirectory(pos_input2_classification_with_feature)
+#add_subdirectory(pos_input2_pretag_with_feature)
+#add_subdirectory(pos_input2_crf_with_feature)
+
+add_subdirectory(pos_bareinput1_classification_with_feature_no_merge)
+
 #add_subdirectory(pos_input1_mlp_without_tag)
 #add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)
