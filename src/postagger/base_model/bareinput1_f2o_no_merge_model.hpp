@@ -15,15 +15,15 @@
 namespace slnn{
 
 template<typename RNNDerived>
-class Input1F2OModel : public SingleInputWithFeatureModel<RNNDerived>
+class BareInput1F2OModel : public SingleInputWithFeatureModel<RNNDerived>
 {
     friend class boost::serialization::access;
 
 public:
-    Input1F2OModel();
-    virtual ~Input1F2OModel();
-    Input1F2OModel(const Input1F2OModel &) = delete;
-    Input1F2OModel& operator()(const Input1F2OModel&) = delete;
+    BareInput1F2OModel();
+    virtual ~BareInput1F2OModel();
+    BareInput1F2OModel(const BareInput1F2OModel &) = delete;
+    BareInput1F2OModel& operator()(const BareInput1F2OModel&) = delete;
 
     virtual void set_model_param(const boost::program_options::variables_map &var_map);
 
@@ -51,14 +51,14 @@ protected:
     POSFeatureLayer * pos_feature_layer;
     Input1 *input_layer;
     BIRNNLayer<RNNDerived> *birnn_layer;
-    OutputBaseWithFeature *output_layer;
+    BareOutputBase *output_layer;
 
 public:
     unsigned word_embedding_dim,
         word_dict_size,
         nr_rnn_stacked_layer,
         rnn_h_dim,
-        hidden_dim,
+        softmax_input_dim,
         output_dim ;
 
     cnn::real dropout_rate ; 
@@ -67,7 +67,7 @@ public:
 
 
 template<typename RNNDerived>
-Input1F2OModel<RNNDerived>::Input1F2OModel() 
+BareInput1F2OModel<RNNDerived>::BareInput1F2OModel() 
     :SingleInputWithFeatureModel<RNNDerived>(),
     pos_feature_layer(nullptr),
     input_layer(nullptr),
@@ -76,7 +76,7 @@ Input1F2OModel<RNNDerived>::Input1F2OModel()
 {}
 
 template <typename RNNDerived>
-Input1F2OModel<RNNDerived>::~Input1F2OModel()
+BareInput1F2OModel<RNNDerived>::~BareInput1F2OModel()
 {
     delete pos_feature_layer;
     delete input_layer;
@@ -85,7 +85,7 @@ Input1F2OModel<RNNDerived>::~Input1F2OModel()
 }
 
 template <typename RNNDerived>
-void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
+void BareInput1F2OModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
 {
     assert(this->word_dict.is_frozen() && this->postag_dict.is_frozen()  && this->pos_feature.is_dict_frozen()) ;
 
@@ -96,7 +96,6 @@ void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::v
     word_embedding_dim = var_map["word_embedding_dim"].as<unsigned>() ;
     nr_rnn_stacked_layer = var_map["nr_rnn_stacked_layer"].as<unsigned>() ;
     rnn_h_dim = var_map["rnn_h_dim"].as<unsigned>() ;
-    hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
 
     dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
 
@@ -107,13 +106,14 @@ void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::v
     this->pos_feature.init_embedding_dim(prefix_suffix_len1_embedding_dim, prefix_suffix_len2_embedding_dim,
         prefix_suffix_len3_embedding_dim, char_length_embedding_dim);
 
+    softmax_input_dim = rnn_h_dim * 2 + this->pos_feature.get_pos_feature_dim();
     word_dict_size = this->word_dict.size() ;
     output_dim = this->postag_dict.size() ;
 }
 
 
 template<typename RNNDerived>
-cnn::expr::Expression Input1F2OModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
+cnn::expr::Expression BareInput1F2OModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq, 
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
     const IndexSeq &gold_seq)
@@ -133,14 +133,15 @@ cnn::expr::Expression Input1F2OModel<RNNDerived>::build_loss(cnn::ComputationGra
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
 
-    std::vector<cnn::expr::Expression> features_exprs;
-    pos_feature_layer->build_feature_exprs(features_gp_seq, features_exprs);
+    std::vector<cnn::expr::Expression> feature_exprs;
+    pos_feature_layer->build_feature_exprs(features_gp_seq, feature_exprs);
 
-    return output_layer->build_output_loss(l2r_exprs, r2l_exprs, features_exprs, gold_seq) ;
+    return output_layer->build_output_loss(std::vector<std::vector<cnn::expr::Expression> *>({ &l2r_exprs, &r2l_exprs, &feature_exprs }),
+        gold_seq) ;
 }
 
 template<typename RNNDerived>
-void Input1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
+void BareInput1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
     IndexSeq &pred_seq)
@@ -163,26 +164,27 @@ void Input1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     std::vector<cnn::expr::Expression> feature_exprs;
     pos_feature_layer->build_feature_exprs(features_gp_seq, feature_exprs);
 
-    output_layer->build_output(l2r_exprs, r2l_exprs, feature_exprs, pred_seq) ;
+    output_layer->build_output(std::vector<std::vector<cnn::expr::Expression> *>({ &l2r_exprs, &r2l_exprs, &feature_exprs }),
+        pred_seq) ;
 }
 
 template <typename RNNDerived>template< typename Archive>
-void Input1F2OModel<RNNDerived>::save(Archive &ar, const unsigned version) const
+void BareInput1F2OModel<RNNDerived>::save(Archive &ar, const unsigned version) const
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_h_dim & nr_rnn_stacked_layer
-        & hidden_dim & output_dim
+        & softmax_input_dim & output_dim
         & dropout_rate ;
     ar & this->word_dict & this->postag_dict & this->pos_feature ;
     ar & *this->m ;
 }
 
 template <typename RNNDerived>template< typename Archive>
-void Input1F2OModel<RNNDerived>::load(Archive &ar, const unsigned version)
+void BareInput1F2OModel<RNNDerived>::load(Archive &ar, const unsigned version)
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_h_dim & nr_rnn_stacked_layer
-        & hidden_dim & output_dim
+        & softmax_input_dim & output_dim
         & dropout_rate ;
     ar & this->word_dict & this->postag_dict & this->pos_feature;
     assert(this->word_dict.size() == word_dict_size && this->postag_dict.size() == output_dim) ;
@@ -192,7 +194,7 @@ void Input1F2OModel<RNNDerived>::load(Archive &ar, const unsigned version)
 
 template <typename RNNDerived>
 template<typename Archive>
-void Input1F2OModel<RNNDerived>::serialize(Archive & ar, const unsigned version)
+void BareInput1F2OModel<RNNDerived>::serialize(Archive & ar, const unsigned version)
 {
     boost::serialization::split_member(ar, *this, version);
 }

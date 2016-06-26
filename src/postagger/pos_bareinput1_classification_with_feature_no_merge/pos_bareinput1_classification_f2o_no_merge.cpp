@@ -8,7 +8,7 @@
 #include "cnn/lstm.h"
 #include "cnn/gru.h"
 
-#include "pos_input1_classification_feature2output_layer_model.h"
+#include "pos_bareinput1_classification_f2o_no_merge_model.h"
 #include "postagger/model_handler/single_input_with_feature_modelhandler.hpp"
 #include "utils/general.hpp"
 
@@ -16,7 +16,7 @@ using namespace std;
 using namespace cnn;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger Input1-Classification F2O Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger BareInput1-Classification F2O No Merge Procedure based on CNN Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>
@@ -41,15 +41,13 @@ int train_process(int argc, char *argv[], const string &program_name)
          ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
           " if words frequency <= replace_freq_threshold , the word will"
           " be replace in this probability")
-          ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
         ("prefix_suffix_len1_embedding_dim", po::value<unsigned>()->default_value(20), "The dimension for prefix suffix len1 feature .")
         ("prefix_suffix_len2_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len2 feature .")
         ("prefix_suffix_len3_embedding_dim", po::value<unsigned>()->default_value(40), "The dimension for prefix suffix len3 feature .")
         ("char_length_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for character length feature .")
         ("nr_rnn_stacked_layer", po::value<unsigned>()->default_value(1), "The number of stacked layers in bi-rnn.")
-        ("rnn_x_dim", po::value<unsigned>()->default_value(50), "The dimension for rnn X.")
         ("rnn_h_dim", po::value<unsigned>()->default_value(100), "The dimension for rnn H.")
-        ("tag_layer_hidden_dim", po::value<unsigned>()->default_value(32), "The dimension for tag hidden layer.")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
                     "else value leads to output trace info.")
         ("help,h", "Show help information.");
@@ -110,7 +108,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler;
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -190,7 +188,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -257,7 +255,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
     char **cnn_argv_ptr = cnn_argv.get();
     cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
-    SingleInputWithFeatureModelHandler<RNNDerived, POSInput1ClassificationF2OModel<RNNDerived>> model_handler ;
+    SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler ;
 
     // load model 
     ifstream is(model_path);
