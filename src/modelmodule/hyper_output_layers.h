@@ -98,7 +98,7 @@ struct BareOutputBase
     cnn::ComputationGraph *pcg;
     DenseLayer softmax_layer;
     BareOutputBase(cnn::Model *m, unsigned input_dim, unsigned output_dim);
-    ~BareOutputBase();
+    virtual ~BareOutputBase();
     virtual void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
         build_output_loss(const std::vector<std::vector<cnn::expr::Expression> *> &input_expr_ptr_group_seq,
