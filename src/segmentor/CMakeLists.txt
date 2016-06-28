@@ -27,6 +27,16 @@ set(single_input_bigram_modelhandler_headers
     ${modelhandler_dir}/single_input_bigram_modelhandler.h
     ${single_input_modelhandler_headers}
 )
+## input model with feature (2016-06-28 )
+# input modelhandler 0628
+set(input1_model_with_feature_0628_dependencies
+    ${base_model_dir}/input1_model_with_feature_0628.hpp
+)
+set(input1_modelhandler_0628_dependencies
+    ${modelhandler_dir}/input1_modelhandler_0628.hpp
+)
+
+
 
 # double input model
 set(input2_model_headers
@@ -68,19 +78,22 @@ set(cws_common_libs
 )
 
 add_subdirectory(cws_single_classification)
-add_subdirectory(cws_single_pretag)
-add_subdirectory(cws_single_crf)
 
-add_subdirectory(cws_double_classification)
-add_subdirectory(cws_double_pretag)
-add_subdirectory(cws_double_crf)
+#add_subdirectory(cws_single_pretag)
+#add_subdirectory(cws_single_crf)
 
-add_subdirectory(cws_single_bigram_classification)
-add_subdirectory(cws_single_bigram_pretag)
-add_subdirectory(cws_single_bigram_crf)
+#add_subdirectory(cws_double_classification)
+#add_subdirectory(cws_double_pretag)
+#add_subdirectory(cws_double_crf)
 
-add_subdirectory(cws_double_bigram_classification)
-add_subdirectory(cws_double_bigram_pretag)
-add_subdirectory(cws_double_bigram_crf)
+#add_subdirectory(cws_single_bigram_classification)
+#add_subdirectory(cws_single_bigram_pretag)
+#add_subdirectory(cws_single_bigram_crf)
 
-add_subdirectory(unit_test)
+#add_subdirectory(cws_double_bigram_classification)
+#add_subdirectory(cws_double_bigram_pretag)
+#add_subdirectory(cws_double_bigram_crf)
+
+add_subdirectory(cws_input1_cl_with_feature)
+
+#add_subdirectory(unit_test)

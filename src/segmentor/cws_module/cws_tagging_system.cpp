@@ -70,6 +70,24 @@ void CWSTaggingSystem::parse_word_tag2words(const Seq &raw_words, const Seq &tag
     std::swap(words, tmp_words) ;
 }
 
+void CWSTaggingSystem::parse_word_tag2words(const Seq &raw_words, const IndexSeq &tag_ids, Seq &o_words)
+{
+    Seq tmp_words ;
+    assert(raw_words.size() == tag_ids.size()) ;
+    std::string word ;
+    for( size_t i = 0 ; i < raw_words.size() ; ++i )
+    {
+        word.append(raw_words[i]) ;
+        Index tag = tag_ids[i] ;
+        if( tag == S_ID || tag == E_ID )
+        {
+            tmp_words.push_back(word) ;
+            word = "" ;
+        }
+    }
+    std::swap(o_words, tmp_words) ;
+}
+
 void CWSTaggingSystem::build(cnn::Dict &tag_dict)
 {
     B_ID = tag_dict.Convert(B_TAG) ;
@@ -88,24 +106,6 @@ bool CWSTaggingSystem::can_trans(Index pre_tag_id, Index cur_tag_id)
 {
     return (((pre_tag_id == B_ID || pre_tag_id == M_ID) && (cur_tag_id == M_ID || cur_tag_id == E_ID)) ||
         ((pre_tag_id == E_ID || pre_tag_id == S_ID) && (cur_tag_id == B_ID || cur_tag_id == S_ID))) ;
-}
-
-void CWSTaggingSystem::parse_word_tag2words(const Seq &raw_words, const IndexSeq &tag_ids, Seq &o_words)
-{
-    Seq tmp_words ;
-    assert(raw_words.size() == tag_ids.size()) ;
-    std::string word ;
-    for( size_t i = 0 ; i < raw_words.size() ; ++i )
-    {
-        word.append(raw_words[i]) ;
-        Index tag = tag_ids[i] ;
-        if( tag == S_ID || tag == E_ID )
-        {
-            tmp_words.push_back(word) ;
-            word = "" ;
-        }
-    }
-    std::swap(o_words, tmp_words) ;
 }
 
 }// end of namespace slnn
