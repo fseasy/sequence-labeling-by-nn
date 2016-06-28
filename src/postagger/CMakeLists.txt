@@ -49,6 +49,11 @@ set(bareinput1_feature2output_layer_no_merge_model_hpp
     ${single_input_with_feature_model_hpp}
     ${postagger_base_model_dir}/bareinput1_f2o_no_merge_model.hpp)
 
+set(bareinput1_feature2output_layer_nonlinear_model_hpp
+    ${bareinput1_feature2output_layer_no_merge_model_hpp}
+    ${postagger_base_model_dir}/bareinput1_f2o_nonlinear_model.hpp)
+   
+    
 # single input with feature modelhandler
 set(single_input_with_feature_modelhandler_hpp
     ${postagger_modelhandler_dir}/single_input_with_feature_modelhandler.hpp
