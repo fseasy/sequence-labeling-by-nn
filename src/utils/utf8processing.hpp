@@ -2,6 +2,7 @@
 #define UTF8PROCESSING_HPP_INCLUDED
 #include <string>
 #include <vector>
+#include "utils/typedeclaration.h"
 #include <boost/log/trivial.hpp>
 /**
  * uint8_t , mask8 , get_length is copy from `utf8.h`
@@ -36,6 +37,7 @@ struct UTF8Processing
     static size_t get_utf8_char_length_checked(const std::string &str , size_t start_pos) ;
 
     // utils
+    static size_t utf8_char_len(const std::string &utf8_str);
     static void utf8_str2char_seq(const std::string &utf8_str, Seq &utf8_seq) ;
     static std::string replace_number(const std::string &str ,
                                       const std::string number_transform_str="##",
@@ -141,6 +143,21 @@ inline
 size_t UTF8Processing::get_utf8_char_length_checked(const std::string &str , size_t start_pos)
 {
     return get_utf8_char_length( str.cbegin() + start_pos , str.cend() ) ;
+}
+
+inline
+size_t UTF8Processing::utf8_char_len(const std::string &utf8_str)
+{
+    size_t char_len = 0;
+    std::string::const_iterator iter = utf8_str.cbegin();
+    while( iter < utf8_str.cend() )
+    {
+        size_t sz = get_utf8_char_length_checked(iter, utf8_str.cend());
+        if( sz == 0 ){ return 0; }
+        ++char_len;
+        iter += sz;
+    }
+    return char_len;
 }
 
 inline
