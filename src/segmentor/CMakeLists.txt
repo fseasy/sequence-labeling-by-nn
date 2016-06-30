@@ -59,6 +59,8 @@ set(input2_bigram_modelhandler_headers
 set(set_cws_feature_dependencies
     ${cws_module_dir}/cws_feature.h
     ${cws_module_dir}/cws_feature.cpp
+    ${cws_module_dir}/cws_feature_layer.h
+    ${cws_module_dir}/cws_feature_layer.cpp
     ${cws_module_dir}/lexicon_feature.h
     ${cws_module_dir}/lexicon_feature.cpp
     ${cws_module_dir}/lexicon_feature_layer.h
