@@ -44,6 +44,11 @@ set(context_module
     ${module_directory}/context_feature_layer.cpp
 )
 
+# base reader
+
+set(base_reader_module
+    ${util_directory}/reader.hpp
+)
 
 #add_subdirectory(postagger)
 #add_subdirectory(ner)

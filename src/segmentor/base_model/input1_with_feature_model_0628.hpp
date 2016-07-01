@@ -16,20 +16,22 @@
 #include "utils/dict_wrapper.hpp"
 #include "modelmodule/hyper_layers.h"
 #include "segmentor/cws_module/cws_tagging_system.h"
+#include "segmentor/cws_module/cws_feature.h"
 namespace slnn{
 
 template <typename RNNDerived>
-class Input1WithFeatureModel
+class CWSInput1WithFeatureModel
 {
     friend class boost::serialization::access;
 public :
     static const std::string UNK_STR;
+    static const unsigned SentMaxLen;
 
 public:
-    Input1WithFeatureModel() ;
-    virtual ~Input1WithFeatureModel() ;
-    Input1WithFeatureModel(const Input1WithFeatureModel&) = delete;
-    Input1WithFeatureModel& operator=(const Input1WithFeatureModel&) = delete;
+    CWSInput1WithFeatureModel() ;
+    virtual ~CWSInput1WithFeatureModel() ;
+    CWSInput1WithFeatureModel(const CWSInput1WithFeatureModel&) = delete;
+    CWSInput1WithFeatureModel& operator=(const CWSInput1WithFeatureModel&) = delete;
 
     void set_replace_threshold(int freq_threshold, float prob_threshold);
     bool is_dict_frozen();
@@ -40,29 +42,31 @@ public:
     virtual void print_model_info() = 0 ;
 
     void word_seq2index_seq(const Seq &word_seq, 
-        IndexSeq &index_sent, IndexSeq &index_postag_seq); // for annotated data
+        IndexSeq &index_sent, IndexSeq &index_postag_seq, CWSFeatureDataSeq &index_feature_data_seq); // for annotated data
     void char_seq2index_seq(const Seq &char_seq, 
-        IndexSeq &index_sent); // for input data
+        IndexSeq &index_sent, CWSFeatureDataSeq &index_feature_data_seq); // for input data
     void replace_word_with_unk(const IndexSeq &sent, 
         IndexSeq &replaced_sent);
     void char_and_tag2word_seq(const Seq &char_seq, const IndexSeq &tag_seq, Seq &word_seq);
 
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
         const IndexSeq &input_seq, 
-        const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
+        const CWSFeatureDataSeq &feature_data_seq,
         const IndexSeq &gold_seq)  = 0 ;
     virtual void predict(cnn::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
-        const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
+        const CWSFeatureDataSeq &feature_data_seq,
         IndexSeq &pred_seq) = 0 ;
-
-public :
     
     cnn::Dict& get_word_dict(){ return word_dict ;  } 
     cnn::Dict& get_tag_dict(){ return tag_dict ; } 
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
     cnn::Model *get_cnn_model(){ return m ; } ;
     CWSTaggingSystem& get_tag_sys(){ return tag_sys ; }
+
+    // CWSFeature interface promote to this class
+    void count_word_freqency(const Seq &word_seq){ cws_feature.count_word_freqency(word_seq); };
+    void build_lexicon(){ cws_feature.build_lexicon(); };
 
 protected:
     cnn::Model *m;
@@ -73,37 +77,41 @@ protected:
 
 
     CWSTaggingSystem tag_sys ;
+    CWSFeature cws_feature;
 };
 
 template <typename RNNDerived>
-std::string Input1WithFeatureModel<RNNDerived>::UNK_STR = "unk_str";
+std::string CWSInput1WithFeatureModel<RNNDerived>::UNK_STR = "unk_str";
+
+template<typename RNNDerived>
+unsigned CWSInput1WithFeatureModel<RNNDerived>::SentMaxLen = 256;
 
 template <typename RNNDerived>
-Input1WithFeatureModel<RNNDerived>::Input1WithFeatureModel()
+CWSInput1WithFeatureModel<RNNDerived>::CWSInput1WithFeatureModel()
     :m(nullptr),
     word_dict_wrapper(word_dict)
 {}
 
 template <typename RNNDerived>
-Input1WithFeatureModel<RNNDerived>::~Input1WithFeatureModel()
+CWSInput1WithFeatureModel<RNNDerived>::~CWSInput1WithFeatureModel()
 {
     delete m;
 }
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::set_replace_threshold(int freq_threshold, float prob_threshold)
+void CWSInput1WithFeatureModel<RNNDerived>::set_replace_threshold(int freq_threshold, float prob_threshold)
 {
     word_dict_wrapper.set_threshold(freq_threshold, prob_threshold);
 }
 
 template<typename RNNDerived>
-bool Input1WithFeatureModel<RNNDerived>::is_dict_frozen()
+bool CWSInput1WithFeatureModel<RNNDerived>::is_dict_frozen()
 {
     return word_dict.is_fronzen() && tag_dict.is_fronzen();
 }
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::freeze_dict()
+void CWSInput1WithFeatureModel<RNNDerived>::freeze_dict()
 {
     word_dict_wrapper.Freeze();
     tag_dict.Freeze();
@@ -111,29 +119,69 @@ void Input1WithFeatureModel<RNNDerived>::freeze_dict()
 }
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_seq, IndexSeq &word_index_seq, IndexSeq &tag_index_seq)
+void CWSInput1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_seq, IndexSeq &word_index_seq, IndexSeq &tag_index_seq,
+    CWSFeatureDataSeq &feature_data_seq)
 {
-
+    using std::swap;
+    IndexSeq tmp_word_index_seq,
+        tmp_tag_index_seq;
+    Seq tmp_char_seq;
+    tmp_word_index_seq.reserve(SentMaxLen);
+    tmp_tag_index_seq.reserve(SentMaxLen);
+    tmp_char_seq.reserve(SentMaxLen);
+    for( std::string &word : word_seq )
+    {
+        std::string word_char_seq,
+            word_tag_seq;
+        CWSTaggingSystem::parse_words2word_tag(word, word_char_seq, word_tag_seq);
+        for( size_t i = 0; i < word_char_seq.size(); ++i )
+        {
+            Index word_id = word_dict_wrapper.Convert(word_char_seq[i]);
+            Index tag_id = tag_dict.Convert(word_char_seq[i]);
+            tmp_word_index_seq.push_back(word_id);
+            tmp_tag_index_seq.push_back(tag_id);
+            tmp_char_seq.push_back(word_char_seq[i]);
+        }
+    }
+    swap(word_index_seq, tmp_word_index_seq);
+    swap(tag_index_seq, tmp_tag_index_seq);
+    cws_feature.extract(tmp_char_seq, feature_data_seq);
 }
 
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::char_seq2index_seq(const Seq &char_seq, IndexSeq &word_index_seq)
+void CWSInput1WithFeatureModel<RNNDerived>::char_seq2index_seq(const Seq &char_seq, IndexSeq &word_index_seq, 
+    CWSFeatureDataSeq &feature_data_seq)
 {
-
+    using std::swap;
+    size_t sz = char_seq.size();
+    IndexSeq tmp_word_index_seq(sz);
+    for(size_t i = 0; i < sz; ++i )
+    {
+        tmp_word_index_seq[i] = word_dict.Convert(char_seq[i]);
+    }
+    swap(word_index_seq, tmp_word_index_seq);
+    cws_feature.extract(char_seq, feature_data_seq);
 }
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &ori_word_seq, IndexSeq &rep_word_seq)
+void CWSInput1WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &ori_word_seq, IndexSeq &rep_word_seq)
 {
-
+    using std::swap;
+    size_t sz = rep_word_seq.size();
+    IndexSeq tmp_rep_word_seq(sz);
+    for( size_t i = 0; i < sz; ++i )
+    {
+        tmp_rep_word_seq[i] = word_dict_wrapper.ConvertProbability(ori_word_seq);
+    }
+    swap(rep_word_seq, tmp_rep_word_seq);
 }
 
 template <typename RNNDerived>
-void Input1WithFeatureModel<RNNDerived>::char_and_tag2word_seq(const Seq &char_seq, const IndexSeq &tag_seq,
+void CWSInput1WithFeatureModel<RNNDerived>::char_and_tag2word_seq(const Seq &char_seq, const IndexSeq &tag_seq,
     Seq &word_seq)
 {
-
+    CWSTaggingSystem::parse_word_tag2words(char_seq, tag_seq, word_seq);
 }
 
 } // end of namespcace slnn 

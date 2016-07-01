@@ -67,6 +67,14 @@ set(set_cws_feature_dependencies
     ${cws_module_dir}/lexicon_feature_layer.cpp
 )
 
+# CWS Reader
+
+set(cws_reader_module
+    ${base_reader_module}
+    ${cws_module_dir}/cws_reader.h
+    ${cws_module_dir}/cws_reader.cpp
+)
+
 # cws module
 set(cws_module_headers
     ${cws_module_dir}/cws_tagging_system.h

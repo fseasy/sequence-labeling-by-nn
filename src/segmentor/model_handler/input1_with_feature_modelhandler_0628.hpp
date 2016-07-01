@@ -1,62 +1,63 @@
-#ifndef SLNN_SEGMENTOR_CWS_SINGLE_CLASSIFICATION_SINGLE_INPUT_MODELHANDLER_H
-#define SLNN_SEGMENTOR_CWS_SINGLE_CLASSIFICATION_SINGLE_INPUT_MODELHANDLER_H
+#ifndef SLNN_SEGMENTOR_INPUT1_WITH_FEATURE_MODELHANDLER_0628_H_
+#define SLNN_SEGMENTOR_INPUT1_WITH_FEATURE_MODELHANDLER_0628_H_
 
 #include <sstream>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#include "segmentor/base_model/single_input_model.h"
+#include "segmentor/base_model/input1_with_feature_model_0628.hpp"
+#include "segmentor/cws_module/cws_feature.h"
 #include "segmentor/cws_module/cws_tagging_system.h"
-
 #include "utils/stat.hpp"
+
 namespace slnn{
 
-template <typename SIModel>
-class SingleInputModelHandler
+template <typename I1Model>
+class CWSInput1WithFeatureModelHandler
 {
 public :
-    SingleInputModel *sim ;
+    CWSInput1WithFeatureModel *i1m ;
 
-    float best_F1;
-    std::stringstream best_model_tmp_ss;
+    static const std::string OutputDelimiter ;
 
-    static const size_t SentMaxLen = 256;
-    static const size_t MaxSentNum = 0x8000; // 32k
-    static const std::string OUT_SPLIT_DELIMITER ;
+    CWSInput1WithFeatureModelHandler() ;
+    virtual ~CWSInput1WithFeatureModelHandler() ;
 
-    SingleInputModelHandler() ;
-    virtual ~SingleInputModelHandler() ;
-    // Before read data
-    void set_unk_replace_threshold(int freq_thres , float prob_thres);
 
     // Reading data 
-    virtual void do_read_annotated_dataset(std::istream &is, 
-                                   std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
-    void read_training_data_and_build_dicts(std::istream &is, 
-                                            std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
-    void read_devel_data(std::istream &is, 
-                         std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs);
+    void read_training_data(std::istream &is,
+        std::vector<IndexSeq> &sents,
+        std::vector<IndexSeq> &tag_seqs,
+        std::vector<CWSFeatureDataSeq> &feature_data_seq);
+    void read_devel_data(std::istream &is,
+        std::vector<IndexSeq> &sents,
+        std::vector<IndexSeq> &tag_seqs,
+        std::vector<CWSFeatureDataSeq> &feature_data_seq);
     virtual void read_test_data(std::istream &is,
-                        std::vector<Seq> &raw_test_sents, std::vector<IndexSeq> &sents);
+        std::vector<Seq> &raw_test_sents, 
+        std::vector<IndexSeq> &sents,
+        std::vector<CWSFeatureDataSeq> &feature_data_seq);
 
     // After Reading Training data
-    void finish_read_training_data(boost::program_options::variables_map &varmap);
+    void set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap);
     void build_model();
 
     // Train & devel & predict
-    void train(const std::vector<IndexSeq> *p_sents, const std::vector<IndexSeq> *p_tag_seqs ,
-               unsigned max_epoch, 
-               const std::vector<IndexSeq> *p_dev_sents, const std::vector<IndexSeq> *p_dev_tag_seqs ,
-               unsigned do_devel_freq ,
-               unsigned trivial_report_freq);
-    float devel(const std::vector<IndexSeq> *p_sents, const std::vector<IndexSeq> *p_tag_seqs );
+    void train(const std::vector<IndexSeq> &sents, const std::vector<IndexSeq> &tag_seqs,
+        const std::vector<CWSFeatureDataSeq> &feature_data_seqs,
+        unsigned max_epoch,
+        const std::vector<IndexSeq> &dev_sents, const std::vector<IndexSeq> &dev_tag_seqs,
+        const std::vector<CWSFeatureDataSeq> &dev_feature_data_seqs,
+        unsigned do_devel_freq,
+        unsigned trivial_report_freq);
+    float devel(const std::vector<IndexSeq> &sents, const std::vector<IndexSeq> &tag_seqs,
+        const std::vector<CWSFeatureDataSeq> &feature_data_seq);
     void predict(std::istream &is, std::ostream &os);
 
     // Save & Load
     void save_model(std::ostream &os);
     void load_model(std::istream &is);
-protected :
-    void save_current_best_model(float F1);
-    bool is_train_error_occurs(float cur_F1);
+private:
+    CNNModelStash model_stash;
 };
 
 } // end of namespace slnn
@@ -67,133 +68,65 @@ protected :
 
 namespace slnn{
 
-template <typename SIModel>
-const size_t SingleInputModelHandler<SIModel>::MaxSentNum ;
+template <typename I1Model>
+const std::string CWSInput1WithFeatureModelHandler<I1Model>::OutputDelimiter = "\t" ;
 
-template <typename SIModel>
-const size_t SingleInputModelHandler<SIModel>::SentMaxLen ;
-
-template <typename SIModel>
-const std::string SingleInputModelHandler<SIModel>::OUT_SPLIT_DELIMITER = "\t" ;
-
-template <typename SIModel>
-SingleInputModelHandler<SIModel>::SingleInputModelHandler()
-    : sim(new SIModel()) ,
-    best_F1(0.f) ,
-    best_model_tmp_ss()
+template <typename I1Model>
+CWSInput1WithFeatureModelHandler<I1Model>::CWSInput1WithFeatureModelHandler()
+    : i1m(new I1Model()) 
 {}
 
-template <typename SIModel>
-SingleInputModelHandler<SIModel>::~SingleInputModelHandler()
+template <typename I1Model>
+CWSInput1WithFeatureModelHandler<I1Model>::~CWSInput1WithFeatureModelHandler()
 {
-    delete sim ;
+    delete i1m ;
 }
 
-template<typename SIModel>
-inline 
-void SingleInputModelHandler<SIModel>::save_current_best_model(float F1)
-{
-    BOOST_LOG_TRIVIAL(info) << "better model has been found . stash it .";
-    best_F1 = F1;
-    best_model_tmp_ss.str(""); // first , clear it's content !
-    boost::archive::text_oarchive to(best_model_tmp_ss);
-    to << *sim->get_cnn_model();
-}
-
-template <typename SIModel>
-inline 
-bool SingleInputModelHandler<SIModel>::is_train_error_occurs(float cur_F1)
-{
-    return  (best_F1 - cur_F1 > 20.f);
-}
-
-template<typename SIModel>
-void SingleInputModelHandler<SIModel>::set_unk_replace_threshold(int freq_thres, float prob_thres)
-{
-    sim->get_input_dict_wrapper().set_threshold(freq_thres, prob_thres);
-}
-
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &is,
-                    std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs)
-{
-    unsigned line_cnt = 0;
-    std::string line;
-    std::vector<IndexSeq> tmp_sents,
-        tmp_tag_seqs;
-    IndexSeq sent, 
-        tag_seq;
-    // pre-allocation
-    tmp_sents.reserve(MaxSentNum); // 2^19 =  480k pairs 
-    tmp_tag_seqs.reserve(MaxSentNum);
-
-    sent.reserve(SentMaxLen);
-    tag_seq.reserve(SentMaxLen);
-
-    DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
-    while (getline(is, line)) {
-        if (0 == line.size()) continue;
-        sent.clear() ;
-        tag_seq.clear() ;
-        std::istringstream iss(line) ;
-        std::string words_line ;
-        Seq tmp_word_cont,
-            tmp_tag_cont ;
-        while( iss >> words_line )
-        {
-            CWSTaggingSystem::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
-            for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
-            {
-                Index word_id = word_dict_wrapper.Convert(tmp_word_cont[i]) ;
-                Index tag_id = tag_dict.Convert(tmp_tag_cont[i]) ;
-                sent.push_back(word_id) ;
-                tag_seq.push_back(tag_id) ;
-            }
-        }
-        tmp_sents.push_back(sent);
-        tmp_tag_seqs.push_back(tag_seq);
-        ++line_cnt;
-        if(0 == line_cnt % 10000) { BOOST_LOG_TRIVIAL(info) << "reading " << line_cnt << " lines"; }
-    }
-    std::swap(sents, tmp_sents);
-    std::swap(tag_seqs, tmp_tag_seqs);
-}
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::read_training_data_and_build_dicts(std::istream &is,
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::read_training_data_and_build_dicts(std::istream &is,
                                         std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
-    DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
-    assert(!word_dict.is_frozen() && !tag_dict.is_frozen());
+    assert(!i1m->is_dict_freezon());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
-    do_read_annotated_dataset(is, sents, tag_seqs);
+    // first , build lexicon
+    CWSReader reader(is);
+    std::vector<Seq> dataset;
+    size_t detected_line_cnt = reader.countline();
+    data_set.reserve(detected_line_cnt);
+    Seq word_seq;
+    while( reader.read_segmented_line(word_seq) )
+    {
+        i1m->count_word_frequency(word_seq);
+        dataset.push_back(std::move(word_seq));
+    }
+    i1m->build_lexicon();
+    // done .
+
     word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(sim->UNK_STR);
+    word_dict_wrapper.SetUnk(i1m->UNK_STR);
     tag_dict.Freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::read_devel_data(std::istream &is,
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::read_devel_data(std::istream &is,
                                                        std::vector<IndexSeq> &sents, 
                                                        std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    cnn::Dict &word_dict = i1m->get_input_dict() ;
+    cnn::Dict &tag_dict = i1m->get_output_dict() ;
     assert(word_dict.is_frozen() && tag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, sents, tag_seqs);
     BOOST_LOG_TRIVIAL(info) << "read developing data done .";
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::read_test_data(std::istream &is,
                                                       std::vector<Seq> &raw_test_sents, 
                                                       std::vector<IndexSeq> &sents)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
+    cnn::Dict &word_dict = i1m->get_input_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_sents ;
@@ -216,21 +149,21 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
     std::swap(sents, tmp_sents) ;
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::finish_read_training_data(boost::program_options::variables_map &varmap)
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::finish_read_training_data(boost::program_options::variables_map &varmap)
 {
-    sim->set_model_param(varmap) ;
+    i1m->set_model_param(varmap) ;
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::build_model()
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::build_model()
 {
-    sim->build_model_structure() ;
-    sim->print_model_info() ;
+    i1m->build_model_structure() ;
+    i1m->print_model_info() ;
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sents, 
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::train(const std::vector<IndexSeq> *p_sents, 
                                              const std::vector<IndexSeq> *p_tag_seqs,
                                              unsigned max_epoch,
                                              const std::vector<IndexSeq> *p_dev_sents, 
@@ -241,12 +174,12 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
     unsigned nr_samples = p_sents->size();
 
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
-    DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
+    DictWrapper &word_dict_wrapper = i1m->get_input_dict_wrapper() ;
     std::vector<unsigned> access_order(nr_samples);
     for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 
     bool is_train_ok = true ; // when grident update error , we stop the training 
-    cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
+    cnn::SimpleSGDTrainer sgd(i1m->get_cnn_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq dynamic_sent_after_replace_unk(SentMaxLen , 0);
@@ -276,7 +209,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
                     dynamic_sent_after_replace_unk[word_idx] =
                         word_dict_wrapper.ConvertProbability(sent.at(word_idx));
                 }
-                sim->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
+                i1m->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
                 cnn::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
@@ -334,14 +267,14 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
     BOOST_LOG_TRIVIAL(info) << "training finished with time cost " << total_time_cost_in_seconds << " s .";
 }
 
-template <typename SIModel>
-float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sents, 
+template <typename I1Model>
+float CWSInput1WithFeatureModelHandler<I1Model>::devel(const std::vector<IndexSeq> *p_sents, 
                                               const std::vector<IndexSeq> *p_tag_seqs)
 {
     unsigned nr_samples = p_sents->size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
 
-    CWSStat stat(sim->get_tag_sys() , true);
+    CWSStat stat(i1m->get_tag_sys() , true);
     stat.start_time_stat();
     std::vector<IndexSeq> predict_tag_seqs(p_tag_seqs->size());
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
@@ -349,7 +282,7 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
         cnn::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &sent = p_sents->at(access_idx);
-        sim->predict(cg, sent,predict_tag_seq);
+        i1m->predict(cg, sent,predict_tag_seq);
         predict_tag_seqs[access_idx] = predict_tag_seq;
         stat.total_tags += predict_tag_seq.size();
     }
@@ -366,8 +299,8 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
     return F1;
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &os)
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::predict(std::istream &is, std::ostream &os)
 {
     
     std::vector<Seq> raw_instances;
@@ -387,9 +320,9 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         IndexSeq &sent = sents.at(i) ;
         IndexSeq pred_tag_seq;
         cnn::ComputationGraph cg;
-        sim->predict(cg, sent, pred_tag_seq);
+        i1m->predict(cg, sent, pred_tag_seq);
         Seq words ;
-        sim->get_tag_sys().parse_word_tag2words(raw_sent, pred_tag_seq, words) ;
+        i1m->get_tag_sys().parse_word_tag2words(raw_sent, pred_tag_seq, words) ;
         os << words[0] ;
         for( size_t i = 1 ; i < words.size() ; ++i ) os << OUT_SPLIT_DELIMITER << words[i] ;
         os << "\n";
@@ -399,27 +332,27 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
     BOOST_LOG_TRIVIAL(info) << stat.get_stat_str("predict done.")  ;
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::save_model(std::ostream &os)
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
     if( best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail() )
     {
         BOOST_LOG_TRIVIAL(info) << "fetch best model ...";
-        sim->set_cnn_model(best_model_tmp_ss) ;
+        i1m->set_cnn_model(best_model_tmp_ss) ;
     }
     boost::archive::text_oarchive to(os);
-    to << *(static_cast<SIModel*>(sim));
+    to << *(static_cast<I1Model*>(i1m));
     BOOST_LOG_TRIVIAL(info) << "save model done .";
 }
 
-template <typename SIModel>
-void SingleInputModelHandler<SIModel>::load_model(std::istream &is)
+template <typename I1Model>
+void CWSInput1WithFeatureModelHandler<I1Model>::load_model(std::istream &is)
 {
     BOOST_LOG_TRIVIAL(info) << "loading model ...";
     boost::archive::text_iarchive ti(is) ;
-    ti >> *(static_cast<SIModel*>(sim));
-    sim->print_model_info() ;
+    ti >> *(static_cast<I1Model*>(i1m));
+    i1m->print_model_info() ;
 }
 
 } // end of namespace slnn

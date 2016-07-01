@@ -14,7 +14,7 @@
 #include "segmentor/cws_module/cws_tagging_system.h"
 namespace slnn{
 
-class CWSSingleClassificationModel : public SingleInputModel
+class CWSSingleClassificationModel : public CWSInput1WithFeatureModel
 {
     friend class boost::serialization::access;
 public:
@@ -39,7 +39,7 @@ public:
 template<typename Archive>
 void CWSSingleClassificationModel::serialize(Archive &ar, const unsigned version)
 {
-    ar & boost::serialization::base_object<SingleInputModel>(*this);
+    ar & boost::serialization::base_object<CWSInput1WithFeatureModel>(*this);
 }
 
 } // end of namespace slnn 

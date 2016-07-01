@@ -92,7 +92,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     
     // Init 
     cnn::Initialize(argc, argv, 1234); 
-    SingleInputModelHandler<CWSSingleClassificationModel> model_handler;
+    CWSInput1WithFeatureModelHandler<CWSSingleClassificationModel> model_handler;
 
     // reading traing data , get word dict size and output tag number
     // -> set replace frequency for word_dict_wrapper
@@ -172,7 +172,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
    
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    SingleInputModelHandler<CWSSingleClassificationModel> model_handler;
+    CWSInput1WithFeatureModelHandler<CWSSingleClassificationModel> model_handler;
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -231,7 +231,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     
     // Init 
     cnn::Initialize(argc, argv, 1234);
-    SingleInputModelHandler<CWSSingleClassificationModel> model_handler ;
+    CWSInput1WithFeatureModelHandler<CWSSingleClassificationModel> model_handler ;
 
     // load model 
     ifstream is(model_path);

@@ -13,6 +13,7 @@ add_executable(${exe_name}
                ${specific_dependencies} # model
                ${input1_with_feature_model_0628_dependencies}        # base model
                ${set_cws_feature_dependencies}
+               ${cws_reader_module}
                ${cws_common_headers}                # common header
                ${cws_common_libs}
                )

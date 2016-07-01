@@ -4,7 +4,7 @@
 namespace slnn{
 
 CWSSingleClassificationModel::CWSSingleClassificationModel()
-    :SingleInputModel() ,
+    :CWSInput1WithFeatureModel() ,
     word_dict(input_dict) ,
     tag_dict(output_dict)
 {}
@@ -13,7 +13,7 @@ CWSSingleClassificationModel::~CWSSingleClassificationModel(){}
 
 void CWSSingleClassificationModel::set_model_param(const boost::program_options::variables_map &var_map)
 {
-    CWSSingleClassificationModel::SingleInputModel::set_model_param(var_map);
+    CWSSingleClassificationModel::CWSInput1WithFeatureModel::set_model_param(var_map);
 }
 void CWSSingleClassificationModel::build_model_structure()
 {
