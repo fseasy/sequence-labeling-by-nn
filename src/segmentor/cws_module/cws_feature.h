@@ -31,6 +31,8 @@ public:
 
     void extract(const Seq &char_seq, CWSFeatureDataSeq &cws_feature_seq);
     
+    std::string get_feature_info();
+
     template <typename Archive>
     void serialize(Archive &ar, unsigned version);
 

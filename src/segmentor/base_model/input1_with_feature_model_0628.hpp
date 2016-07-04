@@ -23,7 +23,7 @@ template <typename RNNDerived>
 class CWSInput1WithFeatureModel
 {
     friend class boost::serialization::access;
-public :
+public:
     static const std::string UNK_STR;
     static const unsigned SentMaxLen;
 
@@ -41,28 +41,27 @@ public:
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
-    void word_seq2index_seq(const Seq &word_seq, 
+    void word_seq2index_seq(const Seq &word_seq,
         IndexSeq &index_sent, IndexSeq &index_postag_seq, CWSFeatureDataSeq &index_feature_data_seq); // for annotated data
-    void char_seq2index_seq(const Seq &char_seq, 
+    void char_seq2index_seq(const Seq &char_seq,
         IndexSeq &index_sent, CWSFeatureDataSeq &index_feature_data_seq); // for input data
-    void replace_word_with_unk(const IndexSeq &sent, 
+    void replace_word_with_unk(const IndexSeq &sent,
         IndexSeq &replaced_sent);
     void char_and_tag2word_seq(const Seq &char_seq, const IndexSeq &tag_seq, Seq &word_seq);
 
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
-        const IndexSeq &input_seq, 
+        const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
-        const IndexSeq &gold_seq)  = 0 ;
-    virtual void predict(cnn::ComputationGraph &cg ,
-        const IndexSeq &input_seq, 
+        const IndexSeq &gold_seq) = 0 ;
+    virtual void predict(cnn::ComputationGraph &cg,
+        const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
         IndexSeq &pred_seq) = 0 ;
-    
-    cnn::Dict& get_word_dict(){ return word_dict ;  } 
-    cnn::Dict& get_tag_dict(){ return tag_dict ; } 
+
+    size_t get_word_dict_size(){ return word_dict.size(); }
+    size_t get_tag_dict_size(){ return CWSTaggingSystem::get_tag_num(); }
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
     cnn::Model *get_cnn_model(){ return m ; } ;
-    CWSTaggingSystem& get_tag_sys(){ return tag_sys ; }
 
     // CWSFeature interface promote to this class
     void count_word_freqency(const Seq &word_seq){ cws_feature.count_word_freqency(word_seq); };
@@ -72,11 +71,8 @@ protected:
     cnn::Model *m;
 
     cnn::Dict word_dict;
-    cnn::Dict tag_dict;
     DictWrapper word_dict_wrapper;
 
-
-    CWSTaggingSystem tag_sys ;
     CWSFeature cws_feature;
 };
 
@@ -107,14 +103,13 @@ void CWSInput1WithFeatureModel<RNNDerived>::set_replace_threshold(int freq_thres
 template<typename RNNDerived>
 bool CWSInput1WithFeatureModel<RNNDerived>::is_dict_frozen()
 {
-    return word_dict.is_fronzen() && tag_dict.is_fronzen();
+    return word_dict.is_fronzen() ;
 }
 
 template <typename RNNDerived>
 void CWSInput1WithFeatureModel<RNNDerived>::freeze_dict()
 {
     word_dict_wrapper.Freeze();
-    tag_dict.Freeze();
     word_dict_wrapper.SetUnk(UNK_STR);
 }
 
@@ -129,17 +124,17 @@ void CWSInput1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_s
     tmp_word_index_seq.reserve(SentMaxLen);
     tmp_tag_index_seq.reserve(SentMaxLen);
     tmp_char_seq.reserve(SentMaxLen);
-    for( std::string &word : word_seq )
+    for(const std::string &word : word_seq )
     {
-        std::string word_char_seq,
-            word_tag_seq;
+        std::string word_char_seq ;
+        IndexSeq word_tag_index_seq;
+        CWSTaggingSystem::static_parse_word2chars_indextag(word, word_char_seq, word_tag_index_seq);
         CWSTaggingSystem::parse_words2word_tag(word, word_char_seq, word_tag_seq);
         for( size_t i = 0; i < word_char_seq.size(); ++i )
         {
+            tmp_tag_index_seq.push_back(word_tag_index_seq[i]);
             Index word_id = word_dict_wrapper.Convert(word_char_seq[i]);
-            Index tag_id = tag_dict.Convert(word_char_seq[i]);
             tmp_word_index_seq.push_back(word_id);
-            tmp_tag_index_seq.push_back(tag_id);
             tmp_char_seq.push_back(word_char_seq[i]);
         }
     }

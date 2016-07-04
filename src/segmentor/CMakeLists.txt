@@ -32,6 +32,17 @@ set(single_input_bigram_modelhandler_headers
 set(input1_with_feature_model_0628_dependencies
     ${base_model_dir}/input1_with_feature_model_0628.hpp
 )
+
+set(input1_f2i_model_0628_dependencies
+    ${input1_with_feature_model_0628_dependencies}
+    ${base_model_dir}/input1_f2i_model_0628.hpp
+)
+
+set(input1_f2o_model_0628_dependencies
+    ${input1_with_feature_model_0628_dependencies}
+    ${base_model_dir}/input1_f2o_model_0628.hpp
+)
+
 set(input1_with_feature_modelhandler_0628_dependencies
     ${modelhandler_dir}/input1_with_feature_modelhandler_0628.hpp
 )

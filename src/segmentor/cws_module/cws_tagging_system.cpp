@@ -65,6 +65,24 @@ bool CWSTaggingSystem::static_can_trans(Index pre_static_tag_id, Index cur_stati
         ) ;
 }
 
+Index CWSTaggingSystem::static_select_tag_constrained(std::vector<cnn::real> &dist, size_t time, Index pre_time_static_tag_id)
+{
+    cnn::real max_prob = std::numeric_limits<cnn::real>::lowest();
+    Index tag_with_max_prob = STATIC_NONE_ID;
+    for( Index tag_id = 0; tag_id < get_tag_num(); ++tag_id )
+    {
+        if( !static_can_emit(time, tag_id) ){ continue; }
+        if( time > 0 && !static_can_trans(pre_time_static_tag_id, tag_id) ){ continue; }
+        if( dist[tag_id] >= max_prob )
+        {
+            tag_with_max_prob = tag_id;
+            max_prob = dist[tag_id];
+        }
+    }
+    // assert(tag_with_max_prob != STATIC_NONE_ID);
+    return tag_with_max_prob;
+}
+
 
 void CWSTaggingSystem::split_word(const std::string &utf8_str, Seq &utf8_seq)
 {
