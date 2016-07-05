@@ -15,7 +15,7 @@ void LexiconFeature::set_dim(unsigned start_here_feature_dim, unsigned pass_here
     this->end_here_feature_dim = end_here_feature_dim;
 }
 
-void LexiconFeature::count_word_freqency(const Seq &word_seq)
+void LexiconFeature::count_word_frequency(const Seq &word_seq)
 {
     for( const std::string &word : word_seq )
     {
@@ -36,7 +36,7 @@ void LexiconFeature::build_lexicon()
         total_freq += iter->second;
     }
     sort(freq_list.begin(), freq_list.end(), std::greater<unsigned>());
-    unsigned long long trunk_total_freq = total_freq * 0.9f;
+    unsigned long long trunk_total_freq = total_freq * 0.9L;
     unsigned long long current_freq = 0;
     freq_threshold = 0;
     for( size_t i = 0; i < freq_list.size(); ++i )
@@ -66,34 +66,32 @@ void LexiconFeature::build_lexicon()
 void LexiconFeature::extract(const Seq &char_seq, LexiconFeatureDataSeq &lexicon_feature_seq) const 
 {
     using std::swap;
-    size_t seq_len = char_seq.size();
-    std::vector<int> charLenSeq(seq_len);
-    for( int i = 0; i < seq_len; ++i ){ charLenSeq[i] = char_seq[i].length(); }
+    // use unsigned and unsigned char , instead of size_t 
+    unsigned seq_len = char_seq.size();
+    std::vector<unsigned char> u8char_byte_size_seq(seq_len);
+    for( unsigned i = 0; i < seq_len; ++i ){ u8char_byte_size_seq[i] = char_seq[i].length(); }
     LexiconFeatureDataSeq tmp_lexicon_feature_seq(seq_len);
     // Max Match
     // this lexicon feature can be look as fusion Max Match Result
-    for( size_t i = 0; i < seq_len; ++i )
+    for( unsigned i = 0; i < seq_len; ++i ) // index increasing one by one , instead of doing like MM which skip word 
     {
-        size_t end_pos = std::min(seq_len, i + lexicon_word_max_len);
+        unsigned end_pos = std::min(seq_len, i + lexicon_word_max_len);
         std::string testWord ;
-        for( size_t k = i; k < end_pos; ++k ){ testWord += char_seq[k]; }
-        size_t word_len = testWord.length();
+        for( unsigned k = i; k < end_pos; ++k ){ testWord += char_seq[k]; }
+        unsigned word_byte_size = testWord.length();
         while( end_pos > i + 1 ) // skip word with one character
         {
-            if( lexicon.count(testWord) ){ break; }
-            size_t erase_char_len = charLenSeq[end_pos -= 1];
-            testWord.erase(word_len -= erase_char_len);
+            if( lexicon.count(testWord) > 0 ){ break; }
+            unsigned erase_char_byte_size = u8char_byte_size_seq[end_pos -= 1];
+            testWord.erase(word_byte_size -= erase_char_byte_size);
         }
-        size_t char_len = std::min(end_pos - i, WordLenLimit());
-        tmp_lexicon_feature_seq[i].set_end_here_feature_index(char_len - 1);
-        tmp_lexicon_feature_seq[end_pos - 1].set_end_here_feature_index(char_len - 1);
-        if( char_len > 2 )
+        unsigned char char_len = static_cast<unsigned char>( std::min(end_pos - i, WordLenLimit()) );
+        tmp_lexicon_feature_seq[i].set_start_here_feature(char_len);
+        for( unsigned k = i+1; k < end_pos-1; ++k )
         {
-            for( size_t k = i+1; k < end_pos-1; ++k )
-            {
-                tmp_lexicon_feature_seq[k].set_pass_here_feature_index(char_len - 2);
-            }
+            tmp_lexicon_feature_seq[k].set_pass_here_feature(char_len);
         }
+        tmp_lexicon_feature_seq[end_pos - 1].set_end_here_feature(char_len);
     }
     swap(lexicon_feature_seq, tmp_lexicon_feature_seq);
 }

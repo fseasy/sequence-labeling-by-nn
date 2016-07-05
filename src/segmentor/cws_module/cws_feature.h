@@ -26,7 +26,7 @@ public:
     void set_dim(unsigned start_here_dim, unsigned pass_here_dim, unsigned end_here_dim);
     unsigned get_feature_dim() const { return lexicon_feature.get_feature_dim(); };
     
-    void count_word_freqency(const Seq &word_seq){ lexicon_feature.count_word_freqency(word_seq); };
+    void count_word_frequency(const Seq &word_seq){ lexicon_feature.count_word_frequency(word_seq); };
     void build_lexicon(){ lexicon_feature.build_lexicon(); };
 
     void extract(const Seq &char_seq, CWSFeatureDataSeq &cws_feature_seq);
@@ -36,6 +36,12 @@ public:
     template <typename Archive>
     void serialize(Archive &ar, unsigned version);
 
+    // DEBUG
+    void debug_one_sent(const Seq &char_seq, const CWSFeatureDataSeq &cws_feature_seq)
+    {
+        lexicon_feature.debug_print_lexicon();
+        lexicon_feature.debug_lexicon_feature_seq(char_seq, cws_feature_seq.lexicon_feature_data_seq);
+    }
 private :
     LexiconFeature lexicon_feature;
 };

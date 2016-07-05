@@ -11,6 +11,7 @@
 #include "cnn/cnn.h"
 #include "cnn/dict.h"
 #include "input1_with_feature_model_0628.hpp"
+#include "segmentor/cws_module/cws_feature_layer.h"
 namespace slnn{
 
 template<typename RNNDerived>

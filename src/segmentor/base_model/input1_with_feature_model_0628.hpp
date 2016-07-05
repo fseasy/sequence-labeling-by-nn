@@ -64,8 +64,17 @@ public:
     cnn::Model *get_cnn_model(){ return m ; } ;
 
     // CWSFeature interface promote to this class
-    void count_word_freqency(const Seq &word_seq){ cws_feature.count_word_freqency(word_seq); };
+    void count_word_frequency(const Seq &word_seq){ cws_feature.count_word_frequency(word_seq); };
     void build_lexicon(){ cws_feature.build_lexicon(); };
+
+    // DEBUG
+    void debug_one_sent(const IndexSeq &index_char_seq, const CWSFeatureDataSeq &feature_seq)
+    {
+        Seq char_seq(index_char_seq.size());
+        std::transform(index_char_seq.begin(), index_char_seq.end(), char_seq.begin(),
+            [this](Index word_idx){ return this->word_dict.Convert(word_idx); });
+        cws_feature.debug_one_sent(char_seq, feature_seq);
+    }
 
 protected:
     cnn::Model *m;
@@ -77,10 +86,10 @@ protected:
 };
 
 template <typename RNNDerived>
-std::string CWSInput1WithFeatureModel<RNNDerived>::UNK_STR = "unk_str";
+const std::string CWSInput1WithFeatureModel<RNNDerived>::UNK_STR = "unk_str";
 
 template<typename RNNDerived>
-unsigned CWSInput1WithFeatureModel<RNNDerived>::SentMaxLen = 256;
+const unsigned CWSInput1WithFeatureModel<RNNDerived>::SentMaxLen = 256;
 
 template <typename RNNDerived>
 CWSInput1WithFeatureModel<RNNDerived>::CWSInput1WithFeatureModel()
@@ -103,7 +112,7 @@ void CWSInput1WithFeatureModel<RNNDerived>::set_replace_threshold(int freq_thres
 template<typename RNNDerived>
 bool CWSInput1WithFeatureModel<RNNDerived>::is_dict_frozen()
 {
-    return word_dict.is_fronzen() ;
+    return word_dict.is_frozen() ;
 }
 
 template <typename RNNDerived>
@@ -126,10 +135,9 @@ void CWSInput1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_s
     tmp_char_seq.reserve(SentMaxLen);
     for(const std::string &word : word_seq )
     {
-        std::string word_char_seq ;
+        Seq word_char_seq ;
         IndexSeq word_tag_index_seq;
         CWSTaggingSystem::static_parse_word2chars_indextag(word, word_char_seq, word_tag_index_seq);
-        CWSTaggingSystem::parse_words2word_tag(word, word_char_seq, word_tag_seq);
         for( size_t i = 0; i < word_char_seq.size(); ++i )
         {
             tmp_tag_index_seq.push_back(word_tag_index_seq[i]);
@@ -163,11 +171,11 @@ template <typename RNNDerived>
 void CWSInput1WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &ori_word_seq, IndexSeq &rep_word_seq)
 {
     using std::swap;
-    size_t sz = rep_word_seq.size();
+    size_t sz = ori_word_seq.size();
     IndexSeq tmp_rep_word_seq(sz);
     for( size_t i = 0; i < sz; ++i )
     {
-        tmp_rep_word_seq[i] = word_dict_wrapper.ConvertProbability(ori_word_seq);
+        tmp_rep_word_seq[i] = word_dict_wrapper.ConvertProbability(ori_word_seq[i]);
     }
     swap(rep_word_seq, tmp_rep_word_seq);
 }

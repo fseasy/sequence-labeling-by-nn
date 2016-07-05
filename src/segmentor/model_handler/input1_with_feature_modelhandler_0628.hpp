@@ -9,6 +9,7 @@
 #include "segmentor/cws_module/cws_tagging_system.h"
 #include "utils/stat.hpp"
 #include "utils/stash_model.hpp"
+#include "segmentor/cws_module/cws_reader.h"
 namespace slnn{
 
 template <typename RNNDerived, typename I1Model>
@@ -26,13 +27,13 @@ public :
     // Reading data 
     void read_training_data(std::istream &is,
         std::vector<IndexSeq> &sents,
-        std::vector<IndexSeq> &tag_seqs,
-        std::vector<CWSFeatureDataSeq> &feature_data_seq);
+        std::vector<CWSFeatureDataSeq> &feature_data_seq,
+        std::vector<IndexSeq> &tag_seqs);
     void read_devel_data(std::istream &is,
         std::vector<IndexSeq> &sents,
-        std::vector<IndexSeq> &tag_seqs,
-        std::vector<CWSFeatureDataSeq> &feature_data_seq);
-    virtual void read_test_data(std::istream &is,
+        std::vector<CWSFeatureDataSeq> &feature_data_seq,
+        std::vector<IndexSeq> &tag_seqs);
+    void read_test_data(std::istream &is,
         std::vector<Seq> &raw_test_sents, 
         std::vector<IndexSeq> &sents,
         std::vector<CWSFeatureDataSeq> &feature_data_seq);
@@ -42,15 +43,18 @@ public :
     void build_model();
 
     // Train & devel & predict
-    void train(const std::vector<IndexSeq> &sents, const std::vector<IndexSeq> &tag_seqs,
+    void train(const std::vector<IndexSeq> &sents, 
         const std::vector<CWSFeatureDataSeq> &feature_data_seqs,
+        const std::vector<IndexSeq> &tag_seqs,
         unsigned max_epoch,
-        const std::vector<IndexSeq> &dev_sents, const std::vector<IndexSeq> &dev_tag_seqs,
+        const std::vector<IndexSeq> &dev_sents, 
         const std::vector<CWSFeatureDataSeq> &dev_feature_data_seqs,
+        const std::vector<IndexSeq> &dev_tag_seqs,
         unsigned do_devel_freq,
         unsigned trivial_report_freq);
-    float devel(const std::vector<IndexSeq> &sents, const std::vector<IndexSeq> &tag_seqs,
-        const std::vector<CWSFeatureDataSeq> &feature_data_seq);
+    float devel(const std::vector<IndexSeq> &sents, 
+        const std::vector<CWSFeatureDataSeq> &feature_data_seq,
+        const std::vector<IndexSeq> &tag_seqs);
     void predict(std::istream &is, std::ostream &os);
 
     // Save & Load
@@ -73,7 +77,7 @@ const std::string CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::OutputD
 
 template <typename RNNDerived, typename I1Model>
 CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::CWSInput1WithFeatureModelHandler()
-    : i1m(new I1Model<RNNDerived>()) 
+    : i1m(new I1Model()) 
 {}
 
 template <typename RNNDerived, typename I1Model>
@@ -84,8 +88,9 @@ CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::~CWSInput1WithFeatureMode
 
 template <typename RNNDerived, typename I1Model>
 void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(std::istream &is,
-                                        std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs,
-    std::vector<CWSFeatureDataSeq> &cws_feature_seqs)
+    std::vector<IndexSeq> &sents,
+    std::vector<CWSFeatureDataSeq> &cws_feature_seqs,
+    std::vector<IndexSeq> &tag_seqs)
 {
     using std::swap;
     assert(!i1m->is_dict_frozen());
@@ -93,8 +98,8 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     BOOST_LOG_TRIVIAL(info) << "build lexicon from training data.";
     CWSReader reader(is);
     std::vector<Seq> dataset;
-    size_t detected_line_cnt = reader.countline();
-    data_set.reserve(detected_line_cnt);
+    size_t detected_line_cnt = reader.count_line();
+    dataset.reserve(detected_line_cnt);
     Seq word_seq;
     while( reader.read_segmented_line(word_seq) )
     {
@@ -105,14 +110,14 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     i1m->build_lexicon();
     // translate word str to char index , extract feature
     BOOST_LOG_TRIVIAL(info) << "process training data.";
-    unsigned dataset_size = dataset.size(); 
+    unsigned dataset_size = dataset.size();
     std::vector<IndexSeq> tmp_sents(dataset_size),
         tmp_tag_seqs(dataset_size);
     std::vector<CWSFeatureDataSeq> tmp_cws_feature_seqs(dataset_size);
     for( size_t i = 0; i < dataset_size; ++i )
     {
         i1m->word_seq2index_seq(dataset[i], tmp_sents[i], tmp_tag_seqs[i], tmp_cws_feature_seqs[i]);
-        if( i % 10000 == 0 ){ BOOST_LOG_TRIVAL(info) << i << " instances has been processed." ; }
+        if( i % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << i << " instances has been processed." ; }
     }
     i1m->freeze_dict();
     BOOST_LOG_TRIVIAL(info) << "Training data processed done. totally " << dataset_size << " instances has been processed.";
@@ -123,15 +128,15 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
 
 template <typename RNNDerived, typename I1Model>
 void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std::istream &is,
-                                                       std::vector<IndexSeq> &sents, 
-                                                       std::vector<IndexSeq> &tag_seqs,
-    std::vector<CWSFeatureDataSeq> &cws_feature_seqs)
+    std::vector<IndexSeq> &sents,
+    std::vector<CWSFeatureDataSeq> &cws_feature_seqs,
+    std::vector<IndexSeq> &tag_seqs)
 {
     using std::swap;
     assert(i1m->is_dict_frozen());
-    BOOST_LOG_TRIVAL(info) << "process devel data .";
+    BOOST_LOG_TRIVIAL(info) << "process devel data .";
     CWSReader reader(is);
-    size_t detected_line_cnt = reader.countline();
+    size_t detected_line_cnt = reader.count_line();
     std::vector<IndexSeq> tmp_sents,
         tmp_tag_seqs;
     std::vector<CWSFeatureDataSeq> tmp_cws_feature_seqs;
@@ -149,7 +154,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std:
         tmp_tag_seqs.push_back(std::move(tag_seq));
         tmp_cws_feature_seqs.push_back(std::move(cws_feature_seq));
         ++line_cnt;
-        if( line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVIAl(info) << line_cnt << " instances has been processed."; }
+        if( line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << line_cnt << " instances has been processed."; }
     }
     BOOST_LOG_TRIVIAL(info) << "Devel data processed done. totally " << line_cnt << " instances has been processed.";
     swap(sents, tmp_sents);
@@ -159,15 +164,15 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std:
 
 template <typename RNNDerived, typename I1Model>
 void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_test_data(std::istream &is,
-                                                      std::vector<Seq> &raw_test_sents, 
-                                                      std::vector<IndexSeq> &sents,
+    std::vector<Seq> &raw_test_sents,
+    std::vector<IndexSeq> &sents,
     std::vector<CWSFeatureDataSeq> &cws_feature_seqs)
 {
     using std::swap;
     assert(i1m->is_dict_frozen());
     BOOST_LOG_TRIVIAL(info) << "processing test data.";
     CWSReader reader(is);
-    size_t detected_line_cnt = reader.countline();
+    size_t detected_line_cnt = reader.count_line();
     std::vector<Seq> tmp_raw_test_sents;
     std::vector<IndexSeq> tmp_sents;
     std::vector<CWSFeatureDataSeq> tmp_cws_feature_seqs;
@@ -186,7 +191,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_test_data(std::
         tmp_sents.push_back(std::move(sent));
         tmp_cws_feature_seqs.push_back(std::move(feature_seq));
 
-        if( ++line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVAL(info) << line_cnt << " instances has been processed."; }
+        if( ++line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << line_cnt << " instances has been processed."; }
     }
     BOOST_LOG_TRIVIAL(info) << "Test data processed done. totally " << line_cnt << " instances has been processed.";
     swap(raw_test_sents, tmp_raw_test_sents);
@@ -209,27 +214,27 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::build_model()
 }
 
 template <typename RNNDerived, typename I1Model>
-void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vector<IndexSeq> &sents, 
-                                             const std::vector<IndexSeq> &tag_seqs,
+void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vector<IndexSeq> &sents,
     const std::vector<CWSFeatureDataSeq> &cws_feature_seqs,
-                                             unsigned max_epoch,
-                                             const std::vector<IndexSeq> &dev_sents, 
-                                             const std::vector<IndexSeq> &dev_tag_seqs,
+    const std::vector<IndexSeq> &tag_seqs,
+    unsigned max_epoch,
+    const std::vector<IndexSeq> &dev_sents,
     const std::vector<CWSFeatureDataSeq> &dev_cws_feature_seqs,
-                                             unsigned do_devel_freq,
-                                             unsigned trivial_report_freq)
+    const std::vector<IndexSeq> &dev_tag_seqs,
+    unsigned do_devel_freq,
+    unsigned trivial_report_freq)
 {
     unsigned nr_samples = sents.size();
 
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
     std::vector<unsigned> access_order(nr_samples);
-    for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
+    for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
     bool is_train_ok = true ; // when grident update error , we stop the training 
     cnn::SimpleSGDTrainer sgd(i1m->get_cnn_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
-    for (unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch)
+    for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
@@ -240,7 +245,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
         training_stat_per_epoch.start_time_stat();
 
         // train for every Epoch 
-        for (unsigned i = 0; i < nr_samples; ++i)
+        for( unsigned i = 0; i < nr_samples; ++i )
         {
             unsigned access_idx = access_order[i];
             // using negative_loglikelihood loss to build model
@@ -250,7 +255,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
                 cnn::ComputationGraph cg ;
-                Index replaced_sent;
+                IndexSeq replaced_sent;
                 i1m->replace_word_with_unk(sent, replaced_sent);
                 i1m->build_loss(cg, replaced_sent, cws_feature_seq, tag_seq);
                 cnn::real loss = as_scalar(cg.forward());
@@ -259,7 +264,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
             }
-            if (0 == (i + 1) % trivial_report_freq) // Report 
+            if( 0 == (i + 1) % trivial_report_freq ) // Report 
             {
                 std::string trivial_header = std::to_string(i + 1) + " instances have been trained.";
                 BOOST_LOG_TRIVIAL(trace) << training_stat_per_epoch.get_stat_str(trivial_header);
@@ -268,7 +273,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
             // Devel
             ++line_cnt_for_devel;
             // If developing samples is available , do `devel` to get model training effect . 
-            if (0 == line_cnt_for_devel % do_devel_freq)
+            if( 0 == line_cnt_for_devel % do_devel_freq )
             {
                 float F1 = devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
                 model_stash.save_when_best(i1m->get_cnn_model(), F1);
@@ -292,7 +297,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
-        if (is_train_ok)
+        if( is_train_ok )
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
             float F1 = devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
@@ -310,9 +315,9 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
 }
 
 template <typename RNNDerived, typename I1Model>
-float CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::devel(const std::vector<IndexSeq> &sents, 
-                                              const std::vector<IndexSeq> &tag_seqs,
-    const std::vector<CWSFeatureDataSeq> &cws_feature_seqs)
+float CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::devel(const std::vector<IndexSeq> &sents,
+    const std::vector<CWSFeatureDataSeq> &cws_feature_seqs,
+    const std::vector<IndexSeq> &tag_seqs)
 {
     unsigned nr_samples = sents.size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
@@ -320,7 +325,7 @@ float CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::devel(const std::ve
     CWSStatNew stat(true);
     stat.start_time_stat();
     std::vector<IndexSeq> predict_tag_seqs(tag_seqs.size());
-    for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
+    for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
         cnn::ComputationGraph cg;
         const IndexSeq &sent = sents.at(access_idx);
@@ -329,10 +334,10 @@ float CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::devel(const std::ve
         stat.total_tags += predict_tag_seqs[access_idx].size();
     }
     stat.end_time_stat();
-    std::array<float , 4> eval_scores = stat.eval(tag_seqs, predict_tag_seqs);
-    float Acc = eval_scores[0] , 
-        P = eval_scores[1] ,
-        R = eval_scores[2] ,
+    std::array<float, 4> eval_scores = stat.eval(tag_seqs, predict_tag_seqs);
+    float Acc = eval_scores[0],
+        P = eval_scores[1],
+        R = eval_scores[2],
         F1 = eval_scores[3] ; // they are all PERCENT VALUE
     std::ostringstream tmp_sos;
     tmp_sos << "validation finished .\n"

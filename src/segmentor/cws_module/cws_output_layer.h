@@ -65,6 +65,18 @@ struct CWSCRFOutput : CRFOutput
 
 };
 
+
+struct CWSSimpleOutputWithFeature : SimpleOutputWithFeature
+{
+    CWSSimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+        unsigned hidden_dim, unsigned output_dim,
+        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_out_seq);
+};
+
 // After 0628, we abandon CWSTaggingSystem instance .
 // Have to write another one . 
 
@@ -78,6 +90,7 @@ struct CWSSimpleOutputNew : SimpleOutput
     void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
         const std::vector<cnn::expr::Expression> &expr_cont2,
         IndexSeq &pred_out_seq);
+
 };
 
 

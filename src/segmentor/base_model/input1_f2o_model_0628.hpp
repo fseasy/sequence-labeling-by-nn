@@ -1,5 +1,5 @@
-#ifndef POS_BASE_MODEL_INPUT1_FEATURE2OUTPUT_LAYER_MODEL_HPP_
-#define POS_BASE_MODEL_INPUT1_FEATURE2OUTPUT_LAYER_MODEL_HPP_
+#ifndef SLNN_SEGMENTOR_BASE_MODEL_INPUT1_F2O_MODEL_0628_HPP_
+#define SLNN_SEGMENTOR_BASE_MODEL_INPUT1_F2O_MODEL_0628_HPP_
 
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
@@ -10,34 +10,35 @@
 
 #include "cnn/cnn.h"
 #include "cnn/dict.h"
+#include "input1_with_feature_model_0628.hpp"
+#include "segmentor/cws_module/cws_feature_layer.h"
 
-#include "single_input_with_feature_model.hpp"
 namespace slnn{
 
 template<typename RNNDerived>
-class Input1F2OModel : public SingleInputWithFeatureModel<RNNDerived>
+class CWSInput1F2OModel : public CWSInput1WithFeatureModel<RNNDerived>
 {
     friend class boost::serialization::access;
 
 public:
-    Input1F2OModel();
-    virtual ~Input1F2OModel();
-    Input1F2OModel(const Input1F2OModel &) = delete;
-    Input1F2OModel& operator()(const Input1F2OModel&) = delete;
+    CWSInput1F2OModel();
+    virtual ~CWSInput1F2OModel();
+    CWSInput1F2OModel(const CWSInput1F2OModel &) = delete;
+    CWSInput1F2OModel& operator()(const CWSInput1F2OModel&) = delete;
 
-    virtual void set_model_param(const boost::program_options::variables_map &var_map);
+    virtual void set_model_param(const boost::program_options::variables_map &var_map) override;
 
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
-        const IndexSeq &input_seq, 
-        const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
-        const IndexSeq &gold_seq) ;
-    virtual void predict(cnn::ComputationGraph &cg ,
-        const IndexSeq &input_seq, 
-        const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
-        IndexSeq &pred_seq) ;
+        const IndexSeq &input_seq,
+        const CWSFeatureDataSeq &feature_data_seq,
+        const IndexSeq &gold_seq) override;
+    virtual void predict(cnn::ComputationGraph &cg,
+        const IndexSeq &input_seq,
+        const CWSFeatureDataSeq &feature_data_seq,
+        IndexSeq &pred_seq) override;
 
     template <typename Archive>
     void save(Archive &ar, const unsigned versoin) const; 
@@ -48,7 +49,7 @@ public:
 
 protected:
 
-    POSFeatureLayer * pos_feature_layer;
+    CWSFeatureLayer * cws_feature_layer;
     Input1 *input_layer;
     BIRNNLayer<RNNDerived> *birnn_layer;
     OutputBaseWithFeature *output_layer;
@@ -67,27 +68,27 @@ public:
 
 
 template<typename RNNDerived>
-Input1F2OModel<RNNDerived>::Input1F2OModel() 
-    :SingleInputWithFeatureModel<RNNDerived>(),
-    pos_feature_layer(nullptr),
+CWSInput1F2OModel<RNNDerived>::CWSInput1F2OModel() 
+    :CWSInput1WithFeatureModel<RNNDerived>(),
+    cws_feature_layer(nullptr),
     input_layer(nullptr),
     birnn_layer(nullptr),
     output_layer(nullptr)
 {}
 
 template <typename RNNDerived>
-Input1F2OModel<RNNDerived>::~Input1F2OModel()
+CWSInput1F2OModel<RNNDerived>::~CWSInput1F2OModel()
 {
-    delete pos_feature_layer;
+    delete cws_feature_layer;
     delete input_layer;
     delete birnn_layer;
     delete output_layer;
 }
 
 template <typename RNNDerived>
-void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
+void CWSInput1F2OModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
 {
-    assert(this->word_dict.is_frozen() && this->postag_dict.is_frozen()  && this->pos_feature.is_dict_frozen()) ;
+    assert(this->word_dict.is_frozen()) ;
 
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
@@ -100,25 +101,23 @@ void Input1F2OModel<RNNDerived>::set_model_param(const boost::program_options::v
 
     dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
 
-    unsigned prefix_suffix_len1_embedding_dim = var_map["prefix_suffix_len1_embedding_dim"].as<unsigned>();
-    unsigned prefix_suffix_len2_embedding_dim = var_map["prefix_suffix_len2_embedding_dim"].as<unsigned>();
-    unsigned prefix_suffix_len3_embedding_dim = var_map["prefix_suffix_len3_embedding_dim"].as<unsigned>();
-    unsigned char_length_embedding_dim = var_map["char_length_embedding_dim"].as<unsigned>();
-    this->pos_feature.init_embedding_dim(prefix_suffix_len1_embedding_dim, prefix_suffix_len2_embedding_dim,
-        prefix_suffix_len3_embedding_dim, char_length_embedding_dim);
+    unsigned start_here_embedding_dim = var_map["start_here_embedding_dim"].as<unsigned>();
+    unsigned pass_here_embedding_dim = var_map["pass_here_embedding_dim"].as<unsigned>();
+    unsigned end_here_embedding_dim = var_map["end_here_embedding_dim"].as<unsigned>();
+    this->cws_feature.set_dim(start_here_embedding_dim, pass_here_embedding_dim, end_here_embedding_dim);
 
-    word_dict_size = this->word_dict.size() ;
-    output_dim = this->postag_dict.size() ;
+    word_dict_size = this->get_word_dict_size() ;
+    output_dim = this->get_tag_dict_size() ;
 }
 
 
 template<typename RNNDerived>
-cnn::expr::Expression Input1F2OModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
+cnn::expr::Expression CWSInput1F2OModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq, 
-    const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
+    const CWSFeatureDataSeq &feature_seq,
     const IndexSeq &gold_seq)
 {
-    pos_feature_layer->new_graph(cg);
+    cws_feature_layer->new_graph(cg);
     input_layer->new_graph(cg) ;
     birnn_layer->new_graph(cg) ;
     output_layer->new_graph(cg) ;
@@ -133,25 +132,25 @@ cnn::expr::Expression Input1F2OModel<RNNDerived>::build_loss(cnn::ComputationGra
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
 
-    std::vector<cnn::expr::Expression> features_exprs;
-    pos_feature_layer->build_feature_exprs(features_gp_seq, features_exprs);
+    std::vector<cnn::expr::Expression> feature_exprs;
+    cws_feature_layer->build_cws_feature(feature_seq, feature_exprs);
 
-    return output_layer->build_output_loss(l2r_exprs, r2l_exprs, features_exprs, gold_seq) ;
+    return output_layer->build_output_loss(l2r_exprs, r2l_exprs, feature_exprs, gold_seq) ;
 }
 
 template<typename RNNDerived>
-void Input1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
+void CWSInput1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
-    const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
+    const CWSFeatureDataSeq &feature_seq,
     IndexSeq &pred_seq)
 {
-    pos_feature_layer->new_graph(cg);
+    cws_feature_layer->new_graph(cg);
     input_layer->new_graph(cg) ;
     birnn_layer->new_graph(cg) ;
     output_layer->new_graph(cg) ;
 
-    birnn_layer->disable_dropout() ;
-    birnn_layer->start_new_sequence();
+    birnn_layer->set_dropout() ;
+    birnn_layer->start_new_sequence() ;
 
     std::vector<cnn::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(input_seq, inputs_exprs) ;
@@ -161,38 +160,38 @@ void Input1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
 
     std::vector<cnn::expr::Expression> feature_exprs;
-    pos_feature_layer->build_feature_exprs(features_gp_seq, feature_exprs);
+    cws_feature_layer->build_cws_feature(feature_seq, feature_exprs);
 
     output_layer->build_output(l2r_exprs, r2l_exprs, feature_exprs, pred_seq) ;
 }
 
 template <typename RNNDerived>template< typename Archive>
-void Input1F2OModel<RNNDerived>::save(Archive &ar, const unsigned version) const
+void CWSInput1F2OModel<RNNDerived>::save(Archive &ar, const unsigned version) const
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_h_dim & nr_rnn_stacked_layer
         & hidden_dim & output_dim
         & dropout_rate ;
-    ar & this->word_dict & this->postag_dict & this->pos_feature ;
+    ar & this->word_dict & this->cws_feature ;
     ar & *this->m ;
 }
 
 template <typename RNNDerived>template< typename Archive>
-void Input1F2OModel<RNNDerived>::load(Archive &ar, const unsigned version)
+void CWSInput1F2OModel<RNNDerived>::load(Archive &ar, const unsigned version)
 {
     ar & word_dict_size & word_embedding_dim
         & rnn_h_dim & nr_rnn_stacked_layer
         & hidden_dim & output_dim
         & dropout_rate ;
-    ar & this->word_dict & this->postag_dict & this->pos_feature;
-    assert(this->word_dict.size() == word_dict_size && this->postag_dict.size() == output_dim) ;
+    ar & this->word_dict & this->cws_feature;
+    assert(this->get_word_dict_size() == word_dict_size && this->get_tag_dict_size() == output_dim) ;
     build_model_structure() ;
     ar & *this->m ;
 }
 
 template <typename RNNDerived>
 template<typename Archive>
-void Input1F2OModel<RNNDerived>::serialize(Archive & ar, const unsigned version)
+void CWSInput1F2OModel<RNNDerived>::serialize(Archive & ar, const unsigned version)
 {
     boost::serialization::split_member(ar, *this, version);
 }

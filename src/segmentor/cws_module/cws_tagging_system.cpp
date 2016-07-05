@@ -69,7 +69,8 @@ Index CWSTaggingSystem::static_select_tag_constrained(std::vector<cnn::real> &di
 {
     cnn::real max_prob = std::numeric_limits<cnn::real>::lowest();
     Index tag_with_max_prob = STATIC_NONE_ID;
-    for( Index tag_id = 0; tag_id < get_tag_num(); ++tag_id )
+    constexpr Index max_tag_id = get_tag_num() - 1;
+    for( Index tag_id = 0; tag_id < max_tag_id; ++tag_id )
     {
         if( !static_can_emit(time, tag_id) ){ continue; }
         if( time > 0 && !static_can_trans(pre_time_static_tag_id, tag_id) ){ continue; }

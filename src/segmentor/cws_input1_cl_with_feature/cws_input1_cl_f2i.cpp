@@ -135,10 +135,11 @@ int train_process(int argc, char *argv[], const string &program_name)
     model_handler.read_devel_data(devel_is, dev_sents , dev_feature_seqs, dev_tag_seqs);
     devel_is.close();
 
+    model_handler.i1m->debug_one_sent(sents.back(), feature_seqs.back());
     // Train 
     model_handler.train(sents, feature_seqs, tag_seqs , 
         max_epoch, 
-        dev_sents dev_feature_seqs, dev_tag_seqs , 
+        dev_sents, dev_feature_seqs, dev_tag_seqs , 
         devel_freq , 
         trivial_report_freq);
 

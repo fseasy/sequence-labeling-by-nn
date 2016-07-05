@@ -333,6 +333,46 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
     std::swap(tmp_predict_ner_seq, pred_seq);
 }
 
+/* CWSSimpleOutputWithFeature */
+
+CWSSimpleOutputWithFeature::CWSSimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+    unsigned hidden_dim, unsigned output_dim,
+    cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
+    : SimpleOutputWithFeature(m, input_dim1, input_dim2, feature_dim, hidden_dim, output_dim, dropout_rate, nonlinear_func)
+{}
+
+void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+    const std::vector<cnn::expr::Expression> &expr_cont2,
+    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+    IndexSeq &pred_out_seq)
+{
+    size_t len = expr_cont1.size();
+    if( 1 == len ) // Special Condition 
+    {
+        pred_out_seq = { CWSTaggingSystem::STATIC_S_ID };
+        return ;
+    }
+    std::vector<Index> tmp_pred_out(len);
+    Index pre_tag_id = CWSTaggingSystem::STATIC_NONE_ID ;
+    for (size_t i = 0; i < len - 1; ++i)
+    {
+        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i], feature_expr_cont[i]);
+        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+
+        Index max_prob_tag_in_constrain = CWSTaggingSystem::static_select_tag_constrained(out_probs , i , pre_tag_id );
+        tmp_pred_out[i] = max_prob_tag_in_constrain ;
+        pre_tag_id = max_prob_tag_in_constrain ;
+    }
+    if( pre_tag_id == CWSTaggingSystem::STATIC_M_ID || 
+        pre_tag_id == CWSTaggingSystem::STATIC_B_ID )
+    { 
+        tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_E_ID ; 
+    }
+    else { tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_S_ID; }
+    std::swap(pred_out_seq, tmp_pred_out);
+}
 
 /* CWSSimpleOutput NEW (0628) */
 CWSSimpleOutputNew::CWSSimpleOutputNew(cnn::Model *m,
