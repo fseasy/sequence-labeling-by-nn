@@ -117,7 +117,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     for( size_t i = 0; i < dataset_size; ++i )
     {
         i1m->word_seq2index_seq(dataset[i], tmp_sents[i], tmp_tag_seqs[i], tmp_cws_feature_seqs[i]);
-        if( (i+1) % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << i << " instances has been processed." ; }
+        if( (i+1) % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << i+1 << " instances has been processed." ; }
     }
     i1m->freeze_dict();
     BOOST_LOG_TRIVIAL(info) << "- Training data processed done. totally " << dataset_size << " instances has been processed.";
@@ -226,7 +226,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
 {
     unsigned nr_samples = sents.size();
 
-    BOOST_LOG_TRIVIAL(info) << "\n+ Train at " << nr_samples << " instances .";
+    BOOST_LOG_TRIVIAL(info) << "+ Train at " << nr_samples << " instances .";
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
