@@ -14,8 +14,7 @@ bool CWSReader::read_segmented_line(Seq &word_seq)
     using std::swap;
     Seq tmp_sent;
     std::string line;
-    bool is_good = getline(is, line).good() ;
-    if( ! is_good ) return false;
+    if( !getline(is, line) ){ return false;  } ; // static_cast<ifstream> == !fail() && !bad() , not equal to good() , especially on EOF bit 
     std::vector<std::string> tmp_word_seq;
     boost::algorithm::split(tmp_word_seq, line, boost::is_any_of(CWSWordSeperator));
     swap(word_seq, tmp_word_seq);
@@ -27,8 +26,7 @@ bool CWSReader::readline(Seq &char_seq)
     using std::swap;
     Seq tmp_sent;
     std::string line;
-    bool is_good = getline(is, line).good() ;
-    if( ! is_good ) return false;
+    if( !getline(is, line) ){ return false;  } ;
     UTF8Processing::utf8_str2char_seq(line, char_seq);
     return true;
 }

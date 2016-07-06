@@ -145,7 +145,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std:
     tmp_cws_feature_seqs.reserve(detected_line_cnt);
     size_t line_cnt = 0;
     Seq word_seq;
-    while( reader.readline(word_seq) )
+    while( reader.read_segmented_line(word_seq) )
     {
         IndexSeq char_seq, tag_seq;
         CWSFeatureDataSeq cws_feature_seq;

@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <array>
 #include <stdlib.h>
 #include <chrono>
