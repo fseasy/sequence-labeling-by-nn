@@ -50,7 +50,7 @@ void LexiconFeature::build_lexicon()
     {
         if( iter->second >= freq_threshold )
         {
-            size_t nr_utf8_char = UTF8Processing::utf8_char_len(iter->first);
+            unsigned nr_utf8_char = UTF8Processing::utf8_char_len(iter->first);
             if( nr_utf8_char > 1)
             {
                 // at least 2 word

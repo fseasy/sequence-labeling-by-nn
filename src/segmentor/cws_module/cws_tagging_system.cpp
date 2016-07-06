@@ -7,10 +7,11 @@ const std::string CWSTaggingSystem::M_TAG = "M" ;
 const std::string CWSTaggingSystem::E_TAG = "E" ;
 const std::string CWSTaggingSystem::S_TAG = "S" ;
 
-const Index CWSTaggingSystem::STATIC_B_ID;
-const Index CWSTaggingSystem::STATIC_M_ID;
-const Index CWSTaggingSystem::STATIC_E_ID;
-const Index CWSTaggingSystem::STATIC_S_ID;
+constexpr Index CWSTaggingSystem::STATIC_B_ID;
+constexpr Index CWSTaggingSystem::STATIC_M_ID;
+constexpr Index CWSTaggingSystem::STATIC_E_ID;
+constexpr Index CWSTaggingSystem::STATIC_S_ID;
+constexpr Index CWSTaggingSystem::STATIC_NONE_ID;
 
 void CWSTaggingSystem::static_parse_word2chars_indextag(const std::string &word, Seq &word_cont, IndexSeq &tag_cont)
 {
