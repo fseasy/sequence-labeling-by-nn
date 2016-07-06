@@ -51,9 +51,9 @@ void CWSTaggingSystem::static_parse_chars_indextag2word_seq(const Seq &char_seq,
     }
     std::swap(word_seq, tmp_word_seq) ;
 }
-bool CWSTaggingSystem::static_can_emit(size_t cur_pos, Index cur_static_tag_id)
+bool CWSTaggingSystem::static_can_emit(size_t cur_time, Index cur_static_tag_id)
 {
-    if( cur_pos == 0 ) {return (cur_static_tag_id == STATIC_B_ID || cur_static_tag_id == STATIC_S_ID) ; } // if first position , only `S` or `B` are valid 
+    if( cur_time == 0 ) {return (cur_static_tag_id == STATIC_B_ID || cur_static_tag_id == STATIC_S_ID) ; } // if first position , only `S` or `B` are valid 
     return true ; // the others is all valid
 }
 bool CWSTaggingSystem::static_can_trans(Index pre_static_tag_id, Index cur_static_tag_id)
@@ -71,7 +71,7 @@ Index CWSTaggingSystem::static_select_tag_constrained(std::vector<cnn::real> &di
     cnn::real max_prob = std::numeric_limits<cnn::real>::lowest();
     Index tag_with_max_prob = STATIC_NONE_ID;
     constexpr Index max_tag_id = get_tag_num() - 1;
-    for( Index tag_id = 0; tag_id < max_tag_id; ++tag_id )
+    for( Index tag_id = 0; tag_id <= max_tag_id; ++tag_id )
     {
         if( !static_can_emit(time, tag_id) ){ continue; }
         if( time > 0 && !static_can_trans(pre_time_static_tag_id, tag_id) ){ continue; }

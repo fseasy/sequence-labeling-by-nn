@@ -89,7 +89,7 @@ struct CWSSimpleOutputNew : SimpleOutput
         NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
     void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
         const std::vector<cnn::expr::Expression> &expr_cont2,
-        IndexSeq &pred_out_seq);
+        IndexSeq &pred_out_seq) override ;
 
 };
 

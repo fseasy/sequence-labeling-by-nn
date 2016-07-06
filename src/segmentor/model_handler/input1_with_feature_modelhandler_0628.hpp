@@ -95,7 +95,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     using std::swap;
     assert(!i1m->is_dict_frozen());
     // first , build lexicon
-    BOOST_LOG_TRIVIAL(info) << "build lexicon from training data.";
+    BOOST_LOG_TRIVIAL(info) << "+ build lexicon from training data.";
     CWSReader reader(is);
     std::vector<Seq> dataset;
     size_t detected_line_cnt = reader.count_line();
@@ -109,7 +109,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     }
     i1m->build_lexicon();
     // translate word str to char index , extract feature
-    BOOST_LOG_TRIVIAL(info) << "process training data.";
+    BOOST_LOG_TRIVIAL(info) << "+ process training data.";
     unsigned dataset_size = dataset.size();
     std::vector<IndexSeq> tmp_sents(dataset_size),
         tmp_tag_seqs(dataset_size);
@@ -117,10 +117,10 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_training_data(s
     for( size_t i = 0; i < dataset_size; ++i )
     {
         i1m->word_seq2index_seq(dataset[i], tmp_sents[i], tmp_tag_seqs[i], tmp_cws_feature_seqs[i]);
-        if( i % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << i << " instances has been processed." ; }
+        if( (i+1) % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << i << " instances has been processed." ; }
     }
     i1m->freeze_dict();
-    BOOST_LOG_TRIVIAL(info) << "Training data processed done. totally " << dataset_size << " instances has been processed.";
+    BOOST_LOG_TRIVIAL(info) << "- Training data processed done. totally " << dataset_size << " instances has been processed.";
     swap(sents, tmp_sents);
     swap(tag_seqs, tmp_tag_seqs);
     swap(cws_feature_seqs, tmp_cws_feature_seqs);
@@ -134,7 +134,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std:
 {
     using std::swap;
     assert(i1m->is_dict_frozen());
-    BOOST_LOG_TRIVIAL(info) << "process devel data .";
+    BOOST_LOG_TRIVIAL(info) << "+ process devel data .";
     CWSReader reader(is);
     size_t detected_line_cnt = reader.count_line();
     std::vector<IndexSeq> tmp_sents,
@@ -156,7 +156,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_devel_data(std:
         ++line_cnt;
         if( line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << line_cnt << " instances has been processed."; }
     }
-    BOOST_LOG_TRIVIAL(info) << "Devel data processed done. totally " << line_cnt << " instances has been processed.";
+    BOOST_LOG_TRIVIAL(info) << "- Devel data processed done. totally " << line_cnt << " instances has been processed.";
     swap(sents, tmp_sents);
     swap(tag_seqs, tmp_tag_seqs);
     swap(cws_feature_seqs, tmp_cws_feature_seqs);
@@ -170,7 +170,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_test_data(std::
 {
     using std::swap;
     assert(i1m->is_dict_frozen());
-    BOOST_LOG_TRIVIAL(info) << "processing test data.";
+    BOOST_LOG_TRIVIAL(info) << "+ processing test data.";
     CWSReader reader(is);
     size_t detected_line_cnt = reader.count_line();
     std::vector<Seq> tmp_raw_test_sents;
@@ -193,7 +193,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_test_data(std::
 
         if( ++line_cnt % 10000 == 0 ){ BOOST_LOG_TRIVIAL(info) << line_cnt << " instances has been processed."; }
     }
-    BOOST_LOG_TRIVIAL(info) << "Test data processed done. totally " << line_cnt << " instances has been processed.";
+    BOOST_LOG_TRIVIAL(info) << "- Test data processed done. totally " << line_cnt << " instances has been processed.";
     swap(raw_test_sents, tmp_raw_test_sents);
     swap(sents, tmp_sents);
     swap(cws_feature_seqs, tmp_cws_feature_seqs);
@@ -226,17 +226,24 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
 {
     unsigned nr_samples = sents.size();
 
-    BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
+    BOOST_LOG_TRIVIAL(info) << "\n+ Train at " << nr_samples << " instances .";
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
-    bool is_train_ok = true ; // when grident update error , we stop the training 
     cnn::SimpleSGDTrainer sgd(i1m->get_cnn_model());
+
+    auto do_devel_in_training = [this, &dev_sents, &dev_cws_feature_seqs, &dev_tag_seqs](CNNModelStash &model_stash) 
+    {
+        // CNNModelStash as param to remind we'll change it's state !
+        float F1 = this->devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
+        model_stash.save_when_best(this->i1m->get_cnn_model(), F1);
+        model_stash.update_training_state(F1);
+    };
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
-    for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
+    for( unsigned nr_epoch = 0; nr_epoch < max_epoch ; ++nr_epoch )
     {
-        BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
+        BOOST_LOG_TRIVIAL(info) << "++ Epoch " << nr_epoch + 1 << "/" << max_epoch << " start ";
         // shuffle samples by random access order
         shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
 
@@ -270,18 +277,12 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
                 BOOST_LOG_TRIVIAL(trace) << training_stat_per_epoch.get_stat_str(trivial_header);
             }
 
-            // Devel
             ++line_cnt_for_devel;
-            // If developing samples is available , do `devel` to get model training effect . 
+            // do devel at every `do_devel_freq`
             if( 0 == line_cnt_for_devel % do_devel_freq )
             {
-                float F1 = devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
-                model_stash.save_when_best(i1m->get_cnn_model(), F1);
-                if( model_stash.is_train_error_occurs(F1) )
-                {
-                    is_train_ok = false;
-                    break;
-                }
+                do_devel_in_training(model_stash);
+                if( !model_stash.is_training_ok() ){ break;  }
             }
         }
 
@@ -291,26 +292,20 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
         training_stat_per_epoch.end_time_stat();
         // Output at end of every eopch
         std::ostringstream tmp_sos;
-        tmp_sos << "-------- epoch " << nr_epoch + 1 << "/" << std::to_string(max_epoch) << " finished . ----------\n"
+        tmp_sos << "- Epoch " << nr_epoch + 1 << "/" << std::to_string(max_epoch) << " finished .\n"
             << nr_samples << " instances has been trained . ";
         std::string info_header = tmp_sos.str();
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
-        if( is_train_ok )
+        if( model_stash.is_training_ok() )
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
-            float F1 = devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
-            model_stash.save_when_best(i1m->get_cnn_model(), F1);
-            if( model_stash.is_train_error_occurs(F1) )
-            {
-                is_train_ok = false ;
-                break ;
-            }
+            do_devel_in_training(model_stash);
         }
-
+        if( !model_stash.is_training_ok() ){ break; }
     }
-    if( !is_train_ok ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
+    if( !model_stash.is_training_ok() ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
     BOOST_LOG_TRIVIAL(info) << "training finished with time cost " << total_time_cost_in_seconds << " s .";
 }
 

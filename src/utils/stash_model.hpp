@@ -9,24 +9,30 @@
 
 namespace slnn{
 
-struct CNNModelStash
+struct CNNModelStash // we'd bettern change it's name to TrainingHelper
 {
     float best_score;
     std::stringstream best_model_tmp_ss;
     CNNModelStash(float train_error_threshold=20.f);
-    bool save_when_best(cnn::Model *best_model, float best_score);
+    bool save_when_best(cnn::Model *best_model, float current_score);
     bool load_if_exists(cnn::Model *cnn_model);
-    bool is_train_error_occurs(float cur_score);
+    void update_training_state(float current_score);
+    bool is_training_ok();
     void set_train_error_threshold(float error_threshold);
+   
+    bool is_train_error_occurs(float cur_score); // Abandoned API from 0628
+    
 private :
     float train_error_threshold;
+    bool is_good;
 };
 
 inline
 CNNModelStash::CNNModelStash(float train_error_threshold)
     :best_score(0.f),
     best_model_tmp_ss(""),
-    train_error_threshold(train_error_threshold)
+    train_error_threshold(train_error_threshold),
+    is_good(true)
 {}
 
 /***
@@ -76,6 +82,18 @@ inline
 void CNNModelStash::set_train_error_threshold(float error_threshold)
 {
     train_error_threshold = error_threshold;
+}
+
+inline 
+void CNNModelStash::update_training_state(float cur_score)
+{
+    is_good = ((best_score - cur_score) < train_error_threshold);
+}
+
+inline 
+bool CNNModelStash::is_training_ok()
+{
+    return is_good;
 }
 
 } // end of namespace slnn

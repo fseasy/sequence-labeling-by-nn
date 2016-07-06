@@ -143,7 +143,7 @@ void CWSInput1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_s
             tmp_tag_index_seq.push_back(word_tag_index_seq[i]);
             Index word_id = word_dict_wrapper.Convert(word_char_seq[i]);
             tmp_word_index_seq.push_back(word_id);
-            tmp_char_seq.push_back(word_char_seq[i]);
+            tmp_char_seq.push_back(std::move(word_char_seq[i]));
         }
     }
     swap(word_index_seq, tmp_word_index_seq);
