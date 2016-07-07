@@ -107,7 +107,7 @@ set(cws_common_libs
     ${cws_module_libs}    
 )
 
-add_subdirectory(cws_single_classification)
+#add_subdirectory(cws_single_classification)
 
 #add_subdirectory(cws_single_pretag)
 #add_subdirectory(cws_single_crf)

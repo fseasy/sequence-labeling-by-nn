@@ -61,7 +61,6 @@ bool POSReader::readline(Seq &sent)
     Seq word_cont;
     std::string line;
     if( !getline(is, line) ){ return false;  } ;
-    if( !is_good ) return false;
     boost::algorithm::split(word_cont, line, boost::is_any_of(PosDataDelimiter));
     swap(sent, word_cont);
     return true;

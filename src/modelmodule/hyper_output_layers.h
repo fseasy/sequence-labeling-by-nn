@@ -138,6 +138,8 @@ struct SoftmaxLayer
             const IndexSeq &gold_seq);
     void build_output(const std::vector<cnn::expr::Expression> &input_expr_cont,
         IndexSeq &predicted_seq);
+    Index build_output(cnn::expr::Expression input_expr);
+    void get_output_distribution(cnn::expr::Expression input_expr, std::vector<cnn::real> &dist);
 };
 
 
@@ -469,6 +471,22 @@ void SoftmaxLayer::build_output(const std::vector<cnn::expr::Expression> &input_
     }
     std::swap(predicted_seq, tmp_pred_out);
 }
+
+inline
+Index SoftmaxLayer::build_output(cnn::expr::Expression input_expr)
+{
+    std::vector<cnn::real> out_probs;
+    get_output_distribution(input_expr, out_probs);
+    return std::distance(out_probs.cbegin(), std::max_element(out_probs.cbegin(), out_probs.cend()));
+}
+
+inline
+void SoftmaxLayer::get_output_distribution(cnn::expr::Expression input_expr, std::vector<cnn::real> &dist)
+{
+    cnn::expr::Expression out_expr = output_layer.build_graph(input_expr);
+    dist = cnn::as_vector(pcg->get_value(out_expr));
+}
+
 
 /******* simple output with feature ********/
 

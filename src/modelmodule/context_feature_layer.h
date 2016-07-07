@@ -9,7 +9,7 @@ namespace slnn{
 template <size_t N>
 struct ContextFeatureLayer
 {
-    ContextFeatureLayer(cnn::Model *m, cnn::LookupParameters * &word_lookup_param);
+    ContextFeatureLayer(cnn::Model *m, cnn::LookupParameters * word_lookup_param);
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
     build_feature_expr(const typename ContextFeature<N>::ContextFeatureIndexGroup & context_feature_gp);
@@ -18,7 +18,7 @@ struct ContextFeatureLayer
         std::vector<cnn::expr::Expression> &context_feature_exprs);
 private:
     cnn::expr::Expression build_word_expr(Index word_id);
-    cnn::LookupParameters *&word_lookup_param;
+    cnn::LookupParameters *word_lookup_param;
     cnn::ComputationGraph *pcg;
     cnn::Parameters *word_sos_param;
     cnn::Parameters *word_eos_param;
@@ -28,7 +28,7 @@ private:
 };
 
 template <size_t N>
-ContextFeatureLayer<N>::ContextFeatureLayer(cnn::Model *m, cnn::LookupParameters * &word_lookup_param)
+ContextFeatureLayer<N>::ContextFeatureLayer(cnn::Model *m, cnn::LookupParameters *word_lookup_param)
     :word_lookup_param(word_lookup_param),
     pcg(nullptr),
     word_sos_param(m->add_parameters(word_lookup_param->dim)),

@@ -50,6 +50,6 @@ set(base_reader_module
     ${util_directory}/reader.hpp
 )
 
-#add_subdirectory(postagger)
+add_subdirectory(postagger)
 #add_subdirectory(ner)
 add_subdirectory(segmentor)
