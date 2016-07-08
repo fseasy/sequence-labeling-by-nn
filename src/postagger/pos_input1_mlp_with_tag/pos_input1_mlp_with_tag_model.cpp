@@ -110,7 +110,7 @@ POSInput1MLPWithTagModel::predict(cnn::ComputationGraph &cg,
 
     std::vector<Index> tmp_pred_seq(sent_len);
     cnn::expr::Expression pre_tag_expr = tag_expr_layer->get_padding_expr(0);
-    for( int i = 0; i < sent_len ; ++i )
+    for( size_t i = 0; i < sent_len ; ++i )
     {
         cnn::expr::Expression word_expr = word_expr_layer->index2expr(input_seq[i]),
             pos_feature_expr = pos_feature_layer->build_feature_expr(features_gp_seq[i]),

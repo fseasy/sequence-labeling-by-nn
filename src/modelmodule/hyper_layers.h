@@ -100,7 +100,7 @@ void StaticConcatenateLayer::concatenate_exprs(const std::vector<std::vector<cnn
     std::vector<cnn::expr::Expression> concatenate_exprs(nr_expr_variety);
     for( size_t i = 0; i < len; ++i )
     {
-        for( int j = 0; j < nr_expr_variety; ++j )
+        for( size_t j = 0; j < nr_expr_variety; ++j )
         {
             concatenate_exprs[j] = multi_exprs[j]->at(i);
         }
