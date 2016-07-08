@@ -415,5 +415,40 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
     std::swap(pred_out_seq, tmp_pred_out);
 }
 
+/* CWS Simple Bare output */
+
+CWSSimpleBareOutput::CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim)
+    :SimpleBareOutput(m, input_dim, output_dim)
+{}
+
+void CWSSimpleBareOutput::build_output(const std::vector<cnn::expr::Expression> &input_expr_seq,
+    IndexSeq &predicted_seq)
+{
+    using std::swap;
+    size_t len = input_expr_seq.size();
+    if( 1 == len ) // Special Condition 
+    {
+        predicted_seq = { CWSTaggingSystem::STATIC_S_ID };
+        return ;
+    }
+    std::vector<Index> tmp_pred_out(len);
+    Index pre_tag_id = CWSTaggingSystem::STATIC_NONE_ID ;
+    for (size_t i = 0; i < len - 1; ++i)
+    {
+        cnn::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
+        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+
+        Index max_prob_tag_in_constrain = CWSTaggingSystem::static_select_tag_constrained(out_probs , i , pre_tag_id );
+        tmp_pred_out[i] = max_prob_tag_in_constrain ;
+        pre_tag_id = max_prob_tag_in_constrain ;
+    }
+    if( pre_tag_id == CWSTaggingSystem::STATIC_M_ID || 
+        pre_tag_id == CWSTaggingSystem::STATIC_B_ID )
+    { 
+        tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_E_ID ; 
+    }
+    else { tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_S_ID; }
+    std::swap(predicted_seq, tmp_pred_out);
+}
 
 } // end of namespace slnn

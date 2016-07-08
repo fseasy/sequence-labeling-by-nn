@@ -35,7 +35,7 @@ void LexiconFeature::build_lexicon()
         freq_list[idx++] = iter->second;
         total_freq += iter->second;
     }
-    sort(freq_list.begin(), freq_list.end(), std::greater<unsigned>());
+    std::sort(freq_list.begin(), freq_list.end(), std::greater<unsigned>());
     unsigned long long trunk_total_freq = total_freq * 0.9L;
     unsigned long long current_freq = 0;
     freq_threshold = 0;
