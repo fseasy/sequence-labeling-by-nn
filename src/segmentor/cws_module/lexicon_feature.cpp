@@ -96,7 +96,7 @@ void LexiconFeature::extract(const Seq &char_seq, LexiconFeatureDataSeq &lexicon
     swap(lexicon_feature_seq, tmp_lexicon_feature_seq);
 }
 
-std::string LexiconFeature::get_lexicon_info()
+std::string LexiconFeature::get_lexicon_info() const
 {
     std::ostringstream oss;
     oss << "lexicon size : " << lexicon.size() << " max word length : " << lexicon_word_max_len

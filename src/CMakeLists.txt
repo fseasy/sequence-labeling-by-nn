@@ -38,8 +38,6 @@ set(additional_base_modules
 set(context_module
     ${module_directory}/context_feature.h
     ${module_directory}/context_feature.cpp
-    ${module_directory}/context_feature_extractor.h
-    ${module_directory}/context_feature_extractor.cpp
     ${module_directory}/context_feature_layer.h
     ${module_directory}/context_feature_layer.cpp
 )

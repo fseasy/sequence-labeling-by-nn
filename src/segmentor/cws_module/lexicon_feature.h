@@ -79,7 +79,7 @@ public :
     void build_lexicon();
     void extract(const Seq &char_seq, LexiconFeatureDataSeq &lexicon_feature_seq) const ;
 
-    std::string get_lexicon_info();
+    std::string get_lexicon_info() const;
 
     template<typename Archive>
     void serialize(Archive &ar, unsigned version);

@@ -22,7 +22,7 @@ public :
     static const std::string StrOfReplaceNumber ;
     static const size_t LenStrOfRepalceNumber ;
     static constexpr size_t PostaggerContextSize = 4 ;
-    using POSContextFeature = ContextFeature<PostaggerContextSize>;
+    using POSContextFeature = ContextFeatureOld<PostaggerContextSize>;
 
 public:
     Input1MLPModel();
