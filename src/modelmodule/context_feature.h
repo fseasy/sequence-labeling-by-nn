@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <sstream>
+#include <iostream>
 #include "cnn/cnn.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
@@ -20,17 +21,18 @@ public:
     // WHY use default ? because in our program structure , the param will be known after the initialization 
     ContextFeature(DictWrapper &dict_wrapper, unsigned context_left_size=0, unsigned context_right_size=0, unsigned word_dim=0);
     void set_parameters(unsigned context_left_size, unsigned context_right_size, unsigned word_dim);
-    unsigned get_context_feature_dim() const { return context_size * word_dim; }
+    unsigned get_feature_dim() const { return context_size * word_dim; }
     
     void extract(const IndexSeq &seq, ContextFeatureDataSeq &context_feature_seq);
     void random_replace_with_unk(const ContextFeatureData &context_feature_data, ContextFeatureData &replaced_feature_data);
     void random_replace_with_unk(const ContextFeatureDataSeq &context_feature_data_seq, 
         ContextFeatureDataSeq &replaced_feature_data_seq);
-    std::string get_context_feature_info() const;
-
+    std::string get_feature_info() const;
     template<typename Archive>
     void serialize(Archive &ar, unsigned version);
 
+    // DEBUG
+    void debug_context_feature_seq(const ContextFeatureDataSeq &context_feature_data_seq);
 private:
     void replace_wordid_with_unk(Index &wordId);
 
@@ -46,7 +48,7 @@ private:
 inline
 void ContextFeature::replace_wordid_with_unk(Index &wordid)
 {
-    if( WordSOSId != wordid || WordEOSId != wordid ){ wordid = rwrapper.ConvertProbability(wordid); }
+    if( WordSOSId != wordid && WordEOSId != wordid ){ wordid = rwrapper.ConvertProbability(wordid); }
 }
 
 inline 

@@ -21,11 +21,11 @@ void ContextFeature::set_parameters(unsigned context_left_size, unsigned context
     this->word_dim = word_dim;
 }
 
-std::string ContextFeature::get_context_feature_info() const 
+std::string ContextFeature::get_feature_info() const 
 {
     std::ostringstream oss;
     oss << "context size : " << context_size << ", left size : " << context_left_size << ", right size: " << context_right_size
-        << "totally context feature dim : " << get_context_feature_dim();
+        << ", totally context feature dim : " << get_feature_dim();
     return oss.str();
 }
 
@@ -53,6 +53,21 @@ void ContextFeature::extract(const IndexSeq &seq, ContextFeatureDataSeq &context
         }
     }
     swap(context_feature_data_seq, tmp_feature_data_seq);
+}
+
+void ContextFeature::debug_context_feature_seq(const ContextFeatureDataSeq &context_feature_data_seq)
+{
+    std::cerr << "context feature output for DEBUG.\n";
+    for( const ContextFeatureData &fdata : context_feature_data_seq )
+    {
+        assert(fdata.size() > 0);
+        std::cerr << fdata[0];
+        for( size_t i = 1; i < fdata.size(); ++i )
+        {
+            std::cerr << " " << fdata[i];
+        }
+        std::cerr << "\n";
+    }
 }
 
 } // end of namespace slnn

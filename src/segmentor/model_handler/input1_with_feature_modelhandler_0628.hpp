@@ -23,6 +23,7 @@ public :
     CWSInput1WithFeatureModelHandler() ;
     virtual ~CWSInput1WithFeatureModelHandler() ;
 
+    void set_model_param_before_reading_training_data(const boost::program_options::variables_map & varmap);
 
     // Reading data 
     void read_training_data(std::istream &is,
@@ -39,7 +40,7 @@ public :
         std::vector<CWSFeatureDataSeq> &feature_data_seq);
 
     // After Reading Training data
-    void set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap);
+    void set_model_param_after_reading_training_data();
     void build_model();
 
     // Train & devel & predict
@@ -84,6 +85,13 @@ template <typename RNNDerived, typename I1Model>
 CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::~CWSInput1WithFeatureModelHandler()
 {
     delete i1m ;
+}
+
+template <typename RNNDerived, typename I1Model>
+void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::
+set_model_param_before_reading_training_data(const boost::program_options::variables_map &varmap)
+{
+    i1m->set_model_param_from_outer(varmap) ;
 }
 
 template <typename RNNDerived, typename I1Model>
@@ -201,9 +209,9 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::read_test_data(std::
 
 template <typename RNNDerived, typename I1Model>
 void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::
-set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap)
+set_model_param_after_reading_training_data()
 {
-    i1m->set_model_param(varmap) ;
+    i1m->set_model_param_from_inner() ;
 }
 
 template <typename RNNDerived, typename I1Model>
@@ -263,8 +271,9 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
                 cnn::ComputationGraph cg ;
                 IndexSeq replaced_sent;
-                i1m->replace_word_with_unk(sent, replaced_sent);
-                i1m->build_loss(cg, replaced_sent, cws_feature_seq, tag_seq);
+                CWSFeatureDataSeq replaced_feature_data;
+                i1m->replace_word_with_unk(sent, cws_feature_seq, replaced_sent, replaced_feature_data);
+                i1m->build_loss(cg, replaced_sent, replaced_feature_data, tag_seq);
                 cnn::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);

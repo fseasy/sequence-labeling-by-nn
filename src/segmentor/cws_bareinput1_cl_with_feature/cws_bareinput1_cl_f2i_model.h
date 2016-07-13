@@ -22,7 +22,6 @@ public:
     CWSBareInput1CLF2IModel() ;
     ~CWSBareInput1CLF2IModel() ;
 
-    void set_model_param(const boost::program_options::variables_map &var_map) override;
     void build_model_structure() override;
     void print_model_info() override;
 };
@@ -36,17 +35,11 @@ template <typename RNNDerived>
 CWSBareInput1CLF2IModel<RNNDerived>::~CWSBareInput1CLF2IModel(){}
 
 template <typename RNNDerived>
-void CWSBareInput1CLF2IModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
-{
-    CWSBareInput1F2IModel<RNNDerived>::set_model_param(var_map);
-}
-
-template <typename RNNDerived>
 void CWSBareInput1CLF2IModel<RNNDerived>::build_model_structure()
 {
     this->m = new cnn::Model() ;
     this->word_expr_layer = new Index2ExprLayer(this->m, this->word_dict_size, this->word_embedding_dim);
-    this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature);
+    this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature, this->word_expr_layer->get_lookup_param());
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, this->rnn_x_dim, this->rnn_h_dim, 
         this->dropout_rate) ;
     this->output_layer = new CWSSimpleBareOutput(this->m, this->softmax_layer_input_dim, this->output_dim) ;

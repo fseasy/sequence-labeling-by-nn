@@ -24,13 +24,6 @@ private:
     cnn::expr::Expression word_eos_expr;
 };
 
-ContextFeatureLayer::ContextFeatureLayer(cnn::Model *m, cnn::LookupParameters *word_lookup_param)
-    :word_lookup_param(word_lookup_param),
-    pcg(nullptr),
-    word_sos_param(m->add_parameters(word_lookup_param->dim)),
-    word_eos_param(m->add_parameters(word_lookup_param->dim))
-{}
-
 inline 
 void ContextFeatureLayer::new_graph(cnn::ComputationGraph &cg)
 {

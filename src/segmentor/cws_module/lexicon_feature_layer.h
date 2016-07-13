@@ -13,6 +13,7 @@ public :
         unsigned end_here_dict_size, unsigned end_here_dim);
     LexiconFeatureLayer(cnn::Model *cnn_m, const LexiconFeature &lexicon_feature);
     void new_graph(cnn::ComputationGraph &cg);
+    cnn::expr::Expression build_lexicon_feature(const LexiconFeatureData &lexicon_feature);
     void build_lexicon_feature(const LexiconFeatureDataSeq &lexicon_feature_seq,
         std::vector<cnn::expr::Expression> &lexicon_feature_exprs);
 
@@ -29,6 +30,16 @@ void LexiconFeatureLayer::new_graph(cnn::ComputationGraph &cg)
     pcg = &cg;
 }
 
+inline 
+cnn::expr::Expression LexiconFeatureLayer::build_lexicon_feature(const LexiconFeatureData &lexicon_feature_data)
+{
+    return cnn::expr::concatenate({
+        cnn::expr::lookup(*pcg, start_here_lookup_param, lexicon_feature_data.get_start_here_feature_index()),
+        cnn::expr::lookup(*pcg, pass_here_lookup_param, lexicon_feature_data.get_pass_here_feature_index()),
+        cnn::expr::lookup(*pcg, end_here_lookup_param, lexicon_feature_data.get_end_here_feature_index())
+    });
+}
+
 inline
 void LexiconFeatureLayer::build_lexicon_feature(const LexiconFeatureDataSeq &lexicon_feature_seq,
     std::vector<cnn::expr::Expression> &lexicon_feature_exprs)
@@ -38,12 +49,7 @@ void LexiconFeatureLayer::build_lexicon_feature(const LexiconFeatureDataSeq &lex
     std::vector<cnn::expr::Expression> tmp_lexicon_feature_exprs(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        const LexiconFeatureData &fdata = lexicon_feature_seq.at(i);
-        tmp_lexicon_feature_exprs[i] = cnn::expr::concatenate({
-            cnn::expr::lookup(*pcg, start_here_lookup_param, fdata.get_start_here_feature_index()),
-            cnn::expr::lookup(*pcg, pass_here_lookup_param, fdata.get_pass_here_feature_index()),
-            cnn::expr::lookup(*pcg, end_here_lookup_param, fdata.get_end_here_feature_index())
-        });
+        tmp_lexicon_feature_exprs[i] = build_lexicon_feature(lexicon_feature_seq[i]);
     }
     swap(lexicon_feature_exprs, tmp_lexicon_feature_exprs);
 }

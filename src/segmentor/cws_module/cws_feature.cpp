@@ -23,8 +23,8 @@ void CWSFeature::extract(const Seq &char_seq, const IndexSeq &index_char_seq, CW
 std::string CWSFeature::get_feature_info() const
 {
     std::ostringstream oss;
-    oss << "lexicon feature info : \n" << lexicon_feature.get_lexicon_info() << "\n"
-        << "context feature info : \n" << context_feature.get_context_feature_info() ;
+    oss << "lexicon feature info : \n" << lexicon_feature.get_feature_info() << "\n"
+        << "context feature info : \n" << context_feature.get_feature_info() ;
     return oss.str();
 }
 

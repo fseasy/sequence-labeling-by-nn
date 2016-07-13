@@ -3,6 +3,7 @@
 
 #include "cws_feature.h"
 #include "lexicon_feature_layer.h"
+#include "modelmodule/context_feature_layer.h"
 
 namespace slnn{
 
@@ -11,25 +12,41 @@ class CWSFeatureLayer
 public:
     CWSFeatureLayer(cnn::Model *cnn_m, unsigned start_here_dict_size, unsigned start_here_dim,
         unsigned pass_here_dict_size, unsigned pass_here_dim,
-        unsigned end_here_dict_size, unsigned end_here_dim);
-    CWSFeatureLayer(cnn::Model *cnn_m, const CWSFeature &cws_feature);
+        unsigned end_here_dict_size, unsigned end_here_dim,
+        cnn::LookupParameters *word_lookup_param);
+    CWSFeatureLayer(cnn::Model *cnn_m, const CWSFeature &cws_feature, cnn::LookupParameters *word_lookup_param);
     void new_graph(cnn::ComputationGraph &cg);
     void build_cws_feature(const CWSFeatureDataSeq &cws_feature_data_seq, std::vector<cnn::expr::Expression> &cws_feature_exprs);
 
 private:
     LexiconFeatureLayer lexicon_feature_layer;
+    ContextFeatureLayer context_feature_layer;
 };
 
 inline
 void CWSFeatureLayer::new_graph(cnn::ComputationGraph &cg)
 {
     lexicon_feature_layer.new_graph(cg);
+    context_feature_layer.new_graph(cg);
 }
 
 inline
 void CWSFeatureLayer::build_cws_feature(const CWSFeatureDataSeq &cws_feature_data_seq, std::vector<cnn::expr::Expression> &cws_feature_exprs)
 {
+    using std::swap;
     lexicon_feature_layer.build_lexicon_feature(cws_feature_data_seq.get_lexicon_feature_data_seq(), cws_feature_exprs);
+    size_t seq_len = cws_feature_data_seq.size();
+    std::vector<cnn::expr::Expression> tmp_cws_exprs(seq_len);
+    const LexiconFeatureDataSeq &lexicon_data_seq = cws_feature_data_seq.get_lexicon_feature_data_seq();
+    const ContextFeatureDataSeq &context_data_seq = cws_feature_data_seq.get_context_feature_data_seq();
+    for( size_t i = 0; i < seq_len; ++i )
+    {
+        tmp_cws_exprs[i] = cnn::expr::concatenate({
+            lexicon_feature_layer.build_lexicon_feature(lexicon_data_seq[i]),
+            context_feature_layer.build_feature_expr(context_data_seq[i])
+        });
+    }
+    swap(cws_feature_exprs, tmp_cws_exprs);
 }
 
 
