@@ -22,11 +22,11 @@ POSInput1MLPWithTagModel:: ~POSInput1MLPWithTagModel()
     delete output_layer;
 }
 
-void POSInput1MLPWithTagModel::set_model_param(const boost::program_options::variables_map &var_map)
+void POSInput1MLPWithTagModel::set_model_param_from_outer(const boost::program_options::variables_map &var_map)
 {
     nonlinear_func_indicate = var_map["mlp_nonlinear_func"].as<std::string>();
     tag_embedding_dim = var_map["tag_embedding_dim"].as<unsigned>();
-    Input1MLPModel::set_model_param(var_map);
+    Input1MLPModel::set_model_param_from_outer(var_map);
     input_dim += tag_embedding_dim; // update input dim
 }
 
@@ -39,7 +39,7 @@ void POSInput1MLPWithTagModel::build_model_structure()
     word_expr_layer = new Index2ExprLayer(m, word_dict_size, word_embedding_dim);
     tag_expr_layer = new ShiftedIndex2ExprLayer(m, output_dim, tag_embedding_dim, ShiftedIndex2ExprLayer::RightShift, 1);
     pos_feature_layer = new POSFeatureLayer(m, pos_feature);
-    pos_context_feature_layer = new ContextFeatureLayer<POSContextFeature::ContextSize>(m, word_expr_layer->get_lookup_param());
+    pos_context_feature_layer = new ContextFeatureLayer(m, word_expr_layer->get_lookup_param());
     mlp_hidden_layer = new MLPHiddenLayer(m, input_dim, mlp_hidden_dim_list, dropout_rate, nonlinear_func);
     output_layer = new SoftmaxLayer(m, mlp_hidden_dim_list.back(), output_dim);
 }
@@ -55,14 +55,14 @@ void POSInput1MLPWithTagModel::print_model_info()
         << "feature info : \n"
         << pos_feature.get_feature_info() << "\n"
         << "context info : \n"
-        << context_feature.get_context_info();
+        << context_feature.get_feature_info();
 }
 
 
 cnn::expr::Expression  
 POSInput1MLPWithTagModel::build_loss(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
     const IndexSeq &gold_seq)
 {
@@ -95,7 +95,7 @@ POSInput1MLPWithTagModel::build_loss(cnn::ComputationGraph &cg,
 void 
 POSInput1MLPWithTagModel::predict(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
     IndexSeq &pred_seq)
 {

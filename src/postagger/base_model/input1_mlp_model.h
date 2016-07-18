@@ -6,7 +6,6 @@
 #include "cnn/cnn.h"
 
 #include "modelmodule/context_feature.h"
-#include "modelmodule/context_feature_extractor.h"
 #include "modelmodule/context_feature_layer.h"
 #include "postagger/postagger_module/pos_feature.h"
 #include "postagger/postagger_module/pos_feature_extractor.h"
@@ -21,8 +20,6 @@ public :
     static const std::string UNK_STR;
     static const std::string StrOfReplaceNumber ;
     static const size_t LenStrOfRepalceNumber ;
-    static constexpr size_t PostaggerContextSize = 4 ;
-    using POSContextFeature = ContextFeatureOld<PostaggerContextSize>;
 
 public:
     Input1MLPModel();
@@ -41,26 +38,27 @@ public:
 
 
     // dirived class should override
-    virtual void set_model_param(const boost::program_options::variables_map &var_map) ;
+    virtual void set_model_param_from_outer(const boost::program_options::variables_map &var_map) ;
+    virtual void set_model_param_from_inner();
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
     // process input and build dict
     void input_seq2index_seq(const Seq &sent, const Seq &postag_seq, 
         IndexSeq &index_sent, IndexSeq &index_postag_seq, 
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        ContextFeatureDataSeq &context_feature_gp_seq,
         POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq); // for annotated data
 
     void input_seq2index_seq(const Seq &sent, 
         IndexSeq &index_sent, 
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        ContextFeatureDataSeq &context_feature_gp_seq,
         POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq); // for input data
 
     void replace_word_with_unk(const IndexSeq &sent, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq,
         IndexSeq &replaced_sent,
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_replaced_feature_gp_seq,
+        ContextFeatureDataSeq &context_replaced_feature_gp_seq,
         POSFeature::POSFeatureIndexGroupSeq &replaced_feature_gp_seq);
     
     // output translate
@@ -69,12 +67,12 @@ public:
     // training and predict
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq)  = 0 ;
     virtual void predict(cnn::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         IndexSeq &pred_seq) = 0 ;
 
@@ -97,7 +95,7 @@ protected:
     DictWrapper word_dict_wrapper;
 public:
     POSFeature pos_feature; // also as parameters
-    POSContextFeature context_feature;
+    ContextFeature context_feature;
 
 public :
     unsigned word_embedding_dim,
@@ -107,8 +105,6 @@ public :
     std::vector<unsigned> mlp_hidden_dim_list;
     cnn::real dropout_rate;
 };
-
-using POSContextFeature = Input1MLPModel::POSContextFeature;
 
 /*********** inline funtion implemantation **********/
 
@@ -138,10 +134,10 @@ void Input1MLPModel::freeze_dict()
 
 inline
 void Input1MLPModel::replace_word_with_unk(const IndexSeq &sent,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq,
     IndexSeq &replaced_sent, 
-    POSContextFeature::ContextFeatureIndexGroupSeq &replaced_context_feature_gp_seq,
+    ContextFeatureDataSeq &replaced_context_feature_gp_seq,
     POSFeature::POSFeatureIndexGroupSeq &replaced_feature_gp_seq)
 {
     using std::swap;
@@ -153,7 +149,7 @@ void Input1MLPModel::replace_word_with_unk(const IndexSeq &sent,
     }
     swap(replaced_sent, tmp_rep_sent);
     pos_feature.do_repalce_feature_with_unk_in_copy(feature_gp_seq, replaced_feature_gp_seq);
-    context_feature.replace_feature_index_group_seq_with_unk(context_feature_gp_seq, replaced_context_feature_gp_seq);
+    context_feature.random_replace_with_unk(context_feature_gp_seq, replaced_context_feature_gp_seq);
 }
 
 inline

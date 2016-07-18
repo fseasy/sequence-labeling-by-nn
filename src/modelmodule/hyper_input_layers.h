@@ -13,6 +13,7 @@ struct Input1
     cnn::ComputationGraph *pcg;
     Input1(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim);
     ~Input1();
+    cnn::LookupParameters *get_lookup_param(){ return word_lookup_param; };
     void new_graph(cnn::ComputationGraph &cg);
     void build_inputs(const IndexSeq &sent , std::vector<cnn::expr::Expression> &input_exprs);
 };
@@ -26,6 +27,7 @@ struct Input1WithFeature
     Input1WithFeature(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim,
         unsigned feature_embedding_dim, unsigned merge_out_dim,
         NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    cnn::LookupParameters *get_lookup_param(){ return word_lookup_param; }
     void new_graph(cnn::ComputationGraph &cg);
     void build_inputs(const IndexSeq &sent , const std::vector<cnn::expr::Expression> &feature_exprs,
         std::vector<cnn::expr::Expression> &input_exprs);

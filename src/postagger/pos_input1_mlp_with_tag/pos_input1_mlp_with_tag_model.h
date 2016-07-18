@@ -16,18 +16,18 @@ public :
     POSInput1MLPWithTagModel(const POSInput1MLPWithTagModel &) = delete ;
     POSInput1MLPWithTagModel &operator=(const POSInput1MLPWithTagModel &) = delete ;
 
-    void set_model_param(const boost::program_options::variables_map &var_map) override;
+    void set_model_param_from_outer(const boost::program_options::variables_map &var_map) override;
     void build_model_structure() override;
     void print_model_info() override;
 
     cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq)  override ;
     void predict(cnn::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         IndexSeq &pred_seq) override ;
 
@@ -38,7 +38,7 @@ private :
     Index2ExprLayer *word_expr_layer;
     ShiftedIndex2ExprLayer *tag_expr_layer;
     POSFeatureLayer *pos_feature_layer;
-    ContextFeatureLayer<POSContextFeature::ContextSize> *pos_context_feature_layer;
+    ContextFeatureLayer *pos_context_feature_layer;
     MLPHiddenLayer *mlp_hidden_layer;
     SoftmaxLayer *output_layer;
 

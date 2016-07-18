@@ -22,7 +22,6 @@ public:
     CWSInput1CLF2OModel();
     ~CWSInput1CLF2OModel() ;
 
-    void set_model_param(const boost::program_options::variables_map &var_map) override;
     void build_model_structure() override;
     void print_model_info() override;
 };
@@ -36,17 +35,11 @@ template <typename RNNDerived>
 CWSInput1CLF2OModel<RNNDerived>::~CWSInput1CLF2OModel(){}
 
 template <typename RNNDerived>
-void CWSInput1CLF2OModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
-{
-    CWSInput1F2OModel<RNNDerived>::set_model_param(var_map);
-}
-
-template <typename RNNDerived>
 void CWSInput1CLF2OModel<RNNDerived>::build_model_structure()
 {
     this->m = new cnn::Model() ;
     this->input_layer = new Input1(this->m, this->word_dict_size, this->word_embedding_dim) ;
-    this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature);
+    this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature, this->input_layer->get_lookup_param());
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, this->word_embedding_dim, this->rnn_h_dim, 
         this->dropout_rate) ;
     this->output_layer = new CWSSimpleOutputWithFeature(this->m, this->rnn_h_dim, this->rnn_h_dim, this->cws_feature.get_feature_dim(),

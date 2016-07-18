@@ -25,8 +25,9 @@ public:
     CWSInput1F2IModel(const CWSInput1F2IModel &) = delete;
     CWSInput1F2IModel& operator()(const CWSInput1F2IModel&) = delete;
 
-    virtual void set_model_param(const boost::program_options::variables_map &var_map) override;
-    
+    virtual void set_model_param_from_outer(const boost::program_options::variables_map &var_map) override;
+    virtual void set_model_param_from_inner() override;
+
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
@@ -86,10 +87,8 @@ CWSInput1F2IModel<RNNDerived>::~CWSInput1F2IModel()
 }
 
 template <typename RNNDerived>
-void CWSInput1F2IModel<RNNDerived>::set_model_param(const boost::program_options::variables_map &var_map)
+void CWSInput1F2IModel<RNNDerived>::set_model_param_from_outer(const boost::program_options::variables_map &var_map)
 {
-    assert(this->word_dict.is_frozen()) ;
-
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     this->set_replace_threshold(replace_freq_threshold, replace_prob_threshold);
@@ -105,8 +104,16 @@ void CWSInput1F2IModel<RNNDerived>::set_model_param(const boost::program_options
     unsigned start_here_embedding_dim = var_map["start_here_embedding_dim"].as<unsigned>();
     unsigned pass_here_embedding_dim = var_map["pass_here_embedding_dim"].as<unsigned>();
     unsigned end_here_embedding_dim = var_map["end_here_embedding_dim"].as<unsigned>();
-    this->cws_feature.set_dim(start_here_embedding_dim, pass_here_embedding_dim, end_here_embedding_dim);
-    
+    unsigned context_left_size = var_map["context_left_size"].as<unsigned>();
+    unsigned context_right_size = var_map["context_right_size"].as<unsigned>();
+    this->cws_feature.set_feature_parameters(start_here_embedding_dim, pass_here_embedding_dim, end_here_embedding_dim,
+        context_left_size, context_right_size, word_embedding_dim);
+}
+
+template <typename RNNDerived>
+void CWSInput1F2IModel<RNNDerived>::set_model_param_from_inner()
+{
+    assert(this->is_dict_frozen());
     word_dict_size = this->get_word_dict_size() ;
     output_dim = this->get_tag_dict_size() ;
 }
