@@ -137,6 +137,6 @@ set(pos_common_libs
 
 #add_subdirectory(pos_bareinput1_classification_with_feature_no_merge)
 
-#add_subdirectory(pos_input1_mlp_without_tag)
-#add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)
+add_subdirectory(pos_input1_mlp_without_tag)
+add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)
 add_subdirectory(pos_input1_mlp_with_tag)

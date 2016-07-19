@@ -111,6 +111,7 @@ struct BareInput1
     unsigned nr_exprs;
     std::vector<cnn::expr::Expression> exprs;
     BareInput1(cnn::Model *m, unsigned vocabulary_size, unsigned word_embedding_dim, unsigned nr_extra_feature_exprs);
+    cnn::LookupParameters *get_lookup_param(){ return word_lookup_param; }
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
         build_input(Index word_idx, const std::vector<cnn::expr::Expression> &extra_feature_exprs);

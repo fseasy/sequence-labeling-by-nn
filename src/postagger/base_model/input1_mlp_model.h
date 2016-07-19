@@ -171,7 +171,7 @@ void Input1MLPModel::save(Archive &ar, unsigned version) const
         &input_dim &output_dim
         &mlp_hidden_dim_list
         &dropout_rate;
-    ar &word_dict &postag_dict &pos_feature;
+    ar &word_dict &postag_dict &pos_feature &context_feature;
     ar &*m;
 }
 
@@ -182,7 +182,7 @@ void Input1MLPModel::load(Archive &ar, unsigned version)
         &input_dim &output_dim
         &mlp_hidden_dim_list
         &dropout_rate;
-    ar &word_dict &postag_dict &pos_feature;
+    ar &word_dict &postag_dict &pos_feature &context_feature;
     assert(word_dict.size() == word_dict_size && postag_dict.size() == output_dim);
     build_model_structure();
     ar &*m;

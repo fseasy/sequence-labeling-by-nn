@@ -12,7 +12,6 @@ namespace slnn{
 const string Input1MLPModelNoFeature::UNK_STR = "unk_str";
 const string Input1MLPModelNoFeature::StrOfReplaceNumber = "##";
 const size_t Input1MLPModelNoFeature::LenStrOfRepalceNumber = 2;
-constexpr size_t Input1MLPModelNoFeature::PostaggerContextSize ;
 
 Input1MLPModelNoFeature::Input1MLPModelNoFeature() 
     :m(nullptr),
@@ -25,10 +24,8 @@ Input1MLPModelNoFeature::~Input1MLPModelNoFeature()
     delete m;
 }
 
-void Input1MLPModelNoFeature::set_model_param(const boost::program_options::variables_map &var_map)
+void Input1MLPModelNoFeature::set_model_param_from_outer(const boost::program_options::variables_map &var_map)
 {
-    assert(word_dict.is_frozen() && postag_dict.is_frozen() ) ;
-
     unsigned replace_freq_threshold = var_map["replace_freq_threshold"].as<unsigned>();
     float replace_prob_threshold = var_map["replace_prob_threshold"].as<float>();
     set_replace_threshold(replace_freq_threshold, replace_prob_threshold);
@@ -51,20 +48,25 @@ void Input1MLPModelNoFeature::set_model_param(const boost::program_options::vari
         cerr << "bad argument for 'mlp_hidden_dim_list' : " << var_map["mlp_hidden_dim_list"].as<string>();
         throw e ;
     }
-
     dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    unsigned context_left_size = var_map["context_left_size"].as<unsigned>();
+    unsigned context_right_size = var_map["context_right_size"].as<unsigned>();
+    this->context_feature.set_parameters(context_left_size, context_right_size, word_embedding_dim);
+    input_dim = word_embedding_dim + context_feature.get_feature_dim();
+}
 
-   
+void Input1MLPModelNoFeature::set_model_param_from_inner()
+{
+    assert(is_dict_frozen());
     word_dict_size = word_dict.size() ;
     output_dim = postag_dict.size() ;
-    input_dim = word_embedding_dim + context_feature.calc_context_feature_dim(word_embedding_dim);
 }
 
 void Input1MLPModelNoFeature::input_seq2index_seq(const Seq &sent, 
     const Seq &postag_seq,
     IndexSeq &index_sent, 
     IndexSeq &index_postag_seq,
-    POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq)
+    ContextFeatureDataSeq &context_feature_gp_seq)
 {
     using std::swap;
     assert(sent.size() == postag_seq.size());
@@ -78,7 +80,7 @@ void Input1MLPModelNoFeature::input_seq2index_seq(const Seq &sent,
         );
         tmp_postag_index_seq[i] = postag_dict.Convert(postag_seq[i]);
     }
-    ContextFeatureExtractor::extract<PostaggerContextSize>(tmp_sent_index_seq, context_feature_gp_seq);
+    context_feature.extract(tmp_sent_index_seq, context_feature_gp_seq);
 
     swap(index_sent, tmp_sent_index_seq);
     swap(index_postag_seq, tmp_postag_index_seq);
@@ -86,7 +88,7 @@ void Input1MLPModelNoFeature::input_seq2index_seq(const Seq &sent,
 
 void Input1MLPModelNoFeature::input_seq2index_seq(const Seq &sent, 
     IndexSeq &index_sent, 
-    POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq)
+    ContextFeatureDataSeq &context_feature_gp_seq)
 {
     using std::swap;
     size_t seq_len = sent.size();
@@ -97,7 +99,7 @@ void Input1MLPModelNoFeature::input_seq2index_seq(const Seq &sent,
             UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber)
         );
     }
-    ContextFeatureExtractor::extract<PostaggerContextSize>(tmp_sent_index_seq, context_feature_gp_seq);
+    context_feature.extract(tmp_sent_index_seq, context_feature_gp_seq);
     
     swap(index_sent, tmp_sent_index_seq);
 }
