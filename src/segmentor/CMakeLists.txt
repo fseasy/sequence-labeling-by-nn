@@ -86,6 +86,8 @@ set(set_cws_feature_dependencies
     ${cws_module_dir}/lexicon_feature.cpp
     ${cws_module_dir}/lexicon_feature_layer.h
     ${cws_module_dir}/lexicon_feature_layer.cpp
+    ${cws_module_dir}/type_feature.h
+    ${cws_module_dir}/type_feature.cpp
 )
 
 # CWS Reader
