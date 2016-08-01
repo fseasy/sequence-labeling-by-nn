@@ -3,6 +3,7 @@
 
 #include "lexicon_feature.h"
 #include "modelmodule/context_feature.h"
+#include "type_feature.h"
 
 namespace slnn{
 
@@ -10,11 +11,14 @@ struct CWSFeatureDataSeq
 {
     LexiconFeatureDataSeq lexicon_feature_data_seq;
     ContextFeatureDataSeq context_feature_data_seq;
+    CharTypeFeatureDataSeq chartype_feature_data_seq;
     size_t size() const { return lexicon_feature_data_seq.size(); }
     const LexiconFeatureDataSeq& get_lexicon_feature_data_seq() const { return lexicon_feature_data_seq; };
     LexiconFeatureDataSeq& get_lexicon_feature_data_seq(){ return lexicon_feature_data_seq; }
     const ContextFeatureDataSeq& get_context_feature_data_seq() const { return context_feature_data_seq; }
     ContextFeatureDataSeq& get_context_feature_data_seq(){ return context_feature_data_seq; }
+    const CharTypeFeatureDataSeq& get_chartype_feature_data_seq() const { return chartype_feature_data_seq; }
+    CharTypeFeatureDataSeq& get_chartype_feature_data_seq(){ return chartype_feature_data_seq; }
 };
 
 class CWSFeatureLayer;
@@ -50,6 +54,7 @@ public:
 private :
     LexiconFeature lexicon_feature;
     ContextFeature context_feature;
+    CharTypeFeature chartype_feature;
 };
 
 
@@ -68,7 +73,7 @@ void CWSFeature::random_replace_with_unk(const CWSFeatureDataSeq &origin_cws_fea
 template <typename Archive>
 void CWSFeature::serialize(Archive &ar, unsigned version)
 {
-    ar & lexicon_feature & context_feature;
+    ar & lexicon_feature & context_feature &chartype_feature;
 }
 
 } // end of namespace slnn

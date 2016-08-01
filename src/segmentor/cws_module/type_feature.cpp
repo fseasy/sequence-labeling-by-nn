@@ -16,7 +16,7 @@ namespace slnn_char_type{
 捌, 玖, 拾, 佰, 仟, 
 */
 
-unordered_set<string> Utf8CharTypeDict::DigitTypeCharDict = 
+const unordered_set<string> Utf8CharTypeDict::DigitTypeCharDict = 
 {
     "0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "\xef\xbc\x90", "\xef\xbc\x91", "\xef\xbc\x92", "\xef\xbc\x93",
     "\xef\xbc\x94", "\xef\xbc\x95", "\xef\xbc\x96", "\xef\xbc\x97", "\xef\xbc\x98", "\xef\xbc\x99", "\xef\xbc\x90",
@@ -37,7 +37,7 @@ S, T, U, V, W, X, Y, Z, ａ, ｂ, ｃ, ｄ,
 Ｕ, Ｖ, Ｗ, Ｘ, Ｙ, Ｚ
 */
 
-unordered_set<string> Utf8CharTypeDict::LetterTypeCharDict = 
+const unordered_set<string> Utf8CharTypeDict::LetterTypeCharDict = 
 {
     "a", "b", "c", "d", "e", "f", "g", "h", "i", "j", "k", "l", "m", "n", "o", "p", "q", "r", "s", "t", "u", "v", 
     "w", "x", "y", "z", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M", "N", "O", "P", "Q", "R",
@@ -68,7 +68,7 @@ unordered_set<string> Utf8CharTypeDict::LetterTypeCharDict =
 _, ¯, ￣, ﹋, ﹉, ﹊, ˋ, ︴,
 ¿, ˇ, 
 */
-unordered_set<string> Utf8CharTypeDict::PuncTypeCharDict = 
+const unordered_set<string> Utf8CharTypeDict::PuncTypeCharDict = 
 {
     "\xef\xbc\x8c", "\xe3\x80\x82", "\xef\xbc\x9f", "\xef\xbc\x81", "\xef\xbc\x9a", "\xef\xbc\x9b", "\xe3\x80\x81", 
     "\xe2\x80\xa6", "\xe2\x80\xa6", "\xef\xbd\x9e", "\xef\xbc\x86", "\xef\xbc\xa0", "\xef\xbc\x83", ",", ".", "?", 
