@@ -15,9 +15,9 @@ private:
     static const std::unordered_set<std::string> PuncTypeCharDict;
     static const std::unordered_set<std::string> LetterTypeCharDict;
 public:
-    bool isDigit(const std::string& u8char) const { return DigitTypeCharDict.count(u8char); }
-    bool isPunc(const std::string& u8char) const { return PuncTypeCharDict.count(u8char); }
-    bool isLetter(const std::string& u8char) const { return LetterTypeCharDict.count(u8char); }
+    bool isDigit(const std::string& u8char) const { return DigitTypeCharDict.count(u8char) > 0; }
+    bool isPunc(const std::string& u8char) const { return PuncTypeCharDict.count(u8char) > 0; }
+    bool isLetter(const std::string& u8char) const { return LetterTypeCharDict.count(u8char) > 0; }
 };
 
 } // end of namespcae slnn_char_type 
@@ -44,6 +44,7 @@ public :
     constexpr CharTypeFeature(unsigned feature_dim = 3) : feature_dim(feature_dim){};
     void extract(const Seq &char_seq, IndexSeq &chartype_feature_seq) const;
     unsigned get_feature_dim() const { return feature_dim; }
+    std::string get_feature_info() const;
     void set_dim(unsigned feature_dim){ this->feature_dim = feature_dim; }
 
     template<typename Archive>
@@ -67,6 +68,15 @@ void CharTypeFeature::extract(const Seq &char_seq, IndexSeq &chartype_feature_se
         else { tmp_feature_seq[i] = DefaultType(); }
     }
     swap(chartype_feature_seq, tmp_feature_seq);
+}
+
+inline
+std::string CharTypeFeature::get_feature_info() const
+{
+    std::ostringstream oss;
+    oss << "chartype category number : " << FeatureDictSize() << ", feature dim : "
+        << get_feature_dim() ;
+    return oss.str();
 }
 
 template<typename Archive>

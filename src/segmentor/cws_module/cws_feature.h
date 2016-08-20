@@ -31,8 +31,10 @@ public:
     CWSFeature(DictWrapper &word_dict_wrapper);
 
     void set_feature_parameters(unsigned lexicon_start_here_dim, unsigned lexicon_pass_here_dim, unsigned lexicon_end_here_dim,
-        unsigned context_left_size, unsigned context_right_size, unsigned word_embedding_dim);
-    unsigned get_feature_dim() const { return lexicon_feature.get_feature_dim() + context_feature.get_feature_dim(); };
+        unsigned context_left_size, unsigned context_right_size, unsigned word_embedding_dim,
+        unsigned chartype_dim);
+    unsigned get_feature_dim() const { return lexicon_feature.get_feature_dim() + context_feature.get_feature_dim()
+                                              + chartype_feature.get_feature_dim(); };
     
     void count_word_frequency(const Seq &word_seq){ lexicon_feature.count_word_frequency(word_seq); };
     void build_lexicon(){ lexicon_feature.build_lexicon(); };
@@ -67,6 +69,7 @@ void CWSFeature::random_replace_with_unk(const CWSFeatureDataSeq &origin_cws_fea
         tmp_data_seq.get_context_feature_data_seq());
     assert(tmp_data_seq.get_context_feature_data_seq().size() > 0);
     tmp_data_seq.get_lexicon_feature_data_seq() = origin_cws_feature_seq.get_lexicon_feature_data_seq();
+    tmp_data_seq.get_chartype_feature_data_seq() = origin_cws_feature_seq.get_chartype_feature_data_seq();
     swap(replaced_cws_feature_seq, tmp_data_seq);
 }
 
