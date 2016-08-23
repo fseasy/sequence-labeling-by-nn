@@ -12,10 +12,11 @@ struct CWSSimpleOutput : SimpleOutput
     // and add comstrained decoding when predict 
     CWSTaggingSystem &tag_sys ;
     CWSSimpleOutput(cnn::Model *m,
-                    unsigned input_dim1, unsigned input_dim2,
-                    unsigned hidden_dim, unsigned output_dim,
-                    CWSTaggingSystem &tag_sys,
-                    NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
+        unsigned input_dim1, unsigned input_dim2,
+        unsigned hidden_dim, unsigned output_dim,
+        CWSTaggingSystem &tag_sys,
+        cnn::real dropout_rate = 0.f,
+        NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
     void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
                       const std::vector<cnn::expr::Expression> &expr_cont2,
                       IndexSeq &pred_out_seq);
@@ -29,11 +30,12 @@ struct CWSPretagOutput : PretagOutput
 {
     CWSTaggingSystem &tag_sys ;
     CWSPretagOutput(cnn::Model *m,
-                    unsigned tag_embedding_dim,
-                    unsigned input_dim1, unsigned input_dim2,
-                    unsigned hidden_dim, unsigned output_dim,
-                    CWSTaggingSystem &tag_sys,
-                    NonLinearFunc *nonlinear_fun = &cnn::expr::rectify);
+        unsigned tag_embedding_dim,
+        unsigned input_dim1, unsigned input_dim2,
+        unsigned hidden_dim, unsigned output_dim,
+        CWSTaggingSystem &tag_sys,
+        cnn::real dropout_rate = 0.f,
+        NonLinearFunc *nonlinear_fun = &cnn::expr::rectify);
     void build_output(const std::vector<cnn::expr::Expression> &expr_1,
                       const std::vector<cnn::expr::Expression> &expr_2,
                       IndexSeq &pred_out_seq) ;
@@ -61,6 +63,41 @@ struct CWSCRFOutput : CRFOutput
                       const std::vector<cnn::expr::Expression> &expr_cont2,
                       IndexSeq &pred_seq) ;
 
+};
+
+
+struct CWSSimpleOutputWithFeature : SimpleOutputWithFeature
+{
+    CWSSimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+        unsigned hidden_dim, unsigned output_dim,
+        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
+    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        IndexSeq &pred_out_seq);
+};
+
+// After 0628, we abandon CWSTaggingSystem instance .
+// Have to write another one . 
+
+struct CWSSimpleOutputNew : SimpleOutput
+{
+    CWSSimpleOutputNew(cnn::Model *m,
+        unsigned input_dim1, unsigned input_dim2,
+        unsigned hidden_dim, unsigned output_dim,
+        cnn::real dropout_rate=0.f,
+        NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
+    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
+        const std::vector<cnn::expr::Expression> &expr_cont2,
+        IndexSeq &pred_out_seq) override ;
+
+};
+
+struct CWSSimpleBareOutput : public SimpleBareOutput
+{
+    CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim);
+    void build_output(const std::vector<cnn::expr::Expression> &input_expr_seq,
+        IndexSeq &predicted_seq) override;
 };
 
 

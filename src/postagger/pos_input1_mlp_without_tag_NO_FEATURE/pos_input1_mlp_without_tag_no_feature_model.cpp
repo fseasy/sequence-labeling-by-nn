@@ -18,18 +18,13 @@ Input1MLPWithoutTagNoFeatureModel:: ~Input1MLPWithoutTagNoFeatureModel()
     delete pos_context_feature_layer;
 }
 
-void Input1MLPWithoutTagNoFeatureModel::set_model_param(const boost::program_options::variables_map &var_map)
-{
-    Input1MLPModelNoFeature::set_model_param(var_map);
-}
-
 void Input1MLPWithoutTagNoFeatureModel::build_model_structure()
 {
     m = new cnn::Model();
     input_layer = new BareInput1(m, word_dict_size, word_embedding_dim, 1);
     mlp_hidden_layer = new MLPHiddenLayer(m, input_dim, mlp_hidden_dim_list, dropout_rate);
     output_layer = new SoftmaxLayer(m, mlp_hidden_dim_list.at(mlp_hidden_dim_list.size() - 1), output_dim);
-    pos_context_feature_layer = new ContextFeatureLayer<POSContextFeature::ContextSize>(m, input_layer->word_lookup_param);
+    pos_context_feature_layer = new ContextFeatureLayer(m, input_layer->word_lookup_param);
 }
 
 void Input1MLPWithoutTagNoFeatureModel::print_model_info()
@@ -40,14 +35,14 @@ void Input1MLPWithoutTagNoFeatureModel::print_model_info()
         << "mlp hidden dims : " << get_mlp_hidden_layer_dim_info() << "\n"
         << "output dim : " << output_dim << "\n"
         << "context info : \n"
-        << context_feature.get_context_info();
+        << context_feature.get_feature_info();
 }
 
 
 cnn::expr::Expression  
 Input1MLPWithoutTagNoFeatureModel::build_loss(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     const IndexSeq &gold_seq)
 {
     pos_context_feature_layer->new_graph(cg);
@@ -73,7 +68,7 @@ Input1MLPWithoutTagNoFeatureModel::build_loss(cnn::ComputationGraph &cg,
 void 
 Input1MLPWithoutTagNoFeatureModel::predict(cnn::ComputationGraph &cg,
     const IndexSeq &input_seq,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     IndexSeq &pred_seq)
 {
     pos_context_feature_layer->new_graph(cg);

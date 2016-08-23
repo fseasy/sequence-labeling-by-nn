@@ -41,6 +41,8 @@ int train_process(int argc, char *argv[], const string &program_name)
                 " if words frequency <= replace_freq_threshold , the word will"
                 " be replace in this probability")
         ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("context_left_size", po::value<unsigned>()->default_value(2), "The left size for context feature")
+        ("context_right_size", po::value<unsigned>()->default_value(2), "The right size for context feature")
         ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
             "separated by comma , like : 512,256,334 ")
         ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
@@ -110,6 +112,8 @@ int train_process(int argc, char *argv[], const string &program_name)
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
     if( !model_os ) fatal_error("failed to open model path at '" + model_path + "'") ;
+    
+    model_handler.set_model_param_before_read_training_data(var_map);
     // reading traing data , get word dict size and output tag number
 
     ifstream train_is(training_data_path);
@@ -118,18 +122,18 @@ int train_process(int argc, char *argv[], const string &program_name)
     }
     vector<IndexSeq> sents ,
         tag_seqs;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> context_feature_gp_seqs;
     model_handler.read_training_data(train_is, sents ,context_feature_gp_seqs, tag_seqs);
     train_is.close();
     // set model structure param 
-    model_handler.set_model_param_after_reading_training_data(var_map);
+    model_handler.set_model_param_after_read_training_data();
 
     // build model structure
     model_handler.build_model(); // passing the var_map to specify the model structure
 
                                  // reading developing data
     vector<IndexSeq> dev_sents, dev_tag_seqs ;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> dev_context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> dev_context_feature_gp_seqs;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
@@ -138,9 +142,9 @@ int train_process(int argc, char *argv[], const string &program_name)
     devel_is.close();
 
     // Train 
-    model_handler.train(&sents, &context_feature_gp_seqs,  &tag_seqs , 
+    model_handler.train(sents, context_feature_gp_seqs,  tag_seqs , 
         max_epoch, 
-        &dev_sents , &dev_context_feature_gp_seqs, &dev_tag_seqs , 
+        dev_sents , dev_context_feature_gp_seqs, dev_tag_seqs , 
         devel_freq , 
         trivial_report_freq);
 
@@ -199,12 +203,12 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
     vector<IndexSeq> sents,
         tag_seqs ;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> context_feature_gp_seqs;
     model_handler.read_devel_data(devel_is, sents, context_feature_gp_seqs, tag_seqs);
     devel_is.close();
 
     // devel
-    model_handler.devel(&sents , &context_feature_gp_seqs, &tag_seqs); 
+    model_handler.devel(sents , context_feature_gp_seqs, tag_seqs); 
 
     return 0;
 }

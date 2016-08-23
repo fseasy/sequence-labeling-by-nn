@@ -6,7 +6,6 @@
 #include "cnn/cnn.h"
 
 #include "modelmodule/context_feature.h"
-#include "modelmodule/context_feature_extractor.h"
 #include "modelmodule/context_feature_layer.h"
 #include "postagger/postagger_module/pos_reader.h"
 namespace slnn{
@@ -18,8 +17,6 @@ public :
     static const std::string UNK_STR;
     static const std::string StrOfReplaceNumber ;
     static const size_t LenStrOfRepalceNumber ;
-    static constexpr size_t PostaggerContextSize = 4 ;
-    using POSContextFeature = ContextFeature<PostaggerContextSize>;
 
 public:
     Input1MLPModelNoFeature();
@@ -38,23 +35,25 @@ public:
 
 
     // dirived class should override
-    virtual void set_model_param(const boost::program_options::variables_map &var_map) ;
+    virtual void set_model_param_from_outer(const boost::program_options::variables_map &var_map) ;
+    virtual void set_model_param_from_inner();
+
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
     // process input and build dict
     void input_seq2index_seq(const Seq &sent, const Seq &postag_seq, 
         IndexSeq &index_sent, IndexSeq &index_postag_seq, 
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq); // for annotated data
+        ContextFeatureDataSeq &context_feature_gp_seq); // for annotated data
 
     void input_seq2index_seq(const Seq &sent, 
         IndexSeq &index_sent, 
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq); // for input data
+        ContextFeatureDataSeq &context_feature_gp_seq); // for input data
 
     void replace_word_with_unk(const IndexSeq &sent, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         IndexSeq &replaced_sent,
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_replaced_feature_gp_seq);
+        ContextFeatureDataSeq &context_replaced_feature_gp_seq);
     
     // output translate
     void postag_index_seq2postag_str_seq(const IndexSeq &postag_index_seq, Seq &postag_str_seq);
@@ -62,11 +61,11 @@ public:
     // training and predict
     virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const IndexSeq &gold_seq)  = 0 ;
     virtual void predict(cnn::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         IndexSeq &pred_seq) = 0 ;
 
     // print
@@ -87,7 +86,7 @@ protected:
     cnn::Dict postag_dict;
     DictWrapper word_dict_wrapper;
 public:
-    POSContextFeature context_feature;
+    ContextFeature context_feature;
 
 public :
     unsigned word_embedding_dim,
@@ -97,8 +96,6 @@ public :
     std::vector<unsigned> mlp_hidden_dim_list;
     cnn::real dropout_rate;
 };
-
-using POSContextFeature = Input1MLPModelNoFeature::POSContextFeature;
 
 /*********** inline funtion implemantation **********/
 
@@ -126,9 +123,9 @@ void Input1MLPModelNoFeature::freeze_dict()
 
 inline
 void Input1MLPModelNoFeature::replace_word_with_unk(const IndexSeq &sent,
-    const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+    const ContextFeatureDataSeq &context_feature_gp_seq,
     IndexSeq &replaced_sent, 
-    POSContextFeature::ContextFeatureIndexGroupSeq &replaced_context_feature_gp_seq)
+    ContextFeatureDataSeq &replaced_context_feature_gp_seq)
 {
     using std::swap;
     size_t seq_len = sent.size();
@@ -138,7 +135,7 @@ void Input1MLPModelNoFeature::replace_word_with_unk(const IndexSeq &sent,
         tmp_rep_sent[i] = word_dict_wrapper.ConvertProbability(sent[i]);
     }
     swap(replaced_sent, tmp_rep_sent);
-    context_feature.replace_feature_index_group_seq_with_unk(context_feature_gp_seq, replaced_context_feature_gp_seq);
+    context_feature.random_replace_with_unk(context_feature_gp_seq, replaced_context_feature_gp_seq);
 }
 
 inline
@@ -161,6 +158,7 @@ void Input1MLPModelNoFeature::save(Archive &ar, unsigned version) const
         &mlp_hidden_dim_list
         &dropout_rate;
     ar &word_dict &postag_dict ;
+    ar &context_feature;
     ar &*m;
 }
 
@@ -173,6 +171,7 @@ void Input1MLPModelNoFeature::load(Archive &ar, unsigned version)
         &dropout_rate;
     ar &word_dict &postag_dict;
     assert(word_dict.size() == word_dict_size && postag_dict.size() == output_dim);
+    ar &context_feature;
     build_model_structure();
     ar &*m;
 }
