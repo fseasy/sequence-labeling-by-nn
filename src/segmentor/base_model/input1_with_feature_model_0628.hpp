@@ -43,7 +43,7 @@ public:
     virtual void print_model_info() = 0 ;
 
     void word_seq2index_seq(const Seq &word_seq,
-        IndexSeq &index_sent, IndexSeq &index_postag_seq, CWSFeatureDataSeq &index_feature_data_seq); // for annotated data
+        IndexSeq &index_sent, IndexSeq &index_tag_seq, CWSFeatureDataSeq &index_feature_data_seq); // for annotated data
     void char_seq2index_seq(const Seq &char_seq,
         IndexSeq &index_sent, CWSFeatureDataSeq &index_feature_data_seq); // for input data
     void replace_word_with_unk(const IndexSeq &sent, const CWSFeatureDataSeq &origin_cws_feature_data_seq,

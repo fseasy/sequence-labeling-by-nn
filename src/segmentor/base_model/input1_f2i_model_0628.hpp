@@ -106,8 +106,9 @@ void CWSInput1F2IModel<RNNDerived>::set_model_param_from_outer(const boost::prog
     unsigned end_here_embedding_dim = var_map["end_here_embedding_dim"].as<unsigned>();
     unsigned context_left_size = var_map["context_left_size"].as<unsigned>();
     unsigned context_right_size = var_map["context_right_size"].as<unsigned>();
+    unsigned chartype_embedding_dim = var_map["chartype_embedding_dim"].as<unsigned>();
     this->cws_feature.set_feature_parameters(start_here_embedding_dim, pass_here_embedding_dim, end_here_embedding_dim,
-        context_left_size, context_right_size, word_embedding_dim);
+        context_left_size, context_right_size, word_embedding_dim, chartype_embedding_dim);
 }
 
 template <typename RNNDerived>
