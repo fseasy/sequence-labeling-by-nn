@@ -1,3 +1,6 @@
 [submodule "cnn"]
 	path = cnn
 	url = https://github.com/Oneplus/cnn.git
+[submodule "src/thirdparty/catch"]
+	path = src/thirdparty/catch
+	url = https://github.com/philsquared/Catch.git
