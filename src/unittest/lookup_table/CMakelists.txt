@@ -1,0 +1,9 @@
+add_executable(test_lookup_table
+               test_lookup_table.cpp 
+               ${unittest_framework_include}
+               ${source_directory}/trivial/lookup_table.h
+               ${source_directory}/trivial/lookup_table.cpp
+               )
+
+target_link_libraries(test_lookup_table 
+                      ${Boost_LIBRARIES})

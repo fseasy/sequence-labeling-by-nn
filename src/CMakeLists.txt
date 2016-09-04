@@ -48,6 +48,13 @@ set(base_reader_module
     ${util_directory}/reader.hpp
 )
 
+## unit test
+set(unittest_framework_include
+    ${source_directory}/thirdparty/catch/include/catch.hpp
+)
+
 add_subdirectory(postagger)
 #add_subdirectory(ner)
 add_subdirectory(segmentor)
+
+add_subdirectory(unittest)

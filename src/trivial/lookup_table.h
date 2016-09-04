@@ -4,6 +4,7 @@
 #include <string>
 #include <random>
 #include <functional>
+#include <boost/serialization/access.hpp>
 namespace slnn{
 
 class LookupTable
@@ -54,19 +55,19 @@ public:
                 2. un-excepted(exception throw)
     */
     Index get_unk_idx() const;
-    bool has_set_unk() noexcept const;
-    bool is_unk_idx() noexcept const;
+    bool has_set_unk() const noexcept;
+    bool is_unk_idx(Index idx) const noexcept;
     
     void freeze() noexcept;
     void unfreeze() noexcept;
-    bool has_frozen() noexcept const;
+    bool has_frozen() const noexcept;
 
     /* count the str occur times in dict ( 1/0)
         Return: 1. 1, if str in dict
                 2. 0, if not
     */
-    std::size_t count(const std::string &str) noexcept const;
-    std::size_t count(Index idx) noexcept const;
+    std::size_t count(const std::string &str) const noexcept;
+    std::size_t count(Index idx) const noexcept;
     
     /* count with ban unk_idx
         Exception: domain_error
@@ -77,8 +78,12 @@ public:
     std::size_t count_ban_unk(Index idx) const;
     
     void reset() noexcept;
-    std::size_t size() noexcept const;
-    std::size_t size_without_unk() noexcept const;
+    std::size_t size() const noexcept;
+    std::size_t size_without_unk() const noexcept;
+
+protected:
+    /* dirived class may need query str2idx directly */
+    const std::unordered_map<std::string, Index>& get_str2idx_dict() const noexcept{ return str2idx; }
 
 private:
     std::unordered_map<std::string, Index> str2idx;
@@ -96,8 +101,7 @@ private:
     }
 };
 
-const std::string LookupTable::UnkStr = "*u*n*k*";
-constexpr Index LookupTable::UnkUnsetValue;
+
 
 class LookupTableWithCnt : public LookupTable
 {
@@ -109,11 +113,11 @@ public:
     /* count str occurrence times (N)
         Return : N, occurrence times
     */
-    std::size_t count(const std::string &str) noexcept const;
-    std::size_t count(Index idx) noexcept const;
+    std::size_t count(const std::string &str) const noexcept;
+    std::size_t count(Index idx) const noexcept;
     std::size_t count_ban_unk(Index idx) const;
 
-    void LookupTable::reset() noexcept;
+    void reset() noexcept;
 private:
     std::vector<unsigned> cnt;
 
@@ -155,7 +159,7 @@ private:
 
 template <typename Generator>
 LookupTableWithReplace::LookupTableWithReplace(const Generator &rng, unsigned cnt_threshold, float prob_threshold) noexcept
-    :rand_generator(std::bind(std::normal_real_distribution<float>(0,1), rng)),
+    :rand_generator(std::bind(std::uniform_real_distribution<float>(0,1), rng)),
     cnt_threshold(cnt_threshold),
     prob_threshold(prob_threshold)
 {}
