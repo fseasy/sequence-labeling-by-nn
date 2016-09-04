@@ -3,7 +3,7 @@ using namespace std;
 
 namespace slnn{
 
-LookupTable::LookupTable()
+LookupTable::LookupTable() noexcept
     :is_unk_seted(false),
     is_frozen(false),
     unk_idx(-1)
@@ -52,8 +52,11 @@ LookupTable::convert(const std::string &str) const
 const std::string& 
 LookupTable::convert(Index idx) const
 {
-    if( idx >= size() ){ throw out_of_range("index '" + to_string(idx) + "' was out of range( size = " + 
-                                                     to_string(size())+")")}
+    if( idx >= static_cast<Index>(size()) || idx < 0 )
+    { 
+        throw out_of_range("index '" + to_string(idx) + "' was out of range( size = " + 
+                            to_string(size())+")")
+    }
     else{ return idx2str[idx]; }
 }
 
@@ -64,7 +67,7 @@ LookupTable::convert_ban_unk(Index idx) const
     else return convert(idx);
 }
 
-void LookupTable::set_unk()
+void LookupTable::set_unk() noexcept
 {
     if( has_set_unk() ){ return; }
     if( has_frozen() )
@@ -76,41 +79,41 @@ void LookupTable::set_unk()
     else{ unk_idx = convert(UnkStr); }
     is_unkseted = true;
 }
-Index LookupTable::get_unk_idx()
+Index LookupTable::get_unk_idx() noexcept
 {
     if( !has_set_unk() ){ throw logic_error("unk was not set."); }
     else{ return unk_idx; }
 }
-bool LookupTable::has_set_unk() const
+bool LookupTable::has_set_unk() noexcept const
 {
-    return is_unkseted;
+    return unk_idx != UnkUnsetValue;
 }
-bool LookupTable::is_unk_idx(Index idx) const
+bool LookupTable::is_unk_idx(Index idx) noexcept const
 {
     if( !has_set_unk() ){ return false; }
     else{ return idx == unk_idx; }
 }
 
-void LookupTable::freeze()
+void LookupTable::freeze() noexcept
 {
     is_frozen = true;
 }
-void LookupTable::unfreeze()
+void LookupTable::unfreeze() noexcept
 {
     is_frozen = false;
 }
-bool LookupTable::has_frozen() const
+bool LookupTable::has_frozen() noexcept const
 {
     return is_frozen;
 }
 
-size_t LookupTable::count(const string& str) const
+size_t LookupTable::count(const string& str) noexcept const
 {
     auto iter = str2idx.find(str);
     if( iter == str2idx.cend() ){ return 0U; }
     else{ return 1U; }
 }
-size_t LookupTable::count(Index idx) const
+size_t LookupTable::count(Index idx) noexcept const
 {
     if( idx >= 0 && idx < static_cast<int>(size()) ){ return 1U; }
     else{ return 0U; }
@@ -121,20 +124,19 @@ size_t LookupTable::count_ban_unk(Index idx) const
     else { return count(idx); }
 }
 
-void LookupTable::reset()
+void LookupTable::reset() noexcept
 {
     str2idx.clear();
     idx2str.clear();
-    is_unk_seted = false;
     is_frozen = false;
-    unk_idx = -1;
+    unk_idx = UnkUnsetValue;
 }
 
-size_t LookupTable::size() const
+size_t LookupTable::size() noexcept const
 {
     return str2idx.size();
 }
-size_t LookupTable::size_without_unk() const
+size_t LookupTable::size_without_unk() noexcept const
 {
     if( has_set_unk() ){ return size() - 1; }
     else { return size();  }
@@ -158,13 +160,13 @@ LookupTableWithCnt::convert(const string& str)
     return idx;
 }
 
-std::size_t LookupTableWithCnt::count(const std::string &str) const
+std::size_t LookupTableWithCnt::count(const std::string &str) noexcept const
 {
     auto iter = str2idx.find(str);
     if( iter == str2idx.cend() ){ return 0U; }
     else{ return cnt[iter->second]; }
 }
-std::size_t LookupTableWithCnt::count(Index idx) const
+std::size_t LookupTableWithCnt::count(Index idx) noexcept const
 {
     if( idx >= 0 && idx < size() ){ return cnt[idx]; }
     else{ return 0U; }
@@ -175,7 +177,7 @@ std::size_t LookupTableWithCnt::count_ban_unk(Index idx) const
     else{ return count(idx); }
 }
 
-void LookupTableWithCnt::reset()
+void LookupTableWithCnt::reset() noexcept
 {
     LookupTable::reset();
     cnt.clear();
@@ -183,11 +185,11 @@ void LookupTableWithCnt::reset()
 
 /*---------------- LookupTableWithReplace -------------------*/
 
-LookupTableWithReplace::LookupTableWithReplace(std::size_t seed, unsigned cnt_threshold, float prob_threshold)
+LookupTableWithReplace::LookupTableWithReplace(std::size_t seed, unsigned cnt_threshold, float prob_threshold) noexcept
     :LookupTableWithReplace(mt19937(seed), cnt_threshold, prob_threshold)
 {}
 
-void LookupTableWithReplace::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold)
+void LookupTableWithReplace::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
 {
     this->cnt_threshold = cnt_threshold;
     this->prob_threshold = prob_threshold;
