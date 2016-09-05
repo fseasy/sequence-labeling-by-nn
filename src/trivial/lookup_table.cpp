@@ -163,6 +163,17 @@ LookupTableWithCnt::convert(const string& str)
     return idx;
 }
 
+
+void LookupTableWithCnt::set_unk() noexcept
+{
+    LookupTable::set_unk();
+    if( size() > cnt.size() )
+    {
+        // unk has been added
+        cnt.push_back(1);
+    }
+}
+
 std::size_t LookupTableWithCnt::count(const std::string &str) const noexcept 
 {
     auto iter = get_str2idx_dict().find(str);
@@ -171,7 +182,7 @@ std::size_t LookupTableWithCnt::count(const std::string &str) const noexcept
 }
 std::size_t LookupTableWithCnt::count(Index idx) const noexcept 
 {
-    if( idx >= 0 && idx < size() ){ return cnt[idx]; }
+    if( idx >= 0 && idx < static_cast<Index>(size()) ){ return cnt[idx]; }
     else{ return 0U; }
 }
 std::size_t LookupTableWithCnt::count_ban_unk(Index idx) const
@@ -203,7 +214,7 @@ LookupTableWithReplace::unk_replace_in_probability(Index idx) const
 {
     if( !has_set_unk() ){ throw logic_error("unk was not set."); }
     else if( idx == get_unk_idx() ){ return idx; }
-    else if( idx < 0 || idx >= size() )
+    else if( idx < 0 || idx >= static_cast<Index>(size()) )
     {
         throw out_of_range("index '" + to_string(idx) +
                            "' was out of range( size = " + to_string(size()) + ")");

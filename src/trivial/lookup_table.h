@@ -5,6 +5,8 @@
 #include <random>
 #include <functional>
 #include <boost/serialization/access.hpp>
+#include <boost/serialization/unordered_map.hpp>
+#include <boost/serialization/vector.hpp>
 namespace slnn{
 
 class LookupTable
@@ -85,6 +87,10 @@ protected:
     /* dirived class may need query str2idx directly */
     const std::unordered_map<std::string, Index>& get_str2idx_dict() const noexcept{ return str2idx; }
 
+protected:
+    template<class Archive> 
+    void serialize(Archive& ar, const unsigned int);
+
 private:
     std::unordered_map<std::string, Index> str2idx;
     std::vector<std::string> idx2str;
@@ -93,15 +99,13 @@ private:
     static const std::string UnkStr;
     static constexpr Index UnkUnsetValue = -1;
     Index unk_idx;
-
-private:
-    template<class Archive> void serialize(Archive& ar, const unsigned int) 
-    {
-        ar &str2idx &idx2str &is_frozen &unk_idx;
-    }
 };
 
-
+template<class Archive> 
+void LookupTable::serialize(Archive& ar, const unsigned int) 
+{
+    ar &str2idx &idx2str &is_frozen &unk_idx;
+}
 
 class LookupTableWithCnt : public LookupTable
 {
@@ -110,6 +114,9 @@ public:
     // hidden the base class function with the same name
     Index convert(const std::string &str);
     
+    // because set_unk may add an key, so we should add cnt if necessary
+    void set_unk() noexcept;
+
     /* count str occurrence times (N)
         Return : N, occurrence times
     */
@@ -118,19 +125,20 @@ public:
     std::size_t count_ban_unk(Index idx) const;
 
     void reset() noexcept;
-private:
-    std::vector<unsigned> cnt;
 
-private:
+protected:
     template<class Archive> 
     void serialize(Archive& ar, const unsigned int);
+
+private:
+    std::vector<unsigned> cnt;
 };
 
 template<class Archive> 
-void LookupTableWithCnt::serialize(Archive& ar, const unsigned int) 
+void LookupTableWithCnt::serialize(Archive& ar, const unsigned int version) 
 {
     ar &cnt;
-    LookupTable::serialize();
+    LookupTable::serialize(ar, version);
 }
 
 
@@ -138,22 +146,24 @@ class LookupTableWithReplace : public LookupTableWithCnt
 {
     friend class boost::serialization::access;
 public:
-    LookupTableWithReplace(std::size_t seed=1234, unsigned cnt_threshold=1, float prob_threshold=0.2f) noexcept;
+    LookupTableWithReplace(std::size_t seed = 1234, unsigned cnt_threshold = 1, float prob_threshold = 0.2f) noexcept;
     template <typename Generator>
-    LookupTableWithReplace(const Generator &rng, unsigned cnt_threshold=1, float prob_threshold=0.2f) noexcept;
-    
+    LookupTableWithReplace(const Generator &rng, unsigned cnt_threshold = 1, float prob_threshold = 0.2f) noexcept;
+
+    int get_cnt_threshold(){ return cnt_threshold; }
+    float get_prob_threshold(){ return prob_threshold; }
     void set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept;
 
     Index unk_replace_in_probability(Index idx) const; 
+
+protected:
+    template<class Archive> 
+    void serialize(Archive& ar, const unsigned int);
 
 private:
     std::function<float()> rand_generator;
     unsigned cnt_threshold;
     float prob_threshold;
-
-private:
-    template<class Archive> 
-    void serialize(Archive& ar, const unsigned int);
 };
 
 
@@ -165,10 +175,10 @@ LookupTableWithReplace::LookupTableWithReplace(const Generator &rng, unsigned cn
 {}
 
 template<class Archive> 
-void LookupTableWithReplace::serialize(Archive& ar, const unsigned int)
+void LookupTableWithReplace::serialize(Archive& ar, const unsigned int version)
 {
     ar &cnt_threshold &prob_threshold;
-    LookupTableWithCnt::serialize();
+    LookupTableWithCnt::serialize(ar, version);
 }
 
 } // end of namespace slnn
