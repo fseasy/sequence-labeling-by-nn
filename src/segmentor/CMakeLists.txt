@@ -119,6 +119,15 @@ set(cws_common_libs
     ${cws_module_libs}    
 )
 
+######### New Structure ########
+set(mlp_base_model
+    ${source_directory}/trivial/lookup_table.h
+    ${source_directory}/trivial/lookup_table.cpp
+    ${base_model_dir}/cws_base_model.h
+    ${base_model_dir}/cws_base_model.cpp
+    ${base_model_dir}/cws_mlp_base_model.h
+)
+
 #add_subdirectory(cws_single_classification)
 
 #add_subdirectory(cws_single_pretag)
@@ -138,4 +147,5 @@ set(cws_common_libs
 
 add_subdirectory(cws_input1_cl_with_feature)
 add_subdirectory(cws_bareinput1_cl_with_feature)
+add_subdirectory(cws_mlp_classification_model)
 #add_subdirectory(unit_test)

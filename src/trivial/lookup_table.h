@@ -113,7 +113,8 @@ class LookupTableWithCnt : public LookupTable
 public:
     // hidden the base class function with the same name
     Index convert(const std::string &str);
-    
+    using LookupTable::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
+
     // because set_unk may add an key, so we should add cnt if necessary
     void set_unk() noexcept;
 
