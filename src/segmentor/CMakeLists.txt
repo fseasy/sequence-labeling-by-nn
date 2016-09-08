@@ -120,6 +120,11 @@ set(cws_common_libs
 )
 
 ######### New Structure ########
+set(cws_task_specifics
+    ${cws_module_dir}/cws_tagging_helper.h
+    ${cws_module_dir}/cws_tagging_helper.cpp
+)
+
 set(mlp_base_model
     ${source_directory}/trivial/lookup_table.h
     ${source_directory}/trivial/lookup_table.cpp

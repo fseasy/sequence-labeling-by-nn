@@ -1,16 +1,10 @@
 #ifndef SLNN_CWS_BASE_MODEL_H_
 #define SLNN_CWS_BASE_MODEL_H_
 #include "trivial/lookup_table.h"
+#include "segmentor/cws_module/cws_tagging_system.h"
 #include "utils/typedeclaration.h"
+
 namespace slnn{
-
-/*
-RawAnnotatedData
-{
-
-}
-
-*/
 
 class CWSBaseModel
 {
@@ -48,6 +42,56 @@ Index CWSBaseModel::char2index(const std::string &character) const
     return char_dict.convert(character);
 }
 
+inline
+Index CWSBaseModel::unk_replace_in_probability(Index idx) const
+{
+    return char_dict.unk_replace_in_probability(idx);
+}
+
+/*
+RawAnnotatedData : 
+template <typename strT=u32string>
+struct 
+{
+    SeqT word_seq ( vector<strT> )
+    unsigned char_length;
+};
+
+ProcessedAnnotatedData :
+struct
+{
+    IndexSeq char_index_seq;
+    IndexSeq tag_index_seq;
+    (others(such as feature info) will be added in the dirived class.)
+};
+*/
+template <typename RawAnnotatedData, typename ProcessedAnnotatedData>
+void process_annotated_data(const RawAnnotatedData& raw_data, ProcessedAnnotatedData& processed_data) noexcept
+{
+    using std::swap;
+    IndexSeq tmp_word_index_seq,
+        tmp_tag_index_seq;
+    Seq tmp_char_seq;
+    tmp_word_index_seq.reserve(SentMaxLen);
+    tmp_tag_index_seq.reserve(SentMaxLen);
+    tmp_char_seq.reserve(SentMaxLen);
+    for(const std::string &word : word_seq )
+    {
+        Seq word_char_seq ;
+        IndexSeq word_tag_index_seq;
+        CWSTaggingSystem::static_parse_word2chars_indextag(word, word_char_seq, word_tag_index_seq);
+        for( size_t i = 0; i < word_char_seq.size(); ++i )
+        {
+            tmp_tag_index_seq.push_back(word_tag_index_seq[i]);
+            Index word_id = word_dict_wrapper.Convert(word_char_seq[i]);
+            tmp_word_index_seq.push_back(word_id);
+            tmp_char_seq.push_back(std::move(word_char_seq[i]));
+        }
+    }
+    cws_feature.extract(tmp_char_seq, tmp_word_index_seq, feature_data_seq);
+    swap(word_index_seq, tmp_word_index_seq);
+    swap(tag_index_seq, tmp_tag_index_seq);
+}
 
 
 } // end of namespace slnn
