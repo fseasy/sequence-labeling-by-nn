@@ -53,6 +53,10 @@ set(unittest_framework_include
     ${source_directory}/thirdparty/catch/include/catch.hpp
 )
 
+## TEST
+add_subdirectory(trivial)
+
+
 add_subdirectory(postagger)
 #add_subdirectory(ner)
 add_subdirectory(segmentor)

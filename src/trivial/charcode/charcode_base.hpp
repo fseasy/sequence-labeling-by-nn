@@ -7,7 +7,7 @@ namespace charcode{
 namespace base{
 
 using uint8_t = unsigned char;
-
+constexpr int UTF8MaxByteSize = 4;
 // octec stands for 8 bits (a byte)
 
 template <typename octet_type>
