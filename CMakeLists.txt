@@ -44,5 +44,14 @@ set(WITH_EIGEN_BACKEND 1)
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-add_subdirectory(${thirdparty_dir}/cnn/cnn)
-add_subdirectory(src)
+
+# dispaly folder in MSVS
+SET_PROPERTY(GLOBAL PROPERTY USE_FOLDERS ON) 
+
+# build thirdparty libraries(CNN)
+ADD_SUBDIRECTORY(${thirdparty_dir}/cnn/cnn)
+SET_PROPERTY(TARGET cnn PROPERTY FOLDER "3rdparty_libraries")
+SET_PROPERTY(TARGET cnn_shared PROPERTY FOLDER "3rdparty_libraries")
+
+# source
+ADD_SUBDIRECTORY(src)

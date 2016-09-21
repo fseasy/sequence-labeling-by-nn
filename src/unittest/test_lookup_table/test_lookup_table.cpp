@@ -2,7 +2,7 @@
 #include <sstream>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
-#include "trivial/lookup_table.h"
+#include "trivial/lookup_table/lookup_table.h"
 #include "../3rdparty/catch/include/catch.hpp"
 
 using namespace std;

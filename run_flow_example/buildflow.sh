@@ -7,9 +7,9 @@ cd ../
 echo "init cnn submodule" >/dev/stderr
 git submodule init
 git submodule update
-cd cnn
+cd 3rdparty/cnn
 git checkout remotes/origin/bugfix/memalloc  
-cd ..
+cd ../..
 
 # build
 mkdir -p build

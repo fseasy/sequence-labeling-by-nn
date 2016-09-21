@@ -1,3 +1,12 @@
+ADD_SUBDIRECTORY(test_lookup_table)
+ADD_SUBDIRECTORY(test_charcode)
 
-add_subdirectory(lookup_table)
-add_subdirectory(charcode)
+FILE(GLOB test_lookup_table_srcs "test_lookup_table/*.cpp")   
+FILE(GLOB test_charcode_srcs "charcode/*.cpp")                  
+
+SOURCE_GROUP("unittest\\test_lookup_table" FILES ${test_lookup_table_srcs})
+
+SOURCE_GROUP("unittest\\test_charcode" FILES ${test_charcode_srcs})
+
+#SOURCE_GROUP("unittest\\test_lookup_table")
+#SOURCE_GROUP("unittest\\test_charcode")

@@ -53,12 +53,19 @@ set(unittest_framework_include
     ${thirdparty_dir}/catch/include/catch.hpp
 )
 
-## TEST
+####################    Trivial Modules #####################
+
+SET(trivial_dir "${source_dir}/trivial")
+
+FILE(GLOB lookup_table_headers "${trivial_dir}/lookup_table/*.h*")
+FILE(GLOB charcode_headers "${trivial_dir}/charcode/*.h*")
+
+
+
 add_subdirectory(trivial)
 
+add_subdirectory(unittest)
 
 add_subdirectory(postagger)
 #add_subdirectory(ner)
 add_subdirectory(segmentor)
-
-add_subdirectory(unittest)
