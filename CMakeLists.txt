@@ -10,10 +10,6 @@ set (EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 enable_testing()
 
-#include_directories(${CMAKE_CURRENT_SOURCE_DIR})
-include_directories(${CMAKE_CURRENT_SOURCE_DIR}/cnn)
-set(WITH_EIGEN_BACKEND 1)
-
 # look for Boost
 if(DEFINED ENV{BOOST_ROOT})
       set(Boost_NO_SYSTEM_PATHS ON)
@@ -33,12 +29,20 @@ else()
     set(LIBS ${LIBS} ${Boost_LIBRARIES} pthread)
 endif()
 
+#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+SET(source_directory ${PROJECT_SOURCE_DIR}/src) # for compatibility 
+
+SET(source_dir ${PROJECT_SOURCE_DIR}/src) # for new structure
+SET(thirdparty_dir ${PROJECT_SOURCE_DIR}/3rdparty)
+
+#include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${thirdparty_dir}/cnn)
+set(BACKEND "eigen")
+set(WITH_EIGEN_BACKEND 1)
 
 # look for Eigen
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIR})
 
-#configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
-set(source_directory ${PROJECT_SOURCE_DIR}/src)
-add_subdirectory(cnn/cnn)
+add_subdirectory(${thirdparty_dir}/cnn/cnn)
 add_subdirectory(src)

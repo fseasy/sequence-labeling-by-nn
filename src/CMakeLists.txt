@@ -50,7 +50,7 @@ set(base_reader_module
 
 ## unit test
 set(unittest_framework_include
-    ${source_directory}/thirdparty/catch/include/catch.hpp
+    ${thirdparty_dir}/catch/include/catch.hpp
 )
 
 ## TEST
