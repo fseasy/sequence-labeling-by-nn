@@ -26,7 +26,7 @@ std::string encode2u8_bytes_unsafe(const std::u32string &unicode_str) noexcept;
 
 // Inner API 
 char32_t next_unicode_from_u8_bytes_unsafe(const std::string &u8_bytes, int &offset, int bytes_length) noexcept;
-void next_u8_unit_from_unicode_unsafe(char32_t uchar, char *o_u8_bytes_preallocated, int &offset) noexcept
+void next_u8_unit_from_unicode_unsafe(char32_t uchar, char *o_u8_bytes_preallocated, int &offset) noexcept;
 
 
 /* -----     Inline Implementation       ----- */
@@ -44,7 +44,7 @@ inline
 std::string unicode2u8_unsafe(char32_t uchar) noexcept
 {
     char u8buf[5];
-    size_t offset = 0;
+    int offset = 0;
     next_u8_unit_from_unicode_unsafe(uchar, u8buf, offset);
     u8buf[offset] = '\0';
     return std::string(u8buf);
@@ -89,7 +89,7 @@ char32_t next_unicode_from_u8_bytes_unsafe(const std::string &u8_bytes, int &off
             uc = UnicodeErrorValue;
         }
     }
-    retur uc;
+    return uc;
 }
 
 inline
