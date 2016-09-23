@@ -1,8 +1,7 @@
-FILE(GLOB test_charcode_srcs "charcode/*.cpp")         
-SOURCE_GROUP("unittest\\test_charcode" FILES ${test_charcode_srcs})
 ADD_EXECUTABLE(test_charcode
                test_charcode.cpp
-               ${charcode_headers})
+               ${charcode_headers}
+               ${unittest_framework_include})
                
 TARGET_LINK_LIBRARIES(test_charcode
                       trivial)

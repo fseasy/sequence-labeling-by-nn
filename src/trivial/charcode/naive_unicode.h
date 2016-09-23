@@ -14,7 +14,7 @@ namespace NUnicode{
              but we'll check the length edge.
 */
 
-char32_t UnicodeErrorValue = -1;
+constexpr char32_t UnicodeErrorValue = -1;
 // Unicde <--> UTF8 (char level)
 char32_t unicode_from_u8_unsafe(const std::string &u8_bytes, int offset, int bytes_length) noexcept;
 std::string unicode2u8_unsafe(char32_t uchar) noexcept;
@@ -75,12 +75,12 @@ char32_t next_unicode_from_u8_bytes_unsafe(const std::string &u8_bytes, int &off
         }
         else if( uc < 0xF0 && offset + 1 < bytes_length) // 3 bytes UTF8
         {
-            uc = ((uc & 0x1F) << 12) | ((mask8(u8_bytes[offset]) & 0x3F) << 6) | (mask8(u8_bytes[offset + 1]) & 0x3F) ;
+            uc = ((uc & 0x0F) << 12) | ((mask8(u8_bytes[offset]) & 0x3F) << 6) | (mask8(u8_bytes[offset + 1]) & 0x3F) ;
             offset += 2;
         }
         else if( offset + 2 < bytes_length )
         {
-            uc = ((uc & 0x1F) << 18) | ((mask8(u8_bytes[offset]) & 0x3F) << 12) |
+            uc = ((uc & 0x07) << 18) | ((mask8(u8_bytes[offset]) & 0x3F) << 12) |
                  ((mask8(u8_bytes[offset + 1]) & 0x3F) << 6) | (mask8(u8_bytes[offset + 2]) & 0x3F);
             offset += 3;
         }
