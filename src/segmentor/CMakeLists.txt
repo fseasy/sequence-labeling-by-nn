@@ -127,8 +127,8 @@ set(cws_task_specifics
 
 set(mlp_base_model
     ${lookup_table_headers}
-    ${base_model_dir}/cws_base_model.h
-    ${base_model_dir}/cws_base_model.cpp
+    ${cws_module_dir}/token_module/cws_basic_token_module.h
+    ${cws_module_dir}/token_module/cws_basic_token_module.cpp
     ${base_model_dir}/cws_mlp_base_model.h
 )
 

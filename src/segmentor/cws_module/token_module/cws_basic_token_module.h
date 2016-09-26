@@ -1,21 +1,20 @@
 #ifndef SLNN_CWS_BASE_MODEL_H_
 #define SLNN_CWS_BASE_MODEL_H_
-#include "trivial/lookup_table.h"
+#include "trivial/lookup_table/lookup_table.h"
 #include "segmentor/cws_module/cws_tagging_system.h"
 #include "utils/typedeclaration.h"
 
 namespace slnn{
 
-class CWSBaseModel
+class CWSBasicTokenModule
 {
     friend class boost::serialization::access;
 public:
     static const std::string UNK_STR;
-    static const unsigned SentMaxLen;
 public:
-    CWSBaseModel(unsigned seed) noexcept;
+    CWSBasicTokenModule(unsigned seed) noexcept;
     // data translate handlers
-    Index char2index(const std::string &character) const;
+    Index token2index(const std::string &character) const;
     Index unk_replace_in_probability(Index idx) const; 
     template <typename RawAnnotatedData, typename ProcessedAnnotatedData>
     void process_annotated_data(const RawAnnotatedData&, ProcessedAnnotatedData&) noexcept;
@@ -50,12 +49,7 @@ Index CWSBaseModel::unk_replace_in_probability(Index idx) const
 
 /*
 RawAnnotatedData : 
-template <typename strT=u32string>
-struct 
-{
-    SeqT word_seq ( vector<strT> )
-    unsigned char_length;
-};
+vector<u32string>
 
 ProcessedAnnotatedData :
 struct
