@@ -1,24 +1,19 @@
-// #define CATCH_CONFIG_MAIN
+#define CATCH_CONFIG_MAIN
 #include <sstream>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include "trivial/lookup_table/lookup_table.h"
-//#include "../3rdparty/catch/include/catch.hpp"
+#include "../3rdparty/catch/include/catch.hpp"
 
 using namespace std;
-using namespace slnn;
+using namespace slnn::trivial::lookup_table;
 
-template class LookupTable<char32_t>;
+extern template class LookupTable<string>;
+extern template class LookupTableWithCnt<string>;
+extern template class LookupTableWithReplace<string>;
 
-int main()
-{
 
-    LookupTable<string> lookup_table;
-    LookupTableWithCnt<char32_t> l2;
-    LookupTableWithReplace<u32string> l3;
-}
 
-/*
 TEST_CASE("LookupTable", "[LookupTable]")
 {
     LookupTable<string> lookup_table;
@@ -37,9 +32,9 @@ TEST_CASE("LookupTable", "[LookupTable]")
     REQUIRE(lookup_table.has_frozen() == false);
     REQUIRE(lookup_table.has_set_unk() == false);
     REQUIRE(lookup_table.count(word1) == 1U);
-    REQUIRE(lookup_table.count(word1_idx) == 1U);
+    REQUIRE(lookup_table.count_ban_unk(word1_idx) == 1U);
     REQUIRE(lookup_table.count(word2) == 0U);
-    REQUIRE(lookup_table.count(1) == 0U);
+    REQUIRE(lookup_table.count_ban_unk(1) == 0U);
     REQUIRE(word1_idx == 0);
     REQUIRE(lookup_table.convert_ban_unk(word1_idx) == word1);
     REQUIRE_THROWS_AS(lookup_table.convert_ban_unk(1), out_of_range);
@@ -51,7 +46,7 @@ TEST_CASE("LookupTable", "[LookupTable]")
     REQUIRE(lookup_table.has_frozen() == false);
     REQUIRE(lookup_table.has_set_unk() == false);
     REQUIRE(lookup_table.count(word2) == 1U);
-    REQUIRE(lookup_table.count(word2_idx) == 1U);
+    REQUIRE(lookup_table.count_ban_unk(word2_idx) == 1U);
     REQUIRE(word2_idx == 1);
     REQUIRE(lookup_table.convert_ban_unk(word2_idx) == word2);
     REQUIRE_THROWS_AS(lookup_table.convert_ban_unk(2), out_of_range);
@@ -59,7 +54,7 @@ TEST_CASE("LookupTable", "[LookupTable]")
     // add duplicated word
     auto dup_idx = lookup_table.convert(word2);
     REQUIRE(lookup_table.size() == 2U);
-    REQUIRE(lookup_table.count(dup_idx) == 1U);
+    REQUIRE(lookup_table.count_ban_unk(dup_idx) == 1U);
 
     // freeze
     lookup_table.freeze();
@@ -75,7 +70,6 @@ TEST_CASE("LookupTable", "[LookupTable]")
     REQUIRE(lookup_table.has_set_unk() == true);
     REQUIRE_NOTHROW(lookup_table.get_unk_idx());
     REQUIRE(lookup_table.is_unk_idx(lookup_table.get_unk_idx()) == true);
-    REQUIRE(lookup_table.count(lookup_table.get_unk_idx()) == 1U);
     REQUIRE_THROWS_AS(lookup_table.count_ban_unk(lookup_table.get_unk_idx()), domain_error);
     REQUIRE(lookup_table.size() == 3U);
     REQUIRE(lookup_table.size_without_unk() == 2U);
@@ -159,6 +153,7 @@ TEST_CASE("LookupTableWithReplace", "[LookupTable]")
     
     // check replace
     REQUIRE_THROWS_AS(lookup_table.unk_replace_in_probability(word1_idx), logic_error);
+    lookup_table.freeze();
     lookup_table.set_unk();
     int replace_cnt = 0;
     for( int i = 1000; i > 0; --i )
@@ -187,7 +182,12 @@ TEST_CASE("LookupTableWithReplace", "[LookupTable]")
         }
     }
     REQUIRE(replace_cnt == 1000);
+    // For word wich cnt > cnt_threshold
+    lookup_table.reset();
     lookup_table.convert(word1);
+    lookup_table.convert(word1);
+    lookup_table.freeze();
+    lookup_table.set_unk();
     replace_cnt = 0;
     for( int i = 1000; i > 0; --i )
     {
@@ -198,4 +198,3 @@ TEST_CASE("LookupTableWithReplace", "[LookupTable]")
     }
     REQUIRE(replace_cnt == 0);
 }
-*/

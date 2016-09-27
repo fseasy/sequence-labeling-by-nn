@@ -120,15 +120,13 @@ set(cws_common_libs
 )
 
 #########################  New Structure  ######################
-set(cws_task_specifics
-    ${cws_module_dir}/cws_tagging_helper.h
-    ${cws_module_dir}/cws_tagging_helper.cpp
-)
+
+FILE(GLOB segmentor_token_module_files "${cws_module_dir}/token_module/*")
+
 
 set(mlp_base_model
     ${lookup_table_headers}
-    ${cws_module_dir}/token_module/cws_basic_token_module.h
-    ${cws_module_dir}/token_module/cws_basic_token_module.cpp
+    ${segmentor_token_module_files}
     ${base_model_dir}/cws_mlp_base_model.h
 )
 
