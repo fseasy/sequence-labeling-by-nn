@@ -6,7 +6,15 @@ namespace slnn{
 namespace segmentor{
 namespace token_module{
 
-
+inline 
+std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
+    const std::vector<Index> &tagseq) noexcept
+{
+    assert(charseq.size() == tagseq.size());
+    std::vector<std::u32string> wordseq;
+    std::u32string word = U"";
+    for(size_t i =  0U; i <)
+}
 
 
 
