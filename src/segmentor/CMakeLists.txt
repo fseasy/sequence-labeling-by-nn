@@ -121,6 +121,9 @@ set(cws_common_libs
 
 #########################  New Structure  ######################
 
+#################
+# Segmentor
+#################
 FILE(GLOB segmentor_token_module_files "${cws_module_dir}/token_module/*")
 
 

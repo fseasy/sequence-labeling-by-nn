@@ -6,6 +6,12 @@ namespace slnn{
 namespace charcode{
 namespace base{
 
+enum class EncodingType
+{
+    UTF8 = 1,
+    GB18030 = 2
+};
+
 using uint8_t = unsigned char;
 constexpr int UTF8MaxByteSize = 4;
 // octec stands for 8 bits (a byte)

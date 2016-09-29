@@ -1,15 +1,23 @@
 #ifndef SLNN_CWS_BASE_MODEL_H_
 #define SLNN_CWS_BASE_MODEL_H_
 #include "trivial/lookup_table/lookup_table.h"
-#include ""
+#include "cws_tag_definition.h"
+#include "trivial/charcode/charcode_convertor.h"
 #include "utils/typedeclaration.h"
 
 namespace slnn{
 namespace segmentor{
+namespace token_module{
+
+namespace token_module_inner{
+
+inline 
+
+}
 
 /**
  * basic segmentor token processing module.
- * for char-based chinese word segmentation, token module contains 
+ * for char-based chinese word segmentation, token module contains
  * 1. the data : lookup table for text token to index
  * 2. operations : a) add the token to lookup table when reading annotated raw data.
  *                 b) translate annotated raw data to integer char-index and integer tag-index (X translate).
@@ -27,7 +35,7 @@ public:
      * @param seed unsigned, to init the inner LookupTableWithReplace.
      */
     CWSBasicTokenModule(unsigned seed) noexcept;
-    
+
     // DATA TRANSLATING
     /**
      * token to index(const).
@@ -50,7 +58,7 @@ public:
      */
     template <typename RawAnnotatedData, typename ProcessedAnnotatedData>
     void process_annotated_data(const RawAnnotatedData &raw_in, ProcessedAnnotatedData &out) noexcept;
-    
+
     /**
      * process unannotated data, that is translating text-token to char-index.
      * @param raw_in raw unannotated data
@@ -78,15 +86,19 @@ private:
     slnn::trivial::LookupTableWithReplace<char32_t> char_dict;
 };
 
+/******************************************
+ * Inline Implementation
+ ******************************************/
+
 
 inline
-Index CWSBaseModel::char2index(const std::string &character) const
+Index CWSBasicTokenModule::token2index(char32_t token) const
 {
-    return char_dict.convert(character);
+    return char_dict.convert(token);
 }
 
 inline
-Index CWSBaseModel::unk_replace_in_probability(Index idx) const
+Index CWSBasicTokenModule::unk_replace_in_probability(Index idx) const
 {
     return char_dict.unk_replace_in_probability(idx);
 }
@@ -131,6 +143,7 @@ void process_annotated_data(const RawAnnotatedData& raw_data, ProcessedAnnotated
     swap(tag_index_seq, tmp_tag_index_seq);
 }
 
+} // end of namespace token_module
 } // end of namespace segmentor
 } // end of namespace slnn
 

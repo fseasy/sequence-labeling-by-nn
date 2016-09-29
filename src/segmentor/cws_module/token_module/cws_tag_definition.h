@@ -1,3 +1,12 @@
+/**
+ * tag_definition.h, tag system definition, including tag id, tag generation rule, tag relation constrains.
+ * tag id : B, M, E, S
+ * tag generation rule: word => (char, tag); 
+ *                      word_seq => (char_seq, tag_seq);
+ *                      (char_seq, tag_seq) => word_seq.
+ * tag relation constrains : can_emit?, can_trans?
+ */
+
 #ifndef SLNN_SEGMENTOR_TOKEN_MODULE_TAG_DEFINITION_H_
 #define SLNN_SEGMENTOR_TOKEN_MODULE_TAG_DEFINITION_H_
 #include "utils/typedeclaration.h"
@@ -45,7 +54,7 @@ constexpr bool TRANS_TABLE[TAG_SIZE][TAG_SIZE] = {
  * @param word unicode string
  * @return generated tag sequence
  */
-std::vector<Index> &out_tagseq generate_tagseq_from_word(const std::u32string &word);
+std::vector<Index> generate_tagseq_from_word(const std::u32string &word) noexcept;
 
 /**
  * from word sequence to generate the tag sequence, ant put it to the pre-allocated memeory.
@@ -54,7 +63,16 @@ std::vector<Index> &out_tagseq generate_tagseq_from_word(const std::u32string &w
  * @param out_preallocated_tagseq pre-allocated container for output tag sequence
  */
 void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32string> &word_seq,
-    std::vector<Index> &out_preallocated_tagseq);
+    std::vector<Index> &out_preallocated_tagseq) noexcept;
+
+/**
+* from char and tag sequence to genrate word sequence
+* @param charseq character sequence, unicode string
+* @param tagseq  tag sequence, Index sequence
+* @return word sequence, unicode string sequence
+*/
+std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
+    const std::vector<Index> &tagseq) noexcept;
 
 /**
  * whethere can emit for the current tag id at the current time.
@@ -65,7 +83,7 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
  * @param cur_tag_id current tag id
  * @return whethere can emit
  */
-bool can_emit(std::size_t cur_time, Index cur_tag_id);
+bool can_emit(std::size_t cur_time, Index cur_tag_id) noexcept;
 
 /**
  * whethere can transfer from previous tag to current tag(unsafe version - using lookup table).
@@ -75,7 +93,7 @@ bool can_emit(std::size_t cur_time, Index cur_tag_id);
  * @param cur_tag_id current tag id.
  * @return whthere can transfer
  */
-bool can_trans_unsafe(Index pre_tag_id, Index cur_tag_id);
+bool can_trans_unsafe(Index pre_tag_id, Index cur_tag_id) noexcept;
 
 /**
  * whethere can transfer from previous tag to current tag(safe version - using condition judgment).
@@ -83,14 +101,14 @@ bool can_trans_unsafe(Index pre_tag_id, Index cur_tag_id);
  * @param cur_tag_id
  * @return whethere can transfer
  */
-bool can_trans(Index pre_tag_id, Index cur_tag_id);
+bool can_trans(Index pre_tag_id, Index cur_tag_id) noexcept;
 
-/*************************************
+/***********************************************************
  * Inline Implementation
- *************************************/
+ ***********************************************************/
 
 inline 
-std::vector<Index> &out_tagseq generate_tagseq_from_word(const std::u32string &word)
+std::vector<Index> generate_tagseq_from_word(const std::u32string &word) noexcept
 {
     std::size_t word_len = word.length();
     std::vector<Index> tagseq_tmp(word_len);
@@ -106,7 +124,7 @@ std::vector<Index> &out_tagseq generate_tagseq_from_word(const std::u32string &w
 
 inline 
 void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32string> &word_seq,
-    std::vector<Index> &out_preallocated_tagseq)
+    std::vector<Index> &out_preallocated_tagseq) noexcept
 {
     int idx = 0;
     for( const auto &word : word_seq )
@@ -116,14 +134,36 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
         else if( word_len > 1U )
         {
             out_preallocated_tagseq[idx++] = TAG_B_ID;
-            for( std::size_t i = 1U; i < word_len - 1U; ++i ){ out_preallocalted_tagseq[idx++] = TAG_M_ID; }
+            for( std::size_t i = 1U; i < word_len - 1U; ++i ){ out_preallocated_tagseq[idx++] = TAG_M_ID; }
             out_preallocated_tagseq[idx++] = TAG_E_ID;
         }
     }
 }
 
+
+inline 
+std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
+    const std::vector<Index> &tagseq) noexcept
+{
+    assert(charseq.size() == tagseq.size());
+    std::vector<std::u32string> wordseq;
+    std::size_t slice_spos = 0;
+    for( std::size_t i = 0U; i < charseq.size(); ++i )
+    {
+        Index tag = tagseq[i];
+        if( tag == Tag::TAG_B_ID || tag == Tag::TAG_S_ID )
+        {
+            std::size_t word_len = i - slice_spos + 1;
+            wordseq.push_back(charseq.substr(slice_spos, word_len));
+            slice_spos = i + 1;
+        }
+    }
+    return wordseq;
+}
+
+
 inline
-bool can_emit(std::size_t cur_time, Index cur_tag_id)
+bool can_emit(std::size_t cur_time, Index cur_tag_id) noexcept
 {
     return cur_time != 0U || cur_tag_id == TAG_S_ID || cur_tag_id == TAG_B_ID;
     // Equivalent logic: 
@@ -132,14 +172,14 @@ bool can_emit(std::size_t cur_time, Index cur_tag_id)
 }
 
 inline
-bool can_trans_unsafe(Index pre_tag_id, Index cur_tag_id)
+bool can_trans_unsafe(Index pre_tag_id, Index cur_tag_id) noexcept
 {
     // WARNING: we haven't check the id, may be out of range
     return TRANS_TABLE[pre_tag_id][cur_tag_id];
 }
 
 inline
-bool can_trans(Index pre_tag_id, Index cur_tag_id)
+bool can_trans(Index pre_tag_id, Index cur_tag_id) noexcept
 {
     return (
            (    (pre_tag_id == TAG_B_ID || pre_tag_id == TAG_M_ID) 
