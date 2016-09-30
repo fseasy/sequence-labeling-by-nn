@@ -2,16 +2,25 @@
 #define SLNN_TRIVIAL_CHARCODE_DETECTOR_H_
 #include <fstream>
 #include <iostream>
-#include <algorithm>
 #include "charcode_base.hpp"
 
 namespace slnn{
 namespace charcode{
 namespace detector{
-
+/**
+ * encoding type detector.
+ * TODO.
+ * singleton design pattern for C++, see : http://stackoverflow.com/questions/1008019/c-singleton-design-pattern
+ */
 class EncodingDetector{
 public:
-    EncodingDetector& get_detector() noexcept;
+    EncodingDetector(const EncodingDetector&) = delete; // ban copy
+    void operator=(const EncodingDetector&) = delete; // ban copy assign
+public:
+    static EncodingDetector* get_detector() noexcept;
+    static base::EncodingType get_console_encoding() noexcept;
+
+public:
     void set_encoding(base::EncodingType) noexcept;
     void set_encoding(std::string &encoding_name) noexcept;
     base::EncodingType get_encoding() const noexcept;
@@ -19,7 +28,8 @@ public:
     base::EncodingType detect_and_set_encoding(std::ifstream &f) noexcept; // reject iostream
     base::EncodingType detect_and_set_encoding(std::istream &stdinf) noexcept;
 private:
-    EncodingDetector();
+    EncodingDetector() noexcept;
+
     base::EncodingType encoding_type;
 };
 
@@ -27,7 +37,33 @@ private:
 /************************************
  * Inline Implementation
  ************************************/
+
+ /**
+ * get EncodingDetector(singleton design pattern).
+ * @return EncodingDetector pointer. (using pointer instead of reference to avoid instance copy when using. )
+ */
+inline 
+EncodingDetector* EncodingDetector::get_detector() noexcept
+{
+    static EncodingDetector singleton_instance;
+    return &singleton_instance; 
+}
+
 /**
+ * get console encoding (just according to compiling platform and priori knowledge).
+ * @return priori knowledge about console encoding.
+ */
+inline 
+base::EncodingType EncodingDetector::get_console_encoding() noexcept
+{
+    base::EncodingType type_from_priori = base::EncodingType::UTF8;
+#ifdef _WIN32
+    type_from_priori = base::EncodingType::GB18030;
+#endif
+    return type_from_priori;
+}
+
+ /**
  * constructor, just according to the platform.
  * WINDOWS -> GB18030, others -> UTF8
  */
@@ -44,17 +80,6 @@ EncodingDetector::EncodingDetector() noexcept
 #endif
 
 /**
- * get EncodingDetector(singleton design pattern).
- * @return EncodingDetector reference.
- */
-inline 
-EncodingDetector& EncodingDetector::get_detector() noexcept
-{
-    static EncodingDetector singleton_instance;
-    return singleton_instance;
-}
-
-/**
  * set encoding type.
  * @param encoding_type given encoding type.
  */
@@ -67,22 +92,11 @@ void EncodingDetector::set_encoding(base::EncodingType encoding_type) noexcept
 inline
 void EncodingDetector::set_encoding(std::string &encoding_name) noexcept
 {
-    std::string upper_name;
-    // Atention.
-    // WHY static_cast ?
-    // toupper has multi definition, one in global namespace from <cctype> : int toupper(int)
-    // one from namespace std : template <class charT> charT toupper(charT c, const locale& loc)
-    // in fact, we haven't using namespace std, so it is ok for just using toupper wihout any namespae prefix.
-    // but I think it is also misleading. SO it is better write it directly!
-    // For more information, see : http://stackoverflow.com/questions/7131858/stdtransform-and-toupper-no-matching-function
-    // Actually, using lambda expression may be more recommending way( it is the sample from cppreference ).
-    std::transform(encoding_name.cbegin(), encoding_name.cend(), std::back_inserter(upper_name),
-        static_cast<int(*)(int)>(&std::toupper));
-    if( uppper_name == "UTF8" ){ set_encoding(base::EncodingType::UTF8); }
-    else if( uppper_name == "GB18030"
-             uppper_name == "GB2312"){ set_encoding(base::EncodingType::GB18030); }
+    EncodingType encoding_type = base::str2encoding_type(encoding_name);
+    if( encoding_type != EncodingType::UNSUPPORT ){ set_encoding(encoding_type); }
     else
     {
+        std::cerr << "un-supported encoding type: " << encoding_name << ". set to UTF8\n";
         set_encoding(base::EncodingType::UTF8);
     }
 }
@@ -129,17 +143,15 @@ base::EncodingType EncodingDetector::detect_and_set_encoding(std::ifstream &f) n
  * WINDOWS -> GB18030, OTHERS -> UTF8.
  */
 inline 
-base::EncodingType EncodingDetector::detect_and_set_encoding(std::ifstream &stdiof) noexcept
+base::EncodingType EncodingDetector::detect_and_set_encoding(std::istream &stdiof) noexcept
 {
-    base::EncodingType type_from_priori = base::EncodingType::UTF8;
-#ifdef _WIN32
-    type_from_priori = base::EncodingType::GB18030;
-#endif
+    base::EncodingType type_from_priori = get_console_encoding();
     set_encoding(type_from_priori);
     return type_from_priori;
 }
 
 } // end of namespace detector
+using detector::EncodingDetector;
 } // end of namespace charcode
 } // end of namespace slnn
 
