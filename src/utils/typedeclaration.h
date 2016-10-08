@@ -26,5 +26,11 @@ namespace slnn{
     using FeaturesIndexSeq = std::vector<std::array<Index,sz>>;
 
     using NonLinearFunc = cnn::expr::Expression(const cnn::expr::Expression &); // an function : [input] -> expression , [output]-> expression 
-}
+
+namespace type{
+
+using real = float;
+
+} // end of namespace type
+} // end of namespace slnn
 #endif

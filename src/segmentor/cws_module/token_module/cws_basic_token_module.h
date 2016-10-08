@@ -97,6 +97,11 @@ public:
     std::string get_module_info() const noexcept;
     std::size_t get_charset_size() const noexcept;
     std::size_t get_tagset_size() const noexcept;
+
+private:
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int);
+
 private:
     slnn::trivial::LookupTableWithReplace<char32_t> token_dict;
 };
@@ -118,69 +123,14 @@ Index SegmentorBasicTokenModule::unk_replace_in_probability(Index idx) const
     return token_dict.unk_replace_in_probability(idx);
 }
 
-/*
-ProcessedAnnotatedData :
-struct
-{
-    std::vector<Index> *charindex_seq;
-    std::vector<Index> *tagindex_seq;
-    (others(such as feature info) will be added in the dirived class.)
-    ProcessedAnnotatedData()
-        : charindex_seq(nullptr),
-          tagindex_seq(nullptr)
-          ...
-    {}
-    ~ProcessedAnnotatedData(){ delete *; }
-};
-*/
-template <typename ProcessedAnnotatedData>
-void 
-SegmentorBasicTokenModule::process_annotated_data(const std::vector<std::u32string>& wordseq, 
-    ProcessedAnnotatedData& processed_data)
-{
-    size_t token_cnt = token_module_inner::count_token_from_wordseq(wordseq);
-    std::vector<Index> * &charindex_seq = processed_data.charindex_seq;
-    std::vector<Index> * &tagindex_seq = processed_data.tagindex_seq;
-    charindex_seq = new std::vector<Index>(token_cnt); 
-    tagindex_seq = new std::vector<Index>(token_cnt); // exception may be throw
-    size_t offset = 0;
-    // char text seq -> char index seq
-    for( const std::u32string &word : wordseq )
-    {
-        for( char32_t uc : word ){ (*charindex_seq)[offset++] = token_dict.convert(uc); }
-    }
-    // char text seq -> tag index seq
-    generate_tagseq_from_wordseq2preallocated_space(wordseq, *tagindex_seq);
-}
-
-
-/**
-    struct ProcessedUnannotatedData
-    {
-        std::vector<Index> *charindex_seq;
-        ProcessedUnannotatedData()
-            : charindex_seq(nullptr)
-        ~ProcessedUnannotatedData(){ delete *; }
-    }
-*/
-template <typename ProcessedUnannotatedData>
-void 
-SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
-    ProcessedUnannotatedData &processed_out) const
-{
-    size_t token_cnt = tokenseq.size();
-    std::vector<Index>* &charindex_seq = processed_out.charindex_seq;
-    charindex_seq = new std::vector<Index>(token_cnt);
-    size_t offset = 0;
-    for( char32_t token : tokenseq ){ (*charindex_seq)[offset++] = token_dict.convert(token); }
-}
-
+inline
 void SegmentorBasicTokenModule::finish_read_training_data()
 {
     token_dict.freeze();
     token_dict.set_unk();
 }
 
+inline
 void SegmentorBasicTokenModule::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
 {
     token_dict.set_unk_replace_threshold(cnt_threshold, prob_threshold);
@@ -201,9 +151,17 @@ std::size_t SegmentorBasicTokenModule::get_charset_size() const noexcept
 {
     return token_dict.size();
 }
+
+inline
 std::size_t SegmentorBasicTokenModule::get_tagset_size() const noexcept
 {
     return TAG_SIZE;
+}
+
+template<class Archive>
+void SegmentorBasicTokenModule::serialize(Archive& ar, const unsigned int)
+{
+    ar &token_dict;
 }
 
 } // end of namespace token_module

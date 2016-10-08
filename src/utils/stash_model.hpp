@@ -9,7 +9,7 @@
 
 namespace slnn{
 
-struct CNNModelStash // we'd bettern change it's name to TrainingHelper
+struct CNNModelStash // we'd better change it's name to TrainingHelper
 {
     float best_score;
     std::stringstream best_model_tmp_ss;
