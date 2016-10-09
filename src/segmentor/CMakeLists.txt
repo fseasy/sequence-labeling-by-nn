@@ -124,8 +124,17 @@ set(cws_common_libs
 #################
 # Segmentor
 #################
-FILE(GLOB segmentor_token_module_files "${cws_module_dir}/token_module/*")
+set(cws_module_token_dir "${cws_module_dir}/token_module")
+set(cws_module_structure_param_dir "${cws_module_dir}/structure_param_module")
+set(cws_module_nn_dir "${cws_module_dir}/nn_module/")
 
+FILE(GLOB segmentor_token_module_files "${cws_module_token_dir}/*")
+FILE(GLOB segmentor_structure_param_module_files "${cws_module_structure_param_dir}/*")
+FILE(GLOB segmentor_nn_module_files "${cws_module_nn_dir}/*")
+
+SOURCE_GROUP("cws_module\\token_module" FILES ${segmentor_token_module_files})
+SOURCE_GROUP("cws_module\\structure_param_module" FILES ${segmentor_structure_param_module_files})
+SOURCE_GROUP("cws_module\\nn_module" FILES ${segmentor_nn_module_files})
 
 set(mlp_base_model
     ${lookup_table_headers}

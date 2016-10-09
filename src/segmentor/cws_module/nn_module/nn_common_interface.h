@@ -13,16 +13,17 @@ class NeuralNetworkCommonInterface
 {
 public:
     // training
+    virtual void set_update_method(std::string &optmization_name) = 0;
     virtual void update(slnn::type::real scale) = 0;
     virtual void update_epoch() = 0;
     virtual void forward() = 0;
     virtual slnn::type::real forward_as_scalar() = 0;
-    virtual std::vector<slnn::tpye::real> void forward_as_vector() = 0;
+    virtual std::vector<slnn::type::real> forward_as_vector() = 0;
     virtual void backward() = 0;
     // stash model
     virtual void stash_model() = 0;
-    virtual void stath_model_when_best(slnn::type::real current_score) = 0;
-    virtual void reset2stashed_model() = 0;
+    virtual bool stash_model_when_best(slnn::type::real current_score) = 0;
+    virtual bool reset2stashed_model() = 0;
     virtual ~NeuralNetworkCommonInterface() {};
 };
 
