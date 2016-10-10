@@ -27,6 +27,7 @@ public:
     base::EncodingType detect_and_set_encoding(const std::string &bytes) noexcept;
     base::EncodingType detect_and_set_encoding(std::ifstream &f) noexcept; // reject iostream
     base::EncodingType detect_and_set_encoding(std::istream &stdinf) noexcept;
+    base::EncodingType detect_and_set_encoding_from_fstream(std::ifstream &f) noexcept; // explicit to detect from file.
 private:
     EncodingDetector() noexcept;
 
@@ -148,6 +149,19 @@ base::EncodingType EncodingDetector::detect_and_set_encoding(std::istream &stdio
     base::EncodingType type_from_priori = get_console_encoding();
     set_encoding(type_from_priori);
     return type_from_priori;
+}
+
+/**
+ * detect encoding from file stream explicitly.
+ * when polymorphism, we can't use the completely-match rule to using the overload function for file stream.
+ * eg:
+ *   void f(std::istream &f){  detect_and_set_encoding(f); } -> we lose the original type, so un-expected things happen
+ */
+inline
+base::EncodingType 
+EncodingDetector::detect_and_set_encoding_from_fstream(std::ifstream &f) noexcept
+{
+    return detect_and_set_encoding(f);
 }
 
 } // end of namespace detector
