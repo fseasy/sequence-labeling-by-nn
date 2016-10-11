@@ -8,6 +8,9 @@
 #include <boost/program_options/variables_map.hpp>
 #include "utils/stat.hpp"
 #include "cws_reader.h"
+#include "token_module/cws_tag_definition.h"
+#include "cws_eval.h"
+#include "cws_stat.h"
 #include "trivial/charcode/charcode_detector.h"
 #include "utils/typedeclaration.h"
 namespace slnn{
@@ -22,7 +25,8 @@ unsigned read_annotated_data(std::ifstream &is, SLModel &slm,
 
 template <typename SLModel>
 unsigned read_unannotated_data(std::ifstream &is, SLModel &slm, 
-    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data);
+    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
+    std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data);
 
 class TrainingUpdateRecorder
 {
@@ -65,7 +69,9 @@ template <typename SLModel>
 void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data);
 
 template <typename SLModel>
-void read_test_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data);
+void read_test_data(std::ifstream &is, SLModel &slm, 
+    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data,
+    std::vector<typename SLModel::UnannotatedDataRawT> &out_test_raw_data);
 
 template <typename SLModel>
 void build_model(SLModel &slm);
@@ -77,7 +83,7 @@ void train(SLModel &slm,
     const TrainingOpts &opts);
 
 template <typename SLModel>
-void devel(SLModel &slm,
+float devel(SLModel &slm,
     const std::vector<SLModel::AnnotatedDataProcessedT> &devel_data);
 
 template <typename SLModel>
@@ -95,15 +101,16 @@ namespace modelhandler_inner{
 template <typename SLModel>
 unsigned read_annotated_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_ann_processed_data)
 {
-    reader::SegmentorUnicodeReader reader(is,
+    using std::swap;
+    reader::SegmentorUnicodeReader reader_ins(is,
         charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is));
     std::vector<typename SLModel::AnnotatedDataProcessedT> dataset;
-    unsigned detected_line_cnt = reader.count_line();
+    unsigned detected_line_cnt = reader_ins.count_line();
     dataset.reserve(detected_line_cnt);
-    std::vector<std::u32string> wordseq;
+    typename SLModel::AnnotatedDataRawT wordseq;
     unsigned readline_cnt = 0,
         report_cnt = detected_line_cnt / 5;
-    while( reader.read_segmented_line(wordseq) )
+    while( reader_ins.read_segmented_line(wordseq) )
     {
         if( wordseq.empty() ){ continue; }
         typename SLModel::AnnotatedDataProcessedT processed_data;
@@ -115,32 +122,40 @@ unsigned read_annotated_data(std::ifstream &is, SLModel &slm, std::vector<typena
             std::cerr << "read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
         }
     }
+    swap(out_ann_processed_data, dataset);
     return readline_cnt;
 }
 
 template <typename SLModel>
 unsigned read_unannotated_data(std::ifstream &is, SLModel &slm,
-    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data)
+    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
+    std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data)
 {
-    reader::SegmentorUnicodeReader reader(is,
+    using std::swap;
+    reader::SegmentorUnicodeReader reader_ins(is,
         charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is));
     std::vector<typename SLModel::UnannotatedDataProcessedT> dataset;
-    unsigned detected_line_cnt = reader.count_line();
+    std::vector<typename SLModel::UnannotatedDataRawT> raw_dataset;
+    unsigned detected_line_cnt = reader_ins.count_line();
     dataset.reserve(detected_line_cnt);
-    std::u32string charseq;
+    raw_dataset.reserve(detected_line_cnt);
+    typename SLModel::UnannotatedDataRawT charseq;
     unsigned readline_cnt = 0,
         report_cnt = detected_line_cnt / 5;
-    while( reader.readline(charseq) )
+    while( reader_ins.readline(charseq) )
     {
         typename SLModel::UnannotatedDataProcessedT processed_data;
         slm.get_token_module()->process_annotated_data(charseq, processed_data);
         dataset.push_back(std::move(processed_data));
+        raw_dataset.push_back(std::move(charseq));
         ++readline_cnt;
         if( report_cnt && readline_cnt % report_cnt == 0 )
         {
             std::cerr << "read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
         }
     }
+    swap(out_unann_processed_data, dataset);
+    swap(out_unann_raw_data, raw_dataset);
     return readline_cnt;
 }
 
@@ -198,10 +213,12 @@ void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLMod
 }
 
 template <typename SLModel>
-void read_test_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data)
+void read_test_data(std::ifstream &is, SLModel &slm, 
+    std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data,
+    std::vector<typename SLModel::UnannotatedDataRawT> &out_test_raw_data)
 {
     std::cerr << "+ Process test data.";
-    unsigned line_cnt = modelhandler_inner::read_unannotated_data(is, slm, out_test_processed_data);
+    unsigned line_cnt = modelhandler_inner::read_unannotated_data(is, slm, out_test_processed_data, out_test_raw_data);
     std::cerr << "- test data processed done. (line count: " << line_cnt << ", instance number: "
         << out_test_processed_data.size() << ")\n";
 }
@@ -303,6 +320,64 @@ void train(SLModel &slm,
         << "at epoch: " << update_recorder.get_best_epoch() << ", "
         << "devel order: " << update_recorder.get_best_devel_order() << "\n";
 }
+
+template <typename SLModel>
+float devel(SLModel &slm, const std::vector<SLModel::AnnotatedDataProcessedT> &devel_data)
+{
+    unsigned nr_samples = devel_data.size();
+    std::cerr << "+ Validation at " << nr_samples << " instances.";
+
+    stat::SegmentorStat stat(true);
+    stat.start_time_stat();
+    eval::SegmentorEval eval_ins;
+    eval_ins.start_eval();
+    for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
+    {
+        typename const SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
+        std::vector<Tag> pred_tagseq = slm.predict(instance);
+        eval_ins.eval_iteratively(*instance.ptagseq, pred_tagseq);
+    }
+    stat.end_time_stat();
+    eval::EvalResultT eval_result = eval_ins.end_eval();
+    stat.nr_token_predict = eval_result.nr_token_predict;
+    stat.total_tags = eval_result.nr_tag;
+    std::ostringstream tmp_sos;
+    tmp_sos << "- Validation finished. \n"
+        << "Acc = " << eval_result.acc << "% , P = " << eval_result.p 
+        << "% , R = " << eval_result.r << "% , F1 = " << eval_result.f1 << "%";
+    std::cerr << stat.get_stat_str(tmp_sos.str()) << "\n";
+    return eval_result.f1;
+}
+
+template <typename SLModel>
+void predict(SLModel &slm,
+    std::istream &is,
+    std::ostream &os)
+{
+    std::vector<typename SLModel::UnannotatedDataProcessedT> test_data;
+    std::vector<typename SLModel::UnannotatedDataRawT> test_raw_data;
+    read_test_data(is, slm, test_data, test_raw_data);
+    std::cerr << "Do prediction on " << test_data.size() << " instances .";
+    BasicStat stat(true);
+    stat.start_time_stat();
+    writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding());
+    for (unsigned int i = 0; i < test_data.size(); ++i)
+    {
+        typename SLModel::UnannotatedDataRawT &raw_instance = test_raw_data[i];
+        typename SLModel::UnannotatedDataProcessedT &instance = test_data[i];
+        if (0 == raw_instance.size())
+        {
+            writer_ins.write({}, {});
+            continue;
+        }
+        std::vector<Tag> pred_tagseq = slm.predict(instance);
+        writer_ins.write(raw_instance, pred_tagseq);
+        stat.total_tags += pred_tagseq.size() ;
+    }
+    stat.end_time_stat() ;
+    std::cerr << stat.get_stat_str("predict done.") << "\n" ;
+}
+
 
 } // end of namespace modelhandler
 } // end of namespace segmentor

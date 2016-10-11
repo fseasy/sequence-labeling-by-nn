@@ -46,8 +46,24 @@ struct StaticConcatenateLayer
     static cnn::expr::Expression concatenate_exprs(const std::vector<cnn::expr::Expression> &to_be_concated_exprs);
 };
 
+struct WindowExprGenerateLayer
+{
+    WindowExprGenerateLayer(cnn::Model *cnn_model, unsigned window_sz, unsigned embedding_dim);
+    void new_graph(cnn::ComputationGraph &cg);
+    std::vector<cnn::expr::Expression> generate_window_expr_by_concatenating(const std::vector<cnn::expr::Expression> &unit_exprs);
+    // data
+    cnn::Parameters *sos_param;
+    cnn::Parameters *eos_param;
+    cnn::expr::Expression sos_expr;
+    cnn::expr::Expression eos_expr;
+    unsigned window_sz;
+};
 
-/* Inline Function Implementation */
+
+
+/********************************************
+ * Inline Function Implementation 
+ ********************************************/
 
 inline 
 void Index2ExprLayer::new_graph(cnn::ComputationGraph &cg)
@@ -107,6 +123,13 @@ void StaticConcatenateLayer::concatenate_exprs(const std::vector<std::vector<cnn
         tmp_exprs[i] = cnn::expr::concatenate(concatenate_exprs);
     }
     swap(exprs, tmp_exprs);
+}
+
+inline
+void WindowExprGenerateLayer::new_graph(cnn::ComputationGraph &cg)
+{
+    sos_expr = cnn::expr::parameter(cg, sos_param);
+    eos_expr = cnn::expr::parameter(cg, eos_param);
 }
 
 } // end of namespace slnn

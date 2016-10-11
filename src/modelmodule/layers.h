@@ -105,20 +105,27 @@ struct Merge4Layer
 
 struct MLPHiddenLayer
 {
+    // data
     unsigned nr_hidden_layer;
     std::vector<cnn::Parameters *> w_list;
     std::vector<cnn::Parameters *> b_list;
     std::vector<cnn::expr::Expression> w_expr_list;
     std::vector<cnn::expr::Expression> b_expr_list;
     cnn::real dropout_rate;
+    bool is_enable_dropout;
     NonLinearFunc *nonlinear_func;
+    // constructor
     MLPHiddenLayer(cnn::Model *m, unsigned input_dim, const std::vector<unsigned> &hidden_layer_dim_list, 
         cnn::real dropout_rate=0.f,
         NonLinearFunc *nonlinear_func=cnn::expr::tanh);
+    // interface
     void new_graph(cnn::ComputationGraph &cg);
     cnn::expr::Expression
         build_graph(const cnn::expr::Expression &input_expr);
     void build_graph(const std::vector<cnn::expr::Expression> &input_exprs, std::vector<cnn::expr::Expression> &output_exprs);
+    // setter
+    void enable_dropout(){ is_enable_dropout = true; }
+    void disable_dropout(){ is_enable_dropout = false; }
 };
 
 
@@ -224,7 +231,7 @@ MLPHiddenLayer::build_graph(const cnn::expr::Expression &input_expr)
         cnn::expr::Expression net_expr = affine_transform({
             b_expr_list[i],
             w_expr_list[i], tmp_expr });
-        if( std::abs(dropout_rate - 0.f) > 1e-6 ) { net_expr = cnn::expr::dropout(net_expr, dropout_rate); }
+        if( is_enable_dropout && std::abs(dropout_rate - 0.f) > 1e-6 ) { net_expr = cnn::expr::dropout(net_expr, dropout_rate); }
         tmp_expr = (*nonlinear_func)(net_expr);
     }
     return tmp_expr;

@@ -23,7 +23,7 @@ struct SegmentorBasicMlpParam
     // Input
     unsigned corpus_token_embedding_dim;
     unsigned corpus_token_dict_size;
-
+    unsigned windows_sz;
     // Mlp
     unsigned mlp_input_dim;
     std::vector<unsigned> mlp_hidden_dim_list;
@@ -41,7 +41,7 @@ struct SegmentorBasicMlpParam
  **********************************************/
 
 template <class Archive>
-void BasicMlpParam::serialize(Archive &ar, const unsigned int)
+void SegmentorBasicMlpParam::serialize(Archive &ar, const unsigned int)
 {
     ar &corpus_token_embedding_dim &corpus_token_dict_size
         &mlp_input_dim &mlp_hidden_dim_list &mlp_dropout_rate &mlp_nonlinear_function_str

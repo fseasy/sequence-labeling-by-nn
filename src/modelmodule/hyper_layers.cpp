@@ -1,9 +1,10 @@
+#include <deque>
 #include "hyper_layers.h"
 
 namespace slnn{
 
 Index2ExprLayer::Index2ExprLayer(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim)
-    :lookup_param(m->add_lookup_parameters(vocab_size, {embedding_dim}))
+    :lookup_param(m->add_lookup_parameters(vocab_size, { embedding_dim }))
 {}
 
 ShiftedIndex2ExprLayer::ShiftedIndex2ExprLayer(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim, ShiftDirection direction,
@@ -28,7 +29,7 @@ void ShiftedIndex2ExprLayer::index_seq2expr_seq(const IndexSeq &indexSeq, std::v
     {
         for( unsigned i = shift_distance ; i < sz; ++i )
         {
-            tmp_exprs[i-shift_distance] = lookup(*pcg, lookup_param, indexSeq[i]);
+            tmp_exprs[i - shift_distance] = lookup(*pcg, lookup_param, indexSeq[i]);
         }
         unsigned padding_pos = shift_distance > sz ? 0 : sz - shift_distance ;
         for( unsigned i = padding_pos; i < sz; ++i )
@@ -49,6 +50,42 @@ void ShiftedIndex2ExprLayer::index_seq2expr_seq(const IndexSeq &indexSeq, std::v
         }
     }
     swap(exprs, tmp_exprs);
+}
+
+
+/***********************************************
+ * WindowExprGenerateLayer
+ ***********************************************/
+
+WindowExprGenerateLayer::WindowExprGenerateLayer(cnn::Model *cnn_model, unsigned window_sz, unsigned embedding_dim)
+    :sos_param(cnn_model->add_parameters({ embedding_dim })),
+    eos_param(cnn_model->add_parameters({embedding_dim})),
+    window_sz(window_sz)
+{}
+
+std::vector<cnn::expr::Expression>
+WindowExprGenerateLayer::generate_window_expr_by_concatenating(const std::vector<cnn::expr::Expression> &unit_exprs)
+{
+    std::deque<cnn::expr::Expression> window_expr_list(window_sz);
+    int len = unit_exprs.size();
+    // init
+    int half_sz = window_sz / 2;
+    for( int i = 0; i < half_sz; ++i ){ window_expr_list[i] = sos_expr; }
+    for( int i = half_sz; i < window_sz; ++i )
+    {
+        window_expr_list[i] = i < len ? unit_exprs[i] : eos_expr;
+    }
+    // generate window concatenated expr 
+    std::vector<cnn::expr::Expression> concat_expr_list(len);
+    concat_expr_list[0] = cnn::expr::concatenate(window_expr_list);
+    for( int i = 1; i < len; ++i )
+    {
+        // scroll
+        window_expr_list.pop_front();
+        window_expr_list.push_back(i + half_sz < len ? unit_exprs[i + half_sz] : eos_expr);
+        concat_expr_list[i] = cnn::expr::concatenate(window_expr_list);
+    }
+    return concat_expr_list;
 }
 
 } // end of namespace slnn

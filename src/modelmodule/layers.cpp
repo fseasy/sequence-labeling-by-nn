@@ -59,6 +59,7 @@ MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsign
     w_expr_list(nr_hidden_layer),
     b_expr_list(nr_hidden_layer),
     dropout_rate(dropout_rate),
+    is_enable_dropout(true),
     nonlinear_func(nonlinear_func)
 {
     assert(nr_hidden_layer > 0);

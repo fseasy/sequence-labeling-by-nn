@@ -72,7 +72,7 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
 * @return word sequence, unicode string sequence
 */
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
-    const std::vector<Index> &tagseq) noexcept;
+    const std::vector<Tag> &tagseq) noexcept;
 
 /**
  * whethere can emit for the current tag id at the current time.
@@ -143,7 +143,7 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
 
 inline 
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
-    const std::vector<Index> &tagseq) noexcept
+    const std::vector<Tag> &tagseq) noexcept
 {
     assert(charseq.size() == tagseq.size());
     std::vector<std::u32string> wordseq;
@@ -193,6 +193,7 @@ bool can_trans(Index pre_tag_id, Index cur_tag_id) noexcept
 }
 
 } // end of segmentor token module
+using token_module::Tag;
 } // end of namespace segmentor
 } // end of namespace slnn
 

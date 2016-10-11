@@ -32,6 +32,9 @@ public:
     virtual void stash_model() override;
     virtual bool stash_model_when_best(slnn::type::real current_score) override;
     virtual bool reset2stashed_model() override;
+protected:
+    cnn::ComputationGraph* get_cg(){ return pcg; }
+    cnn::Model* get_cnn_model(){ return cnn_model; }
 private:
     template <typename Archive>
     void serialize(Arhive &ar, const unsigned version);
