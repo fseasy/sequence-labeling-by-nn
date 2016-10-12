@@ -8,6 +8,7 @@
 #include <boost/program_options/variables_map.hpp>
 #include "utils/stat.hpp"
 #include "cws_reader.h"
+#include "cws_writer.h"
 #include "token_module/cws_tag_definition.h"
 #include "cws_eval.h"
 #include "cws_stat.h"
@@ -24,7 +25,7 @@ unsigned read_annotated_data(std::ifstream &is, SLModel &slm,
     std::vector<typename SLModel::AnnotatedDataProcessedT> &out_ann_processed_data);
 
 template <typename SLModel>
-unsigned read_unannotated_data(std::ifstream &is, SLModel &slm, 
+unsigned read_unannotated_data(std::istream &is, SLModel &slm, 
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data);
 
@@ -63,13 +64,13 @@ template <typename SLModel>
 bool set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args);
 
 template <typename SLModel>
-void read_training_data(std::ifstream &is, &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data);
+void read_training_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data);
 
 template <typename SLModel>
 void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data);
 
 template <typename SLModel>
-void read_test_data(std::ifstream &is, SLModel &slm, 
+void read_test_data(std::istream &is, SLModel &slm, 
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_test_raw_data);
 
@@ -84,7 +85,7 @@ void train(SLModel &slm,
 
 template <typename SLModel>
 float devel(SLModel &slm,
-    const std::vector<SLModel::AnnotatedDataProcessedT> &devel_data);
+    const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data);
 
 template <typename SLModel>
 void predict(SLModel &slm,
@@ -127,13 +128,13 @@ unsigned read_annotated_data(std::ifstream &is, SLModel &slm, std::vector<typena
 }
 
 template <typename SLModel>
-unsigned read_unannotated_data(std::ifstream &is, SLModel &slm,
+unsigned read_unannotated_data(std::istream &is, SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data)
 {
     using std::swap;
     reader::SegmentorUnicodeReader reader_ins(is,
-        charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is));
+        charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is)); // BUG! TODO
     std::vector<typename SLModel::UnannotatedDataProcessedT> dataset;
     std::vector<typename SLModel::UnannotatedDataRawT> raw_dataset;
     unsigned detected_line_cnt = reader_ins.count_line();
@@ -194,7 +195,7 @@ bool set_model_structure_param(SLModel &slm, const boost::program_options::varia
 }
 
 template <typename SLModel>
-void read_training_data(std::ifstream &is, &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data)
+void read_training_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data)
 {
     std::cerr << "+ Process training data.";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
@@ -213,7 +214,7 @@ void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLMod
 }
 
 template <typename SLModel>
-void read_test_data(std::ifstream &is, SLModel &slm, 
+void read_test_data(std::istream &is, SLModel &slm, 
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_test_raw_data)
 {
@@ -237,12 +238,14 @@ void train(SLModel &slm,
 {
     unsigned nr_samples = training_data.size();
     std::cerr << "+ Train at " << nr_samples << " instances .";
+    
+    slm.get_nn()->set_update_method(opts.training_update_method);
 
     modelhandler_inner::TrainingUpdateRecorder update_recorder;
     auto do_devel_in_training = [&devel_data, &slm, &update_recorder](int nr_epoch, int nr_devel_order) 
     {
         // function : 1. devel; 2. stash model when best; 3. update training  state.
-        float f1 = this->devel(slm, devel_data);
+        float f1 = devel(slm, devel_data);
         slm.get_nn()->stash_model_when_best(f1);
         update_recorder.update_training_state(f1, nr_epoch, nr_devel_order);
     };
@@ -255,9 +258,9 @@ void train(SLModel &slm,
     unsigned long long total_time_cost_in_seconds = 0ULL;
     for( unsigned nr_epoch = 0; nr_epoch < opts.max_epoch ; ++nr_epoch )
     {
-        std::cerr << "++ Epoch " << nr_epoch + 1 << "/" << max_epoch << " start ";
+        std::cerr << "++ Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " start ";
         // shuffle samples by random access order
-        std::shuffle(access_order.begin(), access_order.end(), slm.get_mt19937());
+        std::shuffle(access_order.begin(), access_order.end(), *slm.get_mt19937_rng());
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -277,7 +280,7 @@ void train(SLModel &slm,
             // record loss
             training_stat_per_epoch.loss += loss;
             training_stat_per_epoch.total_tags += instance.size() ;
-            if( 0 == (i + 1) % trivial_report_freq ) // Report 
+            if( 0 == (i + 1) % opts.trivial_report_freq ) // Report 
             {
                 std::string trivial_header = std::to_string(i + 1) + " instances have been trained.";
                 BOOST_LOG_TRIVIAL(trace) << training_stat_per_epoch.get_stat_str(trivial_header);
@@ -322,7 +325,7 @@ void train(SLModel &slm,
 }
 
 template <typename SLModel>
-float devel(SLModel &slm, const std::vector<SLModel::AnnotatedDataProcessedT> &devel_data)
+float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data)
 {
     unsigned nr_samples = devel_data.size();
     std::cerr << "+ Validation at " << nr_samples << " instances.";

@@ -41,56 +41,37 @@ class SegmentorBasicTokenModule
 {
     friend class boost::serialization::access;
 public:
-    static const std::string UNK_STR;
+    struct AnnotatedDataProcessedT
+    {
+        std::shared_ptr<std::vector<Index>> pcharseq;
+        std::shared_ptr<std::vector<Tag>> ptagseq;
+        AnnotatedDataProcessedT() : pcharseq(nullptr), ptagseq(nullptr){}
+        std::size_t size() const { pcharseq ? pcharseq->size() : 0UL; }
+    };
+    using AnnotatedDataRawT = std::vector<std::u32string>;
+    using UnannotatedDataProcessedT = std::vector<Index>;
+    using UnannotatedDataRawT = std::u32string;
 public:
-    /**
-     * constructor, with an seed to init the replace randomization.
-     * @param seed unsigned, to init the inner LookupTableWithReplace.
-     */
-    SegmentorBasicTokenModule(unsigned seed) noexcept;
+
+    explicit SegmentorBasicTokenModule(unsigned seed) noexcept;
 
     // DATA TRANSLATING
-    /**
-     * token to index(const).
-     * @param token unicode token
-     * @return index of the token
-     */
     Index token2index(char32_t token) const;
-
-    /**
-     * replace char index with satisfying [cnt <= cnt_threshold] with unk in probality [<= prob_threshold].(const)
-     * @param idx char index
-     * @return unk index(if replace) or the original idx(not replace)
-     */
     Index unk_replace_in_probability(Index idx) const;
-
-    /**
-     * processng annotated data, including add new-token to lookup table, count token, translate text token to integer index.
-     * @exception bad_alloc
-     * @param raw_in raw annotated data
-     * @param out processed data. including char-index and tag-index sequence
-     */
-    template <typename ProcessedAnnotatedData>
-    void process_annotated_data(const std::vector<std::u32string> &raw_in, ProcessedAnnotatedData &out);
-
-    /**
-     * process unannotated data, that is translating text-token to char-index.
-     * @param raw_in raw unannotated data
-     * @param out processed data, including char-index sequence
-     */
-    template <typename ProcessedUnannotatedData>
-    void process_unannotated_data(const std::u32string &raw_in, ProcessedUnannotatedData &out) const;
+    UnannotatedDataProcessedT extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
+    // WE DO NOT use current class-defined data structure. 
+    // ideally, we'll process the derived class-defined data.
+    template <typename ProcessedAnnotatedDataT> 
+    ProcessedAnnotatedDataT replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const;
+    template <typename ProcessedAnnotatedDataT>
+    void process_annotated_data(const std::vector<std::u32string> &raw_in, ProcessedAnnotatedDataT &out);
+    template <typename ProcessedUnannotatedDataT>
+    void process_unannotated_data(const std::u32string &raw_in, ProcessedUnannotatedDataT &out) const;
 
     // DICT INTERFACE
-
-    /**
-     * do someting when has read all training data, including freeze lookup table, set unk.
-     */
     void finish_read_training_data();
-    
-    /**
-     * set unk replace [cnt_threshold] and [prob_threshold].
-     */
+    template <typename StructureParamT>
+    void set_unk_replace_threshold(const StructureParamT& param) noexcept;
     void set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept;
 
     // MODULE INFO
@@ -110,19 +91,144 @@ private:
  * Inline Implementation
  ******************************************/
 
-
+ /**
+ * token to index(const).
+ * @param token unicode token
+ * @return index of the token
+ */
 inline
 Index SegmentorBasicTokenModule::token2index(char32_t token) const
 {
     return token_dict.convert(token);
 }
 
+/**
+* replace char index with satisfying [cnt <= cnt_threshold] with unk in probality [<= prob_threshold].(const)
+* @param idx char index
+* @return unk index(if replace) or the original idx(not replace)
+*/
 inline
 Index SegmentorBasicTokenModule::unk_replace_in_probability(Index idx) const
 {
     return token_dict.unk_replace_in_probability(idx);
 }
 
+
+/**
+ * extract unannotated data from annotated data.
+ * @param ann_data annotated data
+ * @return unannotated data
+ */
+inline
+SegmentorBasicTokenModule::UnannotatedDataProcessedT 
+SegmentorBasicTokenModule::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
+{
+    UnannotatedDataProcessedT 
+}
+
+
+template <typename ProcessedAnnotatedDataT> 
+ProcessedAnnotatedDataT 
+SegmentorBasicTokenModule::replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const
+{
+    ProcessedAnnotatedDataT rep_data;
+    rep_data.pcharseq.reset(new std::vector<Index>( *(in_data.pcharseq) ));
+    rep_data.ptagseq = in_data.ptagseq;
+    for( Index &charidx : *(rep_data.pcharseq) ){ charidx = token_dict.unk_replace_in_probability(charidx); }
+    return rep_data;
+}
+
+
+/**
+* processng annotated data, including add new-token to lookup table, count token, translate text token to integer index.
+* @exception bad_alloc
+* @param raw_in raw annotated data
+* @param out processed data. including char-index and tag-index sequence
+*/
+template <typename ProcessedAnnotatedDataT>
+void 
+SegmentorBasicTokenModule::process_annotated_data(const std::vector<std::u32string>& wordseq, 
+    ProcessedAnnotatedDataT& processed_data)
+{
+    /*
+    ProcessedAnnotatedData :
+    struct
+    {
+    std::vector<Index> *pcharseq;
+    std::vector<Index> *ptagseq;
+    (others(such as feature info) will be added in the dirived class.)
+    ProcessedAnnotatedData()
+    : charindex_seq(nullptr),
+    tagindex_seq(nullptr)
+    ...
+    {}
+    ~ProcessedAnnotatedData(){ delete *; }
+    };
+    */
+    size_t token_cnt = token_module_inner::count_token_from_wordseq(wordseq);
+    std::shared_ptr<std::vector<Index>> &charindex_seq = processed_data.pcharseq;
+    std::shared_ptr<std::vector<Tag>> &tagindex_seq = processed_data.ptagseq;
+    charindex_seq.reset(std::vector<Index>(token_cnt)); 
+    tagindex_seq.reset(std::vector<Tag>(token_cnt)); // exception may be throw
+    size_t offset = 0;
+    // char text seq -> char index seq
+    for( const std::u32string &word : wordseq )
+    {
+        for( char32_t uc : word ){ (*charindex_seq)[offset++] = token_dict.convert(uc); }
+    }
+    // char text seq -> tag index seq
+    generate_tagseq_from_wordseq2preallocated_space(wordseq, *tagindex_seq);
+}
+
+
+/**
+* process unannotated data, that is translating text-token to char-index.
+* @param raw_in raw unannotated data
+* @param out processed data, including char-index sequence
+*/
+template <typename ProcessedUnannotatedDataT>
+void 
+SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
+    ProcessedUnannotatedDataT &processed_out) const
+{
+    /**
+    struct ProcessedUnannotatedData
+    {
+    std::vector<Index> *charindex_seq;
+    ...
+    ProcessedUnannotatedData()
+    : charindex_seq(nullptr)
+    ~ProcessedUnannotatedData(){ delete *; }
+    }
+    */
+    size_t token_cnt = tokenseq.size();
+    std::shared_ptr<std::vector<Index>> &charindex_seq = processed_out.charindex_seq;
+    charindex_seq.reset(new std::vector<Index>(token_cnt));
+    size_t offset = 0;
+    for( char32_t token : tokenseq ){ (*charindex_seq)[offset++] = token_dict.convert(token); }
+}
+
+
+/**
+* specification for ProcessedUnannotatedData = std::vector<Index> (not an structure)
+*/
+template <>
+void
+SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
+    std::vector<Index> &charseq) const
+{
+    using std::swap;
+    size_t token_cnt = tokenseq.size();
+    std::vector<Index> charseq_tmp(token_cnt);
+    size_t offset = 0;
+    for( char32_t token : tokenseq ){ charseq_tmp[offset++] = token_dict.convert(token); }
+    swap(charseq, charseq_tmp);
+}
+
+
+/**
+* do someting when has read all training data, including freeze lookup table, set unk.
+*/
 inline
 void SegmentorBasicTokenModule::finish_read_training_data()
 {
@@ -130,6 +236,20 @@ void SegmentorBasicTokenModule::finish_read_training_data()
     token_dict.set_unk();
 }
 
+
+/**
+* set unk replace [cnt_threshold] and [prob_threshold] from StructureParam.
+*/
+template <typename StructureParamT>
+inline
+void SegmentorBasicTokenModule::set_unk_replace_threshold(const StructureParamT& param) noexcept
+{
+    set_unk_replace_threshold(param.replace_freq_threshold, param.replace_prob_threshold);
+}
+
+/**
+* set unk replace [cnt_threshold] and [prob_threshold].
+*/
 inline
 void SegmentorBasicTokenModule::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
 {

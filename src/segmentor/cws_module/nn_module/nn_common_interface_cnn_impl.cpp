@@ -5,7 +5,7 @@ namespace slnn{
 namespace segmentor{
 namespace nn_module{
 
-void NeuralNetworkCommonInterfaceCnnImpl::set_update_method(std::string &optmization_name)
+void NeuralNetworkCommonInterfaceCnnImpl::set_update_method(const std::string &optmization_name)
 {
     std::string opt_norm_name(optmization_name);
     for( char &c : opt_norm_name ){ c = ::tolower(c); }

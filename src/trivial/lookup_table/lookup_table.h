@@ -8,6 +8,7 @@
 #define SLNN_TRIVIAL_LOOKUP_TABLE_H_
 #include <unordered_map>
 #include <string>
+#include <sstream>
 #include <random>
 #include <functional>
 #include <functional>
@@ -423,7 +424,10 @@ std::size_t LookupTableWithCnt<TokenType, Hash, KeyEqual>::count(const TokenType
 template <typename TokenType, typename Hash,  typename KeyEqual>
 std::size_t LookupTableWithCnt<TokenType, Hash, KeyEqual>::count_ban_unk(Index idx) const
 {
-    if( idx == get_unk_idx_without_throw() && has_set_unk() ){ throw std::domain_error("unk index('" + to_string(idx) + "') was banned."); }
+    if( idx == get_unk_idx_without_throw() && has_set_unk() )
+    { 
+        throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); 
+    }
     else
     {
         if( idx >= 0 && idx < size_without_unk() ){ return cnt[idx]; }
@@ -487,8 +491,9 @@ LookupTableWithReplace<TokenType, Hash, KeyEqual>::unk_replace_in_probability(In
     }
     else
     {
-        throw std::out_of_range("index '" + to_string(idx) +
-            "' was out of range( size = " + to_string(size()) + ")");
+        std::ostringstream oss;
+        oss << "index '" << idx << "' was out of range( size = " << size() << ")";
+        throw std::out_of_range(oss.str());
     }
 }
 

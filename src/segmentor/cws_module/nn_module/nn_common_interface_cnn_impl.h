@@ -16,12 +16,12 @@ class NeuralNetworkCommonInterfaceCnnImpl : public NeuralNetworkCommonInterface
 {
     friend class boost::serialization::access;
 public:
-    NeuralNetworkCommonInterfaceCnnImpl();
+    NeuralNetworkCommonInterfaceCnnImpl(int argc, char**argv, unsigned seed);
     ~NeuralNetworkCommonInterfaceCnnImpl();
     NeuralNetworkCommonInterfaceCnnImpl(const NeuralNetworkCommonInterfaceCnnImpl &) = delete;
     NeuralNetworkCommonInterfaceCnnImpl& operator=(const NeuralNetworkCommonInterfaceCnnImpl &) = delete;
     // training
-    virtual void set_update_method(std::string &optmization_name) override;
+    virtual void set_update_method(const std::string &optmization_name) override;
     virtual void update(slnn::type::real scale) override;
     virtual void update_epoch() override;
     virtual void forward() override;
@@ -32,18 +32,21 @@ public:
     virtual void stash_model() override;
     virtual bool stash_model_when_best(slnn::type::real current_score) override;
     virtual bool reset2stashed_model() override;
+public:
+    void init(int argc, char **argv);
 protected:
     cnn::ComputationGraph* get_cg(){ return pcg; }
     cnn::Model* get_cnn_model(){ return cnn_model; }
 private:
     template <typename Archive>
-    void serialize(Arhive &ar, const unsigned version);
+    void serialize(Archive &ar, const unsigned version);
 private:
     slnn::type::real best_score;
     std::stringstream best_model_tmp_ss;
     cnn::Trainer *trainer;
     cnn::ComputationGraph *pcg;
     cnn::Model *cnn_model;
+    unsigned cnn_rng_seed;
 };
 
 /*********************************************
@@ -51,13 +54,15 @@ private:
  *********************************************/
 
 inline 
-NeuralNetworkCommonInterfaceCnnImpl::NeuralNetworkCommonInterfaceCnnImpl()
+NeuralNetworkCommonInterfaceCnnImpl::NeuralNetworkCommonInterfaceCnnImpl(int argc, char **argv, unsigned seed)
     :best_score(0.f),
     best_model_tmp_ss(""),
     trainer(nullptr),
     pcg(new cnn::ComputationGraph()),
     cnn_model(new cnn::Model())
-{}
+{
+    cnn::Initialize(argc, argv, seed); 
+}
 
 inline
 NeuralNetworkCommonInterfaceCnnImpl::~NeuralNetworkCommonInterfaceCnnImpl()
@@ -100,7 +105,7 @@ std::vector<slnn::type::real> NeuralNetworkCommonInterfaceCnnImpl::forward_as_ve
 inline
 void NeuralNetworkCommonInterfaceCnnImpl::backward()
 {
-    pcg->backward;
+    pcg->backward();
 }
 
 inline 
@@ -137,7 +142,7 @@ bool NeuralNetworkCommonInterfaceCnnImpl::reset2stashed_model()
 
 template <typename Archive>
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::serialize(Arhive &ar, const unsigned version)
+void NeuralNetworkCommonInterfaceCnnImpl::serialize(Archive &ar, const unsigned version)
 {
     ar & *cnn_model;
 }

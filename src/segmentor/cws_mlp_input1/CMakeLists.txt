@@ -11,15 +11,16 @@ FILE(GLOB dep_eval "${cws_module_dir}/cws_eval.*")
 FILE(GLOB dep_stat "${cws_module_dir}/cws_stat.*")
 FILE(GLOB dep_io "${cws_module_dir}/cws_reader.*" "${cws_module_dir}/cws_writer.*")
 
-FILE(GLOB dep_nn_model "cws_mlp_input1*")
+FILE(GLOB model_template "cws_mlp_input1_template.*")
+
+FILE(GLOB cl_model "classification/cws_mlp_input1_cl_model.*")
 
 set(exe_name
-    cws_mlp_classification
+    cws_mlp_input1_classification
 )
 
 add_executable(${exe_name}
-               ${exe_name}.cpp
-               ${mlp_base_model}
+               "classification/${exe_name}.cpp"
                ${dep_token_module}
                ${dep_structure_param_module}
                ${dep_nn_general_module}
@@ -28,7 +29,8 @@ add_executable(${exe_name}
                ${dep_eval}
                ${dep_stat}
                ${dep_io}
-               ${dep_nn_model}
+               ${model_template}
+               ${cl_model}
 )
 
 target_link_libraries(${exe_name} 

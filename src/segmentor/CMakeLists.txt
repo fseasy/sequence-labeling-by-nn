@@ -136,12 +136,6 @@ SOURCE_GROUP("cws_module\\token_module" FILES ${segmentor_token_module_files})
 SOURCE_GROUP("cws_module\\structure_param_module" FILES ${segmentor_structure_param_module_files})
 SOURCE_GROUP("cws_module\\nn_module" FILES ${segmentor_nn_module_files})
 
-set(mlp_base_model
-    ${lookup_table_headers}
-    ${segmentor_token_module_files}
-    ${base_model_dir}/cws_mlp_base_model.h
-)
-
 #add_subdirectory(cws_single_classification)
 
 #add_subdirectory(cws_single_pretag)
@@ -161,5 +155,5 @@ set(mlp_base_model
 
 add_subdirectory(cws_input1_cl_with_feature)
 add_subdirectory(cws_bareinput1_cl_with_feature)
-add_subdirectory(cws_mlp_classification_model)
+add_subdirectory(cws_mlp_input1)
 #add_subdirectory(unit_test)

@@ -15,7 +15,7 @@ struct Writer
     // interface
     void writeline(const std::string &line){ os << line << std::endl; }
     // data
-    std::ostream os;
+    std::ostream &os;
 };
 
 } // end of namespace utils

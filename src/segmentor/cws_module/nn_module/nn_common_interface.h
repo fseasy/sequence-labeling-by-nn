@@ -13,7 +13,7 @@ class NeuralNetworkCommonInterface
 {
 public:
     // training
-    virtual void set_update_method(std::string &optmization_name) = 0;
+    virtual void set_update_method(const std::string &optmization_name) = 0;
     virtual void update(slnn::type::real scale) = 0;
     virtual void update_epoch() = 0;
     virtual void forward() = 0;

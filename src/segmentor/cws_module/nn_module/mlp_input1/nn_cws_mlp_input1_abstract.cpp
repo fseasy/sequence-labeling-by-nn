@@ -3,6 +3,27 @@ namespace slnn{
 namespace segmentor{
 namespace nn_module{
 
+std::function<cnn::expr::Expression(const cnn::expr::Expression &)> 
+get_nonlinear_function_from_name(const std::string &name)
+{
+    std::string lower_name(name);
+    for( char &c : lower_name ){ c = ::tolower(c); }
+    if( lower_name == "relu" || lower_name == "rectify" ){ return &cnn::expr::rectify; }
+    else if( lower_name == "sigmoid" || lower_name == "softmax" ){ return &cnn::expr::softmax; } // a bit strange...
+    else if( lower_name == "tanh" ){ return &cnn::expr::tanh; }
+    else
+    {
+        std::ostringstream oss;
+        oss << "not supported non-linear funtion: " << name << "\n"  
+            <<"Exit!\n";
+        throw std::invalid_argument(oss.str());
+    }
+}
+
+NnSegmentorInput1Abstract::NnSegmentorInput1Abstract(int argc, char **argv, unsigned seed) : 
+    NeuralNetworkCommonInterfaceCnnImpl(argc, argv, seed)
+{}
+
 cnn::expr::Expression 
 NnSegmentorInput1Abstract::build_training_graph(const std::vector<Index> &charseq, 
     const std::vector<Index> &tagseq)
