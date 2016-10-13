@@ -1,6 +1,7 @@
 #ifndef SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_CL_H_
 #define SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_CL_H_
 #include "nn_cws_mlp_input1_abstract.h"
+#include "utils/nn_utility.h"
 namespace slnn{
 namespace segmentor{
 namespace nn_module{
@@ -27,7 +28,7 @@ void NnSegmentorInput1Cl::build_model_structure(const StructureParamT &param)
     std::vector<unsigned> mlp_hidden_dim_list;
     this->mlp_hidden_layer.reset(new MLPHiddenLayer(this->get_cnn_model(), param.mlp_input_dim,
         param.mlp_hidden_dim_list, param.mlp_dropout_rate, 
-        get_nonlinear_function_from_name(param.mlp_nonlinear_function_str)));
+        utils::get_nonlinear_function_from_name(param.mlp_nonlinear_function_str)));
     this->output_layer.reset(new SimpleBareOutput(this->get_cnn_model(), param.mlp_hidden_dim_list.back(),
         param.output_dim));
 }

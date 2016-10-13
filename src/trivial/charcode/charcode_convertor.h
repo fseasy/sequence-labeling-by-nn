@@ -32,10 +32,10 @@ struct UTF8Convertor : public CharcodeConvertor
 /* TODO */
 struct GB18030Convertor : public CharcodeConvertor
 {
-    char32_t decode1(const std::string &u8_bytes, int start_pos, int bytes_length) noexcept override;
-    std::string encode1(char32_t unicode_char) noexcept override;
-    std::u32string decode(const std::string &encoded_bytes) noexcept override;
-    std::string encode(const std::u32string &unicode_str) noexcept override;
+    char32_t decode1(const std::string &u8_bytes, int start_pos, int bytes_length) noexcept override { return 0; }
+    std::string encode1(char32_t unicode_char) noexcept override { return ""; }
+    std::u32string decode(const std::string &encoded_bytes) noexcept override { return U""; }
+    std::string encode(const std::u32string &unicode_str) noexcept override { return ""; }
 };
 
 

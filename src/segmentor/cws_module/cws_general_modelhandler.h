@@ -21,7 +21,7 @@ namespace modelhandler{
 namespace modelhandler_inner{
 
 template <typename SLModel>
-unsigned read_annotated_data(std::ifstream &is, SLModel &slm, 
+unsigned read_annotated_data(std::istream &is, SLModel &slm, 
     std::vector<typename SLModel::AnnotatedDataProcessedT> &out_ann_processed_data);
 
 template <typename SLModel>
@@ -64,10 +64,10 @@ template <typename SLModel>
 bool set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args);
 
 template <typename SLModel>
-void read_training_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data);
+void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data);
 
 template <typename SLModel>
-void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data);
+void read_devel_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data);
 
 template <typename SLModel>
 void read_test_data(std::istream &is, SLModel &slm, 
@@ -100,11 +100,11 @@ void predict(SLModel &slm,
 namespace modelhandler_inner{
 
 template <typename SLModel>
-unsigned read_annotated_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_ann_processed_data)
+unsigned read_annotated_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_ann_processed_data)
 {
     using std::swap;
     reader::SegmentorUnicodeReader reader_ins(is,
-        charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is));
+        charcode::EncodingDetector::get_detector()->detect_and_set_encoding(is));
     std::vector<typename SLModel::AnnotatedDataProcessedT> dataset;
     unsigned detected_line_cnt = reader_ins.count_line();
     dataset.reserve(detected_line_cnt);
@@ -120,7 +120,7 @@ unsigned read_annotated_data(std::ifstream &is, SLModel &slm, std::vector<typena
         ++readline_cnt;
         if( report_cnt && readline_cnt % report_cnt == 0 )
         {
-            std::cerr << "read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
+            std::cerr << "- read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
         }
     }
     swap(out_ann_processed_data, dataset);
@@ -134,7 +134,7 @@ unsigned read_unannotated_data(std::istream &is, SLModel &slm,
 {
     using std::swap;
     reader::SegmentorUnicodeReader reader_ins(is,
-        charcode::EncodingDetector::get_detector()->detect_and_set_encoding_from_fstream(is)); // BUG! TODO
+        charcode::EncodingDetector::get_detector()->detect_and_set_encoding(is)); // BUG! TODO
     std::vector<typename SLModel::UnannotatedDataProcessedT> dataset;
     std::vector<typename SLModel::UnannotatedDataRawT> raw_dataset;
     unsigned detected_line_cnt = reader_ins.count_line();
@@ -146,13 +146,13 @@ unsigned read_unannotated_data(std::istream &is, SLModel &slm,
     while( reader_ins.readline(charseq) )
     {
         typename SLModel::UnannotatedDataProcessedT processed_data;
-        slm.get_token_module()->process_annotated_data(charseq, processed_data);
+        slm.get_token_module()->process_unannotated_data(charseq, processed_data);
         dataset.push_back(std::move(processed_data));
         raw_dataset.push_back(std::move(charseq));
         ++readline_cnt;
         if( report_cnt && readline_cnt % report_cnt == 0 )
         {
-            std::cerr << "read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
+            std::cerr << "- read instance : " << readline_cnt << " [" << readline_cnt / report_cnt << "/5]\n";
         }
     }
     swap(out_unann_processed_data, dataset);
@@ -195,21 +195,21 @@ bool set_model_structure_param(SLModel &slm, const boost::program_options::varia
 }
 
 template <typename SLModel>
-void read_training_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data)
+void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data)
 {
-    std::cerr << "+ Process training data.";
+    std::cerr << "+ Process training data.\n";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
-    std::cerr << "- Training data processed done. ( line count: " << line_cnt << ", instance number: " <<
+    std::cerr << "= Training data processed done. ( line count: " << line_cnt << ", instance number: " <<
         out_training_processed_data.size() << "\n";
     slm.finish_read_training_data();
 }
 
 template <typename SLModel>
-void read_devel_data(std::ifstream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data)
+void read_devel_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_devel_processed_data)
 {
-    std::cerr << "+ Process devel data.";
+    std::cerr << "+ Process devel data.\n";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_devel_processed_data);
-    std::cerr << "- devel data processed done. (line count: " << line_cnt << ", instance number: " 
+    std::cerr << "= devel data processed done. (line count: " << line_cnt << ", instance number: " 
         << out_devel_processed_data.size() << ")\n";
 }
 
@@ -218,9 +218,9 @@ void read_test_data(std::istream &is, SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_test_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_test_raw_data)
 {
-    std::cerr << "+ Process test data.";
+    std::cerr << "+ Process test data.\n";
     unsigned line_cnt = modelhandler_inner::read_unannotated_data(is, slm, out_test_processed_data, out_test_raw_data);
-    std::cerr << "- test data processed done. (line count: " << line_cnt << ", instance number: "
+    std::cerr << "= test data processed done. (line count: " << line_cnt << ", instance number: "
         << out_test_processed_data.size() << ")\n";
 }
 
@@ -237,7 +237,7 @@ void train(SLModel &slm,
     const TrainingOpts &opts)
 {
     unsigned nr_samples = training_data.size();
-    std::cerr << "+ Train at " << nr_samples << " instances .";
+    std::cerr << "+ Train at " << nr_samples << " instances .\n";
     
     slm.get_nn()->set_update_method(opts.training_update_method);
 
@@ -258,7 +258,7 @@ void train(SLModel &slm,
     unsigned long long total_time_cost_in_seconds = 0ULL;
     for( unsigned nr_epoch = 0; nr_epoch < opts.max_epoch ; ++nr_epoch )
     {
-        std::cerr << "++ Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " start ";
+        std::cerr << "++ Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " start. \n";
         // shuffle samples by random access order
         std::shuffle(access_order.begin(), access_order.end(), *slm.get_mt19937_rng());
 
@@ -283,7 +283,7 @@ void train(SLModel &slm,
             if( 0 == (i + 1) % opts.trivial_report_freq ) // Report 
             {
                 std::string trivial_header = std::to_string(i + 1) + " instances have been trained.";
-                BOOST_LOG_TRIVIAL(trace) << training_stat_per_epoch.get_stat_str(trivial_header);
+                std::cerr << training_stat_per_epoch.get_stat_str(trivial_header) << "\n";
             }
             ++line_cnt_for_devel;
             // do devel at every `do_devel_freq` and if update error, just exit the current process
@@ -302,13 +302,13 @@ void train(SLModel &slm,
         training_stat_per_epoch.end_time_stat();
         // 3. output info at end of every eopch
         std::ostringstream tmp_sos;
-        tmp_sos << "- Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " finished .\n";
+        tmp_sos << "-- Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " finished .\n";
         std::cerr << training_stat_per_epoch.get_stat_str(tmp_sos.str()) << "\n";
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
         if( update_recorder.is_training_ok() )
         {
-            std::cerr << "- Do validation at every ends of epoch .\n";
+            std::cerr << "-- Do validation at every ends of epoch .\n";
             do_devel_in_training(nr_epoch, -1); // -1 stands for the end of the epoch.
         }
         // check angin! (previous devel process may change the state.)
@@ -316,19 +316,20 @@ void train(SLModel &slm,
     }
     if( !update_recorder.is_training_ok() )
     { 
-        std::cerr << "- Gradient may have been updated error ! Exit ahead of time.\n" ; 
+        std::cerr << "! Gradient may have been updated error ! Exit ahead of time.\n" ; 
     }
-    std::cerr << "+ Training finished. Time cost:" << total_time_cost_in_seconds << "s, "
-        << "best score(F1): " << update_recorder.get_best_score() << ", "
-        << "at epoch: " << update_recorder.get_best_epoch() << ", "
-        << "devel order: " << update_recorder.get_best_devel_order() << "\n";
+    std::cerr << "= Training finished. Time cost:" << total_time_cost_in_seconds << "s, \n"
+        << "| best score(F1): " << update_recorder.get_best_score() << ", \n"
+        << "| at epoch: " << update_recorder.get_best_epoch() << ", \n"
+        << "| devel order: " << update_recorder.get_best_devel_order() << "\n"
+        << "= - - - - -";
 }
 
 template <typename SLModel>
 float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data)
 {
     unsigned nr_samples = devel_data.size();
-    std::cerr << "+ Validation at " << nr_samples << " instances.";
+    std::cerr << "+ Validation at " << nr_samples << " instances.\n";
 
     stat::SegmentorStat stat(true);
     stat.start_time_stat();
@@ -337,7 +338,8 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
         typename const SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
-        std::vector<Tag> pred_tagseq = slm.predict(instance);
+        std::vector<Index> pred_tagseq = slm.predict(
+            slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
         eval_ins.eval_iteratively(*instance.ptagseq, pred_tagseq);
     }
     stat.end_time_stat();
@@ -345,8 +347,8 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
     stat.nr_token_predict = eval_result.nr_token_predict;
     stat.total_tags = eval_result.nr_tag;
     std::ostringstream tmp_sos;
-    tmp_sos << "- Validation finished. \n"
-        << "Acc = " << eval_result.acc << "% , P = " << eval_result.p 
+    tmp_sos << "= Validation finished. \n"
+        << "| Acc = " << eval_result.acc << "% , P = " << eval_result.p 
         << "% , R = " << eval_result.r << "% , F1 = " << eval_result.f1 << "%";
     std::cerr << stat.get_stat_str(tmp_sos.str()) << "\n";
     return eval_result.f1;
@@ -360,7 +362,7 @@ void predict(SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> test_data;
     std::vector<typename SLModel::UnannotatedDataRawT> test_raw_data;
     read_test_data(is, slm, test_data, test_raw_data);
-    std::cerr << "Do prediction on " << test_data.size() << " instances .";
+    std::cerr << "+ Do prediction on " << test_data.size() << " instances .";
     BasicStat stat(true);
     stat.start_time_stat();
     writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding());
@@ -373,12 +375,12 @@ void predict(SLModel &slm,
             writer_ins.write({}, {});
             continue;
         }
-        std::vector<Tag> pred_tagseq = slm.predict(instance);
+        std::vector<Index> pred_tagseq = slm.predict(instance);
         writer_ins.write(raw_instance, pred_tagseq);
         stat.total_tags += pred_tagseq.size() ;
     }
     stat.end_time_stat() ;
-    std::cerr << stat.get_stat_str("predict done.") << "\n" ;
+    std::cerr << stat.get_stat_str("+ Predict done.") << "\n" ;
 }
 
 

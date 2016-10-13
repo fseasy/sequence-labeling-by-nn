@@ -25,9 +25,8 @@ public:
     void set_encoding(std::string &encoding_name) noexcept;
     base::EncodingType get_encoding() const noexcept;
     base::EncodingType detect_and_set_encoding(const std::string &bytes) noexcept;
-    base::EncodingType detect_and_set_encoding(std::ifstream &f) noexcept; // reject iostream
-    base::EncodingType detect_and_set_encoding(std::istream &stdinf) noexcept;
-    base::EncodingType detect_and_set_encoding_from_fstream(std::ifstream &f) noexcept; // explicit to detect from file.
+    base::EncodingType detect_and_set_encoding(std::ifstream &f) noexcept; // for fstream
+    base::EncodingType detect_and_set_encoding(std::istream &stdinf) noexcept; // dynamic decide stdin or fstream by dynamic_cast
 private:
     EncodingDetector() noexcept;
 
@@ -139,30 +138,27 @@ base::EncodingType EncodingDetector::detect_and_set_encoding(std::ifstream &f) n
 }
 
 /**
- * detect encoding type from stdin.
- * we just according to the priori knowledge.
+ * detect encoding type from polymophic istream.
+ * RTTI istream& by dynamic_cast, if stdin -> return consolo encoding; else -> call detect_and_set_encoding(std::ifstream &f)
  * WINDOWS -> GB18030, OTHERS -> UTF8.
  */
 inline 
-base::EncodingType EncodingDetector::detect_and_set_encoding(std::istream &stdiof) noexcept
+base::EncodingType EncodingDetector::detect_and_set_encoding(std::istream &polymophic_if) noexcept
 {
-    base::EncodingType type_from_priori = get_console_encoding();
-    set_encoding(type_from_priori);
-    return type_from_priori;
+    try
+    {
+        std::ifstream &f =  dynamic_cast<std::ifstream &>(polymophic_if);
+        return detect_and_set_encoding(f);
+    }
+    catch( std::bad_cast &)
+    {
+        // stdin stream
+        base::EncodingType type_from_priori = get_console_encoding();
+        set_encoding(type_from_priori);
+        return type_from_priori;
+    }
 }
 
-/**
- * detect encoding from file stream explicitly.
- * when polymorphism, we can't use the completely-match rule to using the overload function for file stream.
- * eg:
- *   void f(std::istream &f){  detect_and_set_encoding(f); } -> we lose the original type, so un-expected things happen
- */
-inline
-base::EncodingType 
-EncodingDetector::detect_and_set_encoding_from_fstream(std::ifstream &f) noexcept
-{
-    return detect_and_set_encoding(f);
-}
 
 } // end of namespace detector
 using detector::EncodingDetector;

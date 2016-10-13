@@ -50,6 +50,16 @@ struct SegmentorBasicMlpParam
  *  Inline Implementation
  **********************************************/
 
+template<typename TokenModuleT>
+void SegmentorBasicMlpParam::set_param_from_token_module(const TokenModuleT &token_module)
+{
+    // Input - dict size
+    corpus_token_dict_size = token_module.get_charset_size();
+    // Output
+    output_dim = token_module.get_tagset_size();
+}
+
+
 template <class Archive>
 void SegmentorBasicMlpParam::serialize(Archive &ar, const unsigned int)
 {

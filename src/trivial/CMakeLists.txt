@@ -21,4 +21,4 @@ SOURCE_GROUP("lookup_table" FILES ${lookup_table_headers}
 SOURCE_GROUP("charcode" FILES ${charcode_headers}
                               ${charcode_srcs}) 
 
-SET_PROPERTY(TARGET trivial PROPERTY FOLDER "libiraries")                                
+SET_PROPERTY(TARGET trivial PROPERTY FOLDER "libraries")                                

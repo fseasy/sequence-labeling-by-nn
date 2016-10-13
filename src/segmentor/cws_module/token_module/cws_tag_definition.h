@@ -72,7 +72,7 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
 * @return word sequence, unicode string sequence
 */
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
-    const std::vector<Tag> &tagseq) noexcept;
+    const std::vector<Index> &tagseq) noexcept;
 
 /**
  * whethere can emit for the current tag id at the current time.
@@ -138,26 +138,30 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
             out_preallocated_tagseq[idx++] = TAG_E_ID;
         }
     }
+    for( int i = 0; i < idx; ++i ){ std::cerr << out_preallocated_tagseq[i] << " "; } std::cerr << "\n";
 }
 
 
 inline 
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
-    const std::vector<Tag> &tagseq) noexcept
+    const std::vector<Index> &tagseq) noexcept
 {
     assert(charseq.size() == tagseq.size());
     std::vector<std::u32string> wordseq;
+    std::cerr << "BUG " << tagseq.size() << "\n";
     std::size_t slice_spos = 0;
     for( std::size_t i = 0U; i < charseq.size(); ++i )
     {
         Index tag = tagseq[i];
-        if( tag == Tag::TAG_B_ID || tag == Tag::TAG_S_ID )
+        std::cerr << tag << " ";
+        if( tag == Tag::TAG_E_ID || tag == Tag::TAG_S_ID )
         {
             std::size_t word_len = i - slice_spos + 1;
             wordseq.push_back(charseq.substr(slice_spos, word_len));
             slice_spos = i + 1;
         }
     }
+    std::cerr << "\n";
     return wordseq;
 }
 

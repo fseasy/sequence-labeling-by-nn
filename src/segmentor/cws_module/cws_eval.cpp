@@ -7,8 +7,12 @@ SegmentorEval::SegmentorEval()
     :tmp_result4iter()
 {}
 
-void SegmentorEval::eval_iteratively(const std::vector<Tag> &gold_tagseq, const std::vector<Tag> &pred_tagseq)
+void SegmentorEval::eval_iteratively(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
 {
+    assert(gold_tagseq.size() == pred_tagseq.size());
+    std::cerr << "========\n";
+    for( unsigned i = 0; i < gold_tagseq.size(); ++i ){ std::cerr << gold_tagseq[i] << " "; } std::cerr << "\n";
+    for( unsigned i = 0; i < gold_tagseq.size(); ++i ){ std::cerr << pred_tagseq[i] << " "; } std::cerr << "\n";
     eval_inner::EvalTempResultT cur_tmp_result = eval_one(gold_tagseq, pred_tagseq);
     tmp_result4iter += cur_tmp_result;
 }
@@ -24,13 +28,14 @@ EvalResultT SegmentorEval::end_eval()
     float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R)  ;
     EvalResultT tmp;
     // assign
+    std::cerr << "eval bug : nr tag: " << tmp_result4iter.nr_tag << "/" << tmp_result4iter.nr_tag_predict_right << "\n";
     tmp.p = P; tmp.r = R; tmp.f1 = F1; tmp.acc = Acc;
     tmp.nr_tag = tmp_result4iter.nr_tag; tmp.nr_tag_predict_right = tmp_result4iter.nr_tag_predict_right;
     tmp.nr_token_gold = tmp_result4iter.nr_token_gold; tmp.nr_token_predict = tmp_result4iter.nr_token_predict;
     tmp.nr_token_predict_right = tmp_result4iter.nr_token_predict_right;
     return tmp;
 }
-EvalResultT SegmentorEval::eval(const std::vector<std::vector<Tag>> &gold_tagseq_set, const std::vector<std::vector<Tag>> &pred_tagseq_set)
+EvalResultT SegmentorEval::eval(const std::vector<std::vector<Index>> &gold_tagseq_set, const std::vector<std::vector<Index>> &pred_tagseq_set)
 {
     eval_inner::EvalTempResultT backup = tmp_result4iter;
     start_eval();
@@ -43,7 +48,7 @@ EvalResultT SegmentorEval::eval(const std::vector<std::vector<Tag>> &gold_tagseq
     return result;
 }
 
-eval_inner::EvalTempResultT SegmentorEval::eval_one(const std::vector<Tag> &gold_tagseq, const std::vector<Tag> &pred_tagseq)
+eval_inner::EvalTempResultT SegmentorEval::eval_one(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
 {
     assert(gold_tagseq.size() == pred_tagseq.size()) ;
     std::vector<std::pair<unsigned, unsigned>> gold_words = tagseq2word_range_list(gold_tagseq) ;
@@ -81,7 +86,7 @@ eval_inner::EvalTempResultT SegmentorEval::eval_one(const std::vector<Tag> &gold
     return tmp_result;
 }
 
-std::vector<std::pair<unsigned, unsigned>> SegmentorEval::tagseq2word_range_list(const std::vector<Tag> &seq)
+std::vector<std::pair<unsigned, unsigned>> SegmentorEval::tagseq2word_range_list(const std::vector<Index> &seq)
 {
     std::vector<std::pair<unsigned, unsigned>> tmp_word_ranges ;
     unsigned range_s = 0 ;

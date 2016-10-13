@@ -19,7 +19,7 @@ public:
     // constructor
     SegmentorWriter(std::ostream &os, charcode::EncodingType encoding_type, const std::u32string &uni_delimiter=U"\t");
     using Writer::writeline;
-    void write(const std::u32string &uni_str, const std::vector<Tag> &tagseq);
+    void write(const std::u32string &uni_str, const std::vector<Index> &tagseq);
 private:
     std::shared_ptr<charcode::CharcodeConvertor> conv;
     std::string out_delimiter;
@@ -37,9 +37,9 @@ SegmentorWriter::SegmentorWriter(std::ostream &os, charcode::EncodingType encodi
 {}
 
 inline
-void SegmentorWriter::write(const std::u32string &charseq, const std::vector<Tag> &tagseq)
+void SegmentorWriter::write(const std::u32string &charseq, const std::vector<Index> &tagseq)
 {
-    if( charseq.size() == 0 ){ writeline(""); }
+    if( charseq.size() == 0 ){ writeline(""); return; }
     std::vector<std::u32string> wordseq = token_module::generate_wordseq_from_chartagseq(charseq, tagseq);
     std::ostringstream oss;
     oss << conv->encode(wordseq[0]);

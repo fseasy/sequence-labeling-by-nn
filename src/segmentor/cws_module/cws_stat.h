@@ -28,10 +28,11 @@ std::string SegmentorStat::get_stat_str(const std::string &info_header)
 {
     std::ostringstream str_os;
     str_os << info_header << "\n" ;
-    if( !is_predict ){ str_os << "Sum E = " << get_sum_E() << "\n" ; }
-    str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
-        << "Speed(tag) = " << get_speed_as_kilo_tokens_per_sencond() << " K Tags/s\n"
-        << "Speed(token) = " << nr_token_predict / 1000.f / get_time_cost_in_seconds() << " K Tokens/s" ;
+    if( !is_predict ){ str_os << "| Sum E = " << get_sum_E() << "\n" ; }
+    str_os << "| Time cost = " << get_time_cost_in_seconds() << " s\n"
+        << "| Speed(tag) = " << get_speed_as_kilo_tokens_per_sencond() << " K Tags/s\n"
+        << "| Speed(token) = " << nr_token_predict / 1000.f / get_time_cost_in_seconds() << " K Tokens/s\n"
+        << "= - - - - -";
     return str_os.str();
 }
 

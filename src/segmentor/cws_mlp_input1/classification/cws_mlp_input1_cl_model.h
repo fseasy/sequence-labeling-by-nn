@@ -9,6 +9,11 @@ namespace slnn{
 namespace segmentor{
 namespace mlp_input1{
 
+extern template class SegmentorMlpInput1Template<
+    token_module::SegmentorBasicTokenModule,
+    structure_param_module::SegmentorBasicMlpParam,
+    nn_module::NnSegmentorInput1Cl>;
+
 using MlpInput1Cl = SegmentorMlpInput1Template<
     token_module::SegmentorBasicTokenModule,
     structure_param_module::SegmentorBasicMlpParam,

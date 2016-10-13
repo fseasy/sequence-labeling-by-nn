@@ -1,6 +1,6 @@
 #include <limits>
 #include "cws_output_layer.h"
-
+#include "segmentor/cws_module/token_module/cws_tag_definition.h"
 namespace slnn{
 
 CWSSimpleOutput::CWSSimpleOutput(cnn::Model *m,
@@ -415,20 +415,22 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
     std::swap(pred_out_seq, tmp_pred_out);
 }
 
-/* CWS Simple Bare output */
+/***************************************************
+ * Segmentor output :  Simple Bare output (re-write @2016-10-13)
+ ***************************************************/
 
 CWSSimpleBareOutput::CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim)
     :SimpleBareOutput(m, input_dim, output_dim)
 {}
 
-void CWSSimpleBareOutput::build_output(const std::vector<cnn::expr::Expression> &input_expr_seq,
-    IndexSeq &predicted_seq)
+void CWSSimpleBareOutput::
+build_output(const std::vector<cnn::expr::Expression> &input_expr_seq, std::vector<Index> &out_pred_seq)
 {
     using std::swap;
     size_t len = input_expr_seq.size();
-    if( 1 == len ) // Special Condition 
+    if( 1 == len ) // Special Condition : len = 1
     {
-        predicted_seq = { CWSTaggingSystem::STATIC_S_ID };
+        out_pred_seq = { segmentor::Tag::TAG_S_ID };
         return ;
     }
     std::vector<Index> tmp_pred_out(len);

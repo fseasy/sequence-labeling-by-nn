@@ -53,15 +53,24 @@ set(unittest_framework_include
     ${thirdparty_dir}/catch/include/catch.hpp
 )
 
-####################    Trivial Modules #####################
+####################    Layer Modules (modelmodule)  ###########
+
+set(layer_dir "${source_dir}/modelmodule")
+
+FILE(GLOB layer_headers "${layer_dir}/*.h*")
+
+
+####################    Trivial Modules    #####################
 
 SET(trivial_dir "${source_dir}/trivial")
 
 FILE(GLOB lookup_table_headers "${trivial_dir}/lookup_table/*.h*")
 FILE(GLOB charcode_headers "${trivial_dir}/charcode/*.h*")
 
+###################    utils (new)         ######################
+SET(utils_dir "${source_dir}/utils")
 
-
+ADD_SUBDIRECTORY(modelmodule)
 add_subdirectory(trivial)
 
 add_subdirectory(unittest)

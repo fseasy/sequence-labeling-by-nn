@@ -3,7 +3,8 @@
 
 #include <vector>
 #include <array>
-#include <utility> 
+#include <utility>
+#include <functional>
 #include "cnn/cnn.h"
 
 namespace slnn{

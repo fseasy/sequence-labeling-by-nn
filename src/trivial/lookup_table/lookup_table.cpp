@@ -10,6 +10,8 @@ template class LookupTable<char32_t>;
 template class LookupTable<u32string>;
 template class LookupTable<string>;
 
+template class LookupTableWithCnt<char32_t>;
+template class LookupTableWithCnt<u32string>;
 template class LookupTableWithCnt<string>;
 
 template class LookupTableWithReplace<char32_t>;

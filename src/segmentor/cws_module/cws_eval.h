@@ -34,15 +34,15 @@ struct EvalTempResultT
 
 struct EvalResultT
 {
-    float p;
-    float r;
-    float f1;
-    float acc;
-    unsigned nr_token_predict_right;
-    unsigned nr_token_predict;
-    unsigned nr_token_gold;
-    unsigned nr_tag_predict_right;
-    unsigned nr_tag;
+    float p = 0.f;
+    float r = 0.f;
+    float f1 = 0.f;
+    float acc = 0.f;
+    unsigned nr_token_predict_right = 0;
+    unsigned nr_token_predict = 0;
+    unsigned nr_token_gold = 0;
+    unsigned nr_tag_predict_right = 0;
+    unsigned nr_tag = 0;
 };
 
 /**
@@ -59,13 +59,13 @@ public:
 public:
     // iteratively
     void start_eval();
-    void eval_iteratively(const std::vector<Tag> &gold_tagseq, const std::vector<Tag> &pred_tagseq);
+    void eval_iteratively(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq);
     EvalResultT end_eval();
     // batch
-    EvalResultT eval(const std::vector<std::vector<Tag>> &gold_tagseq_set, const std::vector<std::vector<Tag>> &pred_tagseq);
+    EvalResultT eval(const std::vector<std::vector<Index>> &gold_tagseq_set, const std::vector<std::vector<Index>> &pred_tagseq);
 private:
-    eval_inner::EvalTempResultT eval_one(const std::vector<Tag> &gold_tagseq, const std::vector<Tag> &pred_tagseq);
-    std::vector<std::pair<unsigned, unsigned>> tagseq2word_range_list(const std::vector<Tag> &seq);
+    eval_inner::EvalTempResultT eval_one(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq);
+    std::vector<std::pair<unsigned, unsigned>> tagseq2word_range_list(const std::vector<Index> &seq);
 private:
     eval_inner::EvalTempResultT tmp_result4iter;
 };

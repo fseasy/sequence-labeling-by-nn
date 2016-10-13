@@ -19,10 +19,13 @@ public:
     using UnannotatedDataProcessedT = typename TokenModuleT::UnannotatedDataProcessedT;
     using UnannotatedDataRawT = typename TokenModuleT::UnannotatedDataRawT;
 public:
-    TokenModuleT* get_token_module() const { return &token_module; }
-    NnModuleT* get_nn() const { return &nn; }
-    StructureParamT *get_param() const { return &param; }
-    std::mt19937* get_mt19937_rng() const { static rng = std::mt19937(rng_seed); return &rng; }
+    const TokenModuleT* get_token_module() const { return &token_module; }
+    TokenModuleT* get_token_module() { return &token_module; }
+    const NnModuleT* get_nn() const { return &nn; }
+    NnModuleT* get_nn() { return &nn; }
+    const StructureParamT *get_param() const { return &param; }
+    StructureParamT *get_param() { return &param; }
+    std::mt19937* get_mt19937_rng() { static std::mt19937 rng(rng_seed); return &rng; }
     unsigned get_rng_seed() const { return rng_seed; }
 private:
     explicit SegmentorMlpInput1Template(int argc, char **argv, unsigned seed) ;
@@ -32,15 +35,15 @@ public:
     SegmentorMlpInput1Template& operator=(const SegmentorMlpInput1Template&) = delete;
 public:
     static std::shared_ptr<SegmentorMlpInput1Template> create_new_model(int argc, char**argv, unsigned seed);
-    static void save_model(std::ostream &os, const SegmentorMlpInput1Template &m);
+    static void save_model(std::ostream &os, SegmentorMlpInput1Template &m);
     static std::shared_ptr<SegmentorMlpInput1Template> load_and_build_model(std::istream &is, int argc, char **argv);
-    void save_model(std::ostream &os) const { save_model(os, *this); }
+    void save_model(std::ostream &os) { save_model(os, *this); }
 public:
     void set_model_structure_param_from_outer(const boost::program_options::variables_map &args);
     void finish_read_training_data();
     void build_model_structure();
     void build_training_graph(const AnnotatedDataProcessedT& ann_processed_data);
-    std::vector<Tag> predict(const UnannotatedDataProcessedT& unann_processed_data);
+    std::vector<Index> predict(const UnannotatedDataProcessedT& unann_processed_data);
 private:
     TokenModuleT token_module;
     StructureParamT param;
@@ -73,17 +76,18 @@ create_new_model(int argc, char **argv, unsigned seed)
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 void 
 SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
-save_model(std::ostream &os, const SegmentorMlpInput1Template &m)
+save_model(std::ostream &os, SegmentorMlpInput1Template &m)
 {
     boost::archive::text_oarchive to(os);
     // 1. first save the seed.
-    to << m.get_rng_seed();
+    unsigned seed = m.get_rng_seed();
+    to << seed; // boost can't directly serialize r-value ?
     // 2. save param
-    to << *m.get_param();
+    to << *(m.get_param());
     // 3. save token module
-    to << *m.get_token_module();
+    to << *(m.get_token_module());
     // 4. save nn
-    to << *m.get_nn();
+    to << *(m.get_nn());
 }
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
@@ -101,7 +105,7 @@ load_and_build_model(std::istream &is, int argc, char **argv)
     ti >> *m->get_param();
     // 4. read token module
     ti >> *m->get_token_module();
-    // 5. build structure
+    //// 5. build structure
     m->build_model_structure();
     // 6. read nn
     ti >> *m->get_nn();
@@ -153,7 +157,7 @@ build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-std::vector<Tag> SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+std::vector<Index> SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 predict(const UnannotatedDataProcessedT & unann_processed_data)
 {
     return nn.predict(unann_processed_data);

@@ -10,13 +10,14 @@
 
 #ifndef __linux     // WINDOWS
     #include <io.h>
-    #define access _access_s
+    #define io_access _access_s  // name `access` is confilicate with boost::serialization::access 
     #define F_OK 0
     #define R_OK 4
     #define W_OK 2
     #define X_OK 1
 #else               // LINUX
     #include <unistd.h>
+    #define io_access access
 #endif
 
 #include <boost/program_options.hpp>
@@ -37,7 +38,7 @@ struct FileUtils
     static
     bool writeable(const std::string &file_name)
     {
-        if(exists(file_name)) return access(file_name.c_str() , W_OK) == 0 ; 
+        if(exists(file_name)) return io_access(file_name.c_str() , W_OK) == 0 ; 
         else
         {
             // we thought it is a dir_name + file_name

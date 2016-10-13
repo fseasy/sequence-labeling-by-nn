@@ -39,6 +39,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
             "separated by comma , like : 512,256,334 ")
         ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
+        ("nonlinear_func", po::value<string>()->default_value(string("relu")), "Non-linear function for mlp layers")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
             "else value leads to output trace info.")
@@ -210,7 +211,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     string raw_data_path, output_path, model_path;
     op_des.add_options()
         ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
-        ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
+        ("input", po::value<string>(&raw_data_path), "The path to input data.")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -225,7 +226,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
 
     //set params 
 
-    varmap_key_fatal_check(var_map, "raw_data", "raw_data path should be specified .");
+    varmap_key_fatal_check(var_map, "input", "input data path should be specified .");
 
     if (output_path == "")
     {
@@ -284,8 +285,8 @@ int main(int argc, char *argv[])
     ostringstream oss;
     string program_name = argv[0];
     oss << PROGRAM_HEADER << "\n"
-        << "usage : " << program_name << " [task] <options>" << "\n"
-        << "task : [ train, devel, predict ] , anyone of the list is optional\n"
+        << "usage     : " << program_name << " [task] <options>" << "\n"
+        << "task      : [ train, devel, predict ] , anyone of the list is optional\n"
         << "<options> : options for specific task and model .\n"
         << "            using '" << program_name << " [task] [rnn-type] -h' for details" ;
     string usage = oss.str();

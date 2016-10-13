@@ -3,7 +3,8 @@
 #include <functional>
 #include "utils/typedeclaration.h"
 #include "segmentor/cws_module/nn_module/nn_common_interface_cnn_impl.h"
-#include "segmentor/cws_module/cws_feature_layer.h"
+#include "segmentor/cws_module/token_module/cws_tag_definition.h"
+#include "modelmodule/hyper_layers.h"
 namespace slnn{
 namespace segmentor{
 namespace nn_module{
@@ -17,8 +18,8 @@ public:
     template <typename UnannotatedDataProcessedT>
     std::vector<Index> predict(const UnannotatedDataProcessedT &unann_processed_data);
 protected:
-    cnn::expr::Expression build_training_graph(const std::vector<Index> &charseq, const std::vector<Index> &tagseq);
-    std::vector<Index> predict(const std::vector<Index> &charseq);
+    cnn::expr::Expression build_training_graph_impl(const std::vector<Index> &charseq, const std::vector<Index> &tagseq);
+    std::vector<Index> predict_impl(const std::vector<Index> &charseq);
 protected:
     std::shared_ptr<Index2ExprLayer> word_expr_layer;
     std::shared_ptr<WindowExprGenerateLayer> window_expr_generate_layer;
@@ -26,8 +27,7 @@ protected:
     std::shared_ptr<BareOutputBase> output_layer;
 };
 
-std::function<cnn::expr::Expression(const cnn::expr::Expression &)> 
-get_nonlinear_function_from_name(const std::string &name);
+
 
 
 /**************************************************
@@ -39,16 +39,14 @@ inline
 cnn::expr::Expression 
 NnSegmentorInput1Abstract::build_training_graph(const AnnotatedDataProcessedT &ann_processed_data)
 {
-    build_training_graph(*ann_processed_data.pcharseq, *ann_processed_data.ptagseq);
+    return build_training_graph_impl(*ann_processed_data.pcharseq, *ann_processed_data.ptagseq);
 }
 template <typename UnannotatedDataProcessedT>
 inline
 std::vector<Index> 
 NnSegmentorInput1Abstract::predict(const UnannotatedDataProcessedT &unann_processed_data)
 {
-    // here Template type equals to non-template function's type. According to function-call match rule,
-    // this template function should never be called. we write here for specification?
-    predict(unann_processed_data);  
+    return predict_impl(unann_processed_data);  
 }
 
 

@@ -74,9 +74,10 @@ struct BasicStat
     {
         std::ostringstream str_os;
         str_os << info_header << "\n" ;
-        if( !is_predict ){ str_os << "Total E = " << get_sum_E() << "\n" ; }
-        str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
-            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s";
+        if( !is_predict ){ str_os << "| Total E = " << get_sum_E() << "\n" ; }
+        str_os << "| Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "| Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
+            << "= - - - - -";
         return str_os.str();
     }
 protected :

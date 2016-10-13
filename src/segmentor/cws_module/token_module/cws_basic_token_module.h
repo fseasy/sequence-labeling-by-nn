@@ -44,9 +44,9 @@ public:
     struct AnnotatedDataProcessedT
     {
         std::shared_ptr<std::vector<Index>> pcharseq;
-        std::shared_ptr<std::vector<Tag>> ptagseq;
+        std::shared_ptr<std::vector<Index>> ptagseq;
         AnnotatedDataProcessedT() : pcharseq(nullptr), ptagseq(nullptr){}
-        std::size_t size() const { pcharseq ? pcharseq->size() : 0UL; }
+        std::size_t size() const { return pcharseq ? pcharseq->size() : 0UL; }
     };
     using AnnotatedDataRawT = std::vector<std::u32string>;
     using UnannotatedDataProcessedT = std::vector<Index>;
@@ -84,7 +84,12 @@ private:
     void serialize(Archive& ar, const unsigned int);
 
 private:
-    slnn::trivial::LookupTableWithReplace<char32_t> token_dict;
+    //slnn::trivial::LookupTableWithReplace<char32_t> token_dict;
+    /**
+     * token dict: unicode-char => index.
+     * because boost(<=1.58.0) doesn't support deserialize char32_t, so we use actual-euqal data type -> unsigned
+     */
+    slnn::trivial::LookupTableWithReplace<unsigned> token_dict;
 };
 
 /******************************************
@@ -123,7 +128,7 @@ inline
 SegmentorBasicTokenModule::UnannotatedDataProcessedT 
 SegmentorBasicTokenModule::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
-    UnannotatedDataProcessedT 
+    return *(ann_data.pcharseq);
 }
 
 
@@ -167,9 +172,9 @@ SegmentorBasicTokenModule::process_annotated_data(const std::vector<std::u32stri
     */
     size_t token_cnt = token_module_inner::count_token_from_wordseq(wordseq);
     std::shared_ptr<std::vector<Index>> &charindex_seq = processed_data.pcharseq;
-    std::shared_ptr<std::vector<Tag>> &tagindex_seq = processed_data.ptagseq;
-    charindex_seq.reset(std::vector<Index>(token_cnt)); 
-    tagindex_seq.reset(std::vector<Tag>(token_cnt)); // exception may be throw
+    std::shared_ptr<std::vector<Index>> &tagindex_seq = processed_data.ptagseq;
+    charindex_seq.reset(new std::vector<Index>(token_cnt)); 
+    tagindex_seq.reset(new std::vector<Index>(token_cnt)); // exception may be throw for memory limit
     size_t offset = 0;
     // char text seq -> char index seq
     for( const std::u32string &word : wordseq )
@@ -213,6 +218,7 @@ SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokens
 * specification for ProcessedUnannotatedData = std::vector<Index> (not an structure)
 */
 template <>
+inline
 void
 SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
     std::vector<Index> &charseq) const
@@ -281,7 +287,7 @@ std::size_t SegmentorBasicTokenModule::get_tagset_size() const noexcept
 template<class Archive>
 void SegmentorBasicTokenModule::serialize(Archive& ar, const unsigned int)
 {
-    ar &token_dict;
+    ar & token_dict;
 }
 
 } // end of namespace token_module

@@ -112,7 +112,7 @@ inline
 void NeuralNetworkCommonInterfaceCnnImpl::stash_model()
 {
     best_model_tmp_ss.str(""); // first , clear it's content !
-    boost::archive::text_oarchive to(best_model_tmp_ss); // to construct an text_oarchive using stringstream
+    boost::archive::text_oarchive to(best_model_tmp_ss); // to construct a text_oarchive using stringstream
     to << *cnn_model;
 }
 
