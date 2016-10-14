@@ -51,12 +51,12 @@ private:
 } // end of namespace modelhandler-inner
 
 inline
-const std::string& WordOutputDelimiter()
+const std::u32string& WordOutputDelimiter()
 {
     // see Effective C++ , item 04.
     // for non-local static variable, to avoid initialization-race-condition, using local static variable.
     // that is, Singleton Pattern Design
-    static std::string WordOutputDelimiterLocalStatic = "\t";
+    static std::u32string WordOutputDelimiterLocalStatic = U"\t";
     return WordOutputDelimiterLocalStatic;
 }
 
@@ -256,9 +256,9 @@ void train(SLModel &slm,
 
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
-    for( unsigned nr_epoch = 0; nr_epoch < opts.max_epoch ; ++nr_epoch )
+    for( unsigned nr_epoch = 1; nr_epoch <= opts.max_epoch ; ++nr_epoch )
     {
-        std::cerr << "++ Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " start. \n";
+        std::cerr << "++ Epoch " << nr_epoch << "/" << opts.max_epoch << " start. \n";
         // shuffle samples by random access order
         std::shuffle(access_order.begin(), access_order.end(), *slm.get_mt19937_rng());
 
@@ -302,7 +302,7 @@ void train(SLModel &slm,
         training_stat_per_epoch.end_time_stat();
         // 3. output info at end of every eopch
         std::ostringstream tmp_sos;
-        tmp_sos << "-- Epoch " << nr_epoch + 1 << "/" << opts.max_epoch << " finished .\n";
+        tmp_sos << "-- Epoch " << nr_epoch << "/" << opts.max_epoch << " finished .\n";
         std::cerr << training_stat_per_epoch.get_stat_str(tmp_sos.str()) << "\n";
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
@@ -365,7 +365,7 @@ void predict(SLModel &slm,
     std::cerr << "+ Do prediction on " << test_data.size() << " instances .";
     BasicStat stat(true);
     stat.start_time_stat();
-    writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding());
+    writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding(), WordOutputDelimiter());
     for (unsigned int i = 0; i < test_data.size(); ++i)
     {
         typename SLModel::UnannotatedDataRawT &raw_instance = test_raw_data[i];

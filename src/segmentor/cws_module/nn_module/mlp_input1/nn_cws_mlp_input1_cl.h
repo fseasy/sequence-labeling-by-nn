@@ -29,7 +29,7 @@ void NnSegmentorInput1Cl::build_model_structure(const StructureParamT &param)
     this->mlp_hidden_layer.reset(new MLPHiddenLayer(this->get_cnn_model(), param.mlp_input_dim,
         param.mlp_hidden_dim_list, param.mlp_dropout_rate, 
         utils::get_nonlinear_function_from_name(param.mlp_nonlinear_function_str)));
-    this->output_layer.reset(new SimpleBareOutput(this->get_cnn_model(), param.mlp_hidden_dim_list.back(),
+    this->output_layer.reset(new CWSSimpleBareOutput(this->get_cnn_model(), param.mlp_hidden_dim_list.back(),
         param.output_dim));
 }
 

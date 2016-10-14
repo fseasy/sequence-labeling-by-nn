@@ -2,7 +2,8 @@ FILE(GLOB dep_token_module "${cws_module_token_dir}/cws_basic_token_module.*"
                            "${cws_module_token_dir}/cws_tag_definition.h"
                            "${cws_module_token_dir}/cws_tag_utility.h")
 FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/basic_mlp_param.*")
-FILE(GLOB dep_nn_general_module "${cws_module_nn_dir}/nn_common_interface.*"
+FILE(GLOB dep_nn_general_module "${cws_module_dir}/cws_output_layer.*"                          # segmentor output layer.
+                                "${cws_module_nn_dir}/nn_common_interface.*"
                                 "${cws_module_nn_dir}/nn_common_interface_cnn_impl.*"
                                 "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_abstract.*")
 FILE(GLOB dep_nn_specific_module "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_cl.*")            
@@ -11,6 +12,8 @@ FILE(GLOB dep_eval "${cws_module_dir}/cws_eval.*")
 FILE(GLOB dep_stat "${cws_module_dir}/cws_stat.*")
 FILE(GLOB dep_io "${cws_module_dir}/cws_reader.*" "${cws_module_dir}/cws_writer.*")
 FILE(GLOB dep_others "${utils_dir}/nn_utility.*")
+
+FILE(GLOB dep_nn_4compatibility "${cws_module_dir}/cws_tagging_system.*")
 
 FILE(GLOB model_template "cws_mlp_input1_template.*")
 
@@ -31,6 +34,7 @@ ADD_LIBRARY(cl_model
            ${dep_stat}
            ${dep_io}
            ${dep_others}
+           ${dep_nn_4compatibility}
            ${model_template}
            ${cl_model}
 )

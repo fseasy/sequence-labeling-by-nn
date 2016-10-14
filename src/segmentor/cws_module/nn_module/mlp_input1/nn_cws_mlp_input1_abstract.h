@@ -4,7 +4,8 @@
 #include "utils/typedeclaration.h"
 #include "segmentor/cws_module/nn_module/nn_common_interface_cnn_impl.h"
 #include "segmentor/cws_module/token_module/cws_tag_definition.h"
-#include "modelmodule/hyper_layers.h"
+#include "segmentor/cws_module/cws_output_layer.h"
+
 namespace slnn{
 namespace segmentor{
 namespace nn_module{

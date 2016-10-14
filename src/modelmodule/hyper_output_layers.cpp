@@ -225,7 +225,9 @@ BareOutputBase::BareOutputBase(cnn::Model *m, unsigned input_dim, unsigned outpu
 
 BareOutputBase::~BareOutputBase(){}
 
-/* Simple Bare Output */
+/*********************************
+ * Bare Output : [Simple] Bare Output 
+ *********************************/
 SimpleBareOutput::SimpleBareOutput(cnn::Model *m, unsigned inputs_total_dim, unsigned output_dim)
     :BareOutputBase(m, inputs_total_dim, output_dim)
 {}

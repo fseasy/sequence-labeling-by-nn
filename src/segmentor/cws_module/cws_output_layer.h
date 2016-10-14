@@ -93,11 +93,13 @@ struct CWSSimpleOutputNew : SimpleOutput
 
 };
 
+/******************************************************
+ * Simple Bare Output for Segmentor
+ ******************************************************/
 struct CWSSimpleBareOutput : public SimpleBareOutput
 {
     CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim);
-    void build_output(const std::vector<cnn::expr::Expression> &input_expr_seq,
-        IndexSeq &predicted_seq) override;
+    void build_output(const std::vector<cnn::expr::Expression>& input_expr_seq, std::vector<Index>& out_pred_seq) override;
 };
 
 

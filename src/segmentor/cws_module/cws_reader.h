@@ -32,7 +32,7 @@ namespace reader_inner{
 inline 
 bool is_seg_delimiter(char32_t uc)
 {
-    return uc == U'\t';
+    return uc == U'\t' || uc == U' ';
 }
 
 }

@@ -15,7 +15,7 @@ namespace token_module{
 /****************************************************
  * Inline Implementation
  ****************************************************/
-Index select_best_tag_constrained(std::vector<cnn::real> &dist, size_t time, Index pre_time_tag_id)
+Index select_best_tag_constrained(const std::vector<cnn::real> &dist, size_t time, Index pre_time_tag_id)
 {
     cnn::real max_prob = std::numeric_limits<cnn::real>::lowest();
     Index tag_with_max_prob = Tag::TAG_NONE_ID;
@@ -23,14 +23,14 @@ Index select_best_tag_constrained(std::vector<cnn::real> &dist, size_t time, Ind
     for( Index tag_id = 0; tag_id <= max_tag_id; ++tag_id )
     {
         if( !can_emit(time, tag_id) ){ continue; }
-        if( time > 0 && !can_trans(pre_time_tag_id, tag_id) ){ continue; }
+        if( time > 0 && !can_trans_unsafe(pre_time_tag_id, tag_id) ){ continue; }
         if( dist[tag_id] >= max_prob )
         {
             tag_with_max_prob = tag_id;
             max_prob = dist[tag_id];
         }
     }
-    // assert(tag_with_max_prob != STATIC_NONE_ID);
+    // assert(tag_with_max_prob != Tag::TAG_NONE_ID);
     return tag_with_max_prob;
 }
 

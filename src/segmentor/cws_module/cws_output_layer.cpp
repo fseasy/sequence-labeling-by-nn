@@ -1,6 +1,7 @@
 #include <limits>
 #include "cws_output_layer.h"
 #include "segmentor/cws_module/token_module/cws_tag_definition.h"
+#include "segmentor/cws_module/token_module/cws_tag_utility.h"
 namespace slnn{
 
 CWSSimpleOutput::CWSSimpleOutput(cnn::Model *m,
@@ -346,6 +347,7 @@ void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expre
     const std::vector<cnn::expr::Expression> &feature_expr_cont,
     IndexSeq &pred_out_seq)
 {
+    using std::swap;
     size_t len = expr_cont1.size();
     if( 1 == len ) // Special Condition 
     {
@@ -371,7 +373,7 @@ void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expre
         tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_E_ID ; 
     }
     else { tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_S_ID; }
-    std::swap(pred_out_seq, tmp_pred_out);
+    swap(pred_out_seq, tmp_pred_out);
 }
 
 /* CWSSimpleOutput NEW (0628) */
@@ -387,6 +389,7 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
     const std::vector<cnn::expr::Expression> &expr_cont2,
     IndexSeq &pred_out_seq)
 {
+    using std::swap;
     size_t len = expr_cont1.size();
     if( 1 == len ) // Special Condition 
     {
@@ -412,7 +415,7 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
         tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_E_ID ; 
     }
     else { tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_S_ID; }
-    std::swap(pred_out_seq, tmp_pred_out);
+    swap(pred_out_seq, tmp_pred_out);
 }
 
 /***************************************************
@@ -427,30 +430,30 @@ void CWSSimpleBareOutput::
 build_output(const std::vector<cnn::expr::Expression> &input_expr_seq, std::vector<Index> &out_pred_seq)
 {
     using std::swap;
-    size_t len = input_expr_seq.size();
+    std::size_t len = input_expr_seq.size();
     if( 1 == len ) // Special Condition : len = 1
     {
         out_pred_seq = { segmentor::Tag::TAG_S_ID };
         return ;
     }
     std::vector<Index> tmp_pred_out(len);
-    Index pre_tag_id = CWSTaggingSystem::STATIC_NONE_ID ;
-    for (size_t i = 0; i < len - 1; ++i)
+    Index pre_tag_id = segmentor::Tag::TAG_NONE_ID;
+    for (std::size_t i = 0; i < len - 1; ++i) // select first and middle tags
     {
         cnn::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
         std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
 
-        Index max_prob_tag_in_constrain = CWSTaggingSystem::static_select_tag_constrained(out_probs , i , pre_tag_id );
+        Index max_prob_tag_in_constrain = segmentor::token_module::select_best_tag_constrained(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
         pre_tag_id = max_prob_tag_in_constrain ;
     }
-    if( pre_tag_id == CWSTaggingSystem::STATIC_M_ID || 
-        pre_tag_id == CWSTaggingSystem::STATIC_B_ID )
+    if( pre_tag_id == segmentor::Tag::TAG_M_ID||  // select last tag
+        pre_tag_id == segmentor::Tag::TAG_B_ID)
     { 
-        tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_E_ID ; 
+        tmp_pred_out[len - 1] = segmentor::Tag::TAG_E_ID; 
     }
-    else { tmp_pred_out[len - 1] = CWSTaggingSystem::STATIC_S_ID; }
-    std::swap(predicted_seq, tmp_pred_out);
+    else { tmp_pred_out[len - 1] = segmentor::Tag::TAG_S_ID; }
+    swap(out_pred_seq, tmp_pred_out);
 }
 
 } // end of namespace slnn
