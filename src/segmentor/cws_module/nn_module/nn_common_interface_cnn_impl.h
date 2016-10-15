@@ -124,6 +124,7 @@ bool NeuralNetworkCommonInterfaceCnnImpl::stash_model_when_best(slnn::type::real
     {
         best_score = current_score;
         stash_model();
+        std::cerr << " * better model found and stashed done.\n";
         return true;
     }
     else { return false; }
