@@ -4,6 +4,7 @@ ADD_EXECUTABLE(test_charcode
                ${unittest_framework_include})
                
 TARGET_LINK_LIBRARIES(test_charcode
-                      trivial)
+                      trivial
+                      ${Boost_LIRARIES})
 
 SET_PROPERTY(TARGET test_charcode PROPERTY FOLDER "unittest")                 

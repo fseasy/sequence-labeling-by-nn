@@ -5,7 +5,7 @@ ADD_EXECUTABLE(test_lookup_table
                )
 
 TARGET_LINK_LIBRARIES(test_lookup_table 
-                      ${Boost_LIBRARIES}
-                      trivial)
+                      trivial
+                      ${Boost_LIBRARIES})
 
 SET_PROPERTY(TARGET test_lookup_table PROPERTY FOLDER "unittest")                          

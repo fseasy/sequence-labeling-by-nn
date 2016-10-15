@@ -150,7 +150,7 @@ inline
 void SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 {
-    typename AnnotatedDataProcessedT data_after_unk_replace = 
+    AnnotatedDataProcessedT data_after_unk_replace = 
         token_module.replace_low_freq_token2unk(ann_processed_data);
     nn.build_training_graph(data_after_unk_replace);
 }

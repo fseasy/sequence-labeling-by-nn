@@ -13,6 +13,7 @@ cnn::expr::Expression
 NnSegmentorInput1Abstract::build_training_graph_impl(const std::vector<Index> &charseq, 
     const std::vector<Index> &tagseq)
 {
+    clear_cg(); // !! ATTENTION !!
     word_expr_layer->new_graph(*get_cg());
     window_expr_generate_layer->new_graph(*get_cg());
     mlp_hidden_layer->new_graph(*get_cg());
@@ -35,6 +36,7 @@ NnSegmentorInput1Abstract::build_training_graph_impl(const std::vector<Index> &c
 std::vector<Index> 
 NnSegmentorInput1Abstract::predict_impl(const std::vector<Index> &charseq)
 {
+    clear_cg(); // !!!!
     word_expr_layer->new_graph(*get_cg());
     window_expr_generate_layer->new_graph(*get_cg());
     mlp_hidden_layer->new_graph(*get_cg());

@@ -58,7 +58,8 @@ public:
     // DATA TRANSLATING
     Index token2index(char32_t token) const;
     Index unk_replace_in_probability(Index idx) const;
-    UnannotatedDataProcessedT extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
+    std::shared_ptr<UnannotatedDataProcessedT>
+    extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
     // WE DO NOT use current class-defined data structure. 
     // ideally, we'll process the derived class-defined data.
     template <typename ProcessedAnnotatedDataT> 
@@ -125,10 +126,10 @@ Index SegmentorBasicTokenModule::unk_replace_in_probability(Index idx) const
  * @return unannotated data
  */
 inline
-SegmentorBasicTokenModule::UnannotatedDataProcessedT 
+std::shared_ptr<SegmentorBasicTokenModule::UnannotatedDataProcessedT >
 SegmentorBasicTokenModule::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
-    return *(ann_data.pcharseq);
+    return ann_data.pcharseq;
 }
 
 

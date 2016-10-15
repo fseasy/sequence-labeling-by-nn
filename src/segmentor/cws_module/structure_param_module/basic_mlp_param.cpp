@@ -39,9 +39,10 @@ void SegmentorBasicMlpParam::set_param_from_user_defined(const boost::program_op
 std::string SegmentorBasicMlpParam::get_structure_info()
 {
     std::ostringstream oss;
-    oss << "input: " << "charset-size(" << corpus_token_dict_size << ") embedding-dim(" << corpus_token_embedding_dim
+    oss << "+ Model info: \n"
+        << "| input: " << "charset-size(" << corpus_token_dict_size << ") embedding-dim(" << corpus_token_embedding_dim
         << ") window-size(" << window_size << ")\n"
-        << "mlp: " << "input-dim(" << mlp_input_dim << ") hidden-dim-list(";
+        << "| mlp: " << "input-dim(" << mlp_input_dim << ") hidden-dim-list(";
     if( !mlp_hidden_dim_list.empty() )
     {
         oss << mlp_hidden_dim_list[0];
@@ -49,9 +50,10 @@ std::string SegmentorBasicMlpParam::get_structure_info()
     }
     oss << ") mlp-nonlinear-func(" << mlp_nonlinear_function_str << ") mlp-dropout-rate("
         << mlp_dropout_rate << ")" << "\n"
-        << "output: " << "output-dim(" << output_dim << ")" << "\n"
-        << "others: " << "replace-frequent-threshold(" << replace_freq_threshold << ") "
-        << "replace-probability-threshold(" << replace_prob_threshold << ")";
+        << "| output: " << "output-dim(" << output_dim << ")" << "\n"
+        << "| others: " << "replace-frequent-threshold(" << replace_freq_threshold << ") "
+        << "replace-probability-threshold(" << replace_prob_threshold << ")\n"
+        << "= - - - - -";
     return oss.str();
 }
 

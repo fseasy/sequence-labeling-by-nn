@@ -10,14 +10,14 @@ FILE(GLOB dep_nn_specific_module "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_inp
 FILE(GLOB dep_modelhandler "${cws_module_dir}/cws_general_modelhandler.*")
 FILE(GLOB dep_eval "${cws_module_dir}/cws_eval.*")
 FILE(GLOB dep_stat "${cws_module_dir}/cws_stat.*")
-FILE(GLOB dep_io "${cws_module_dir}/cws_reader.*" "${cws_module_dir}/cws_writer.*")
+FILE(GLOB dep_io "${cws_module_dir}/cws_reader_unicode.*" "${cws_module_dir}/cws_writer.*")
 FILE(GLOB dep_others "${utils_dir}/nn_utility.*")
 
 FILE(GLOB dep_nn_4compatibility "${cws_module_dir}/cws_tagging_system.*")
 
 FILE(GLOB model_template "cws_mlp_input1_template.*")
 
-FILE(GLOB cl_model "classification/cws_mlp_input1_cl_model.*")
+FILE(GLOB cl_model_files "classification/cws_mlp_input1_cl_model.*")
 
 set(exe_name
     cws_mlp_input1_classification
@@ -29,18 +29,22 @@ ADD_LIBRARY(cl_model
            ${dep_structure_param_module}
            ${dep_nn_general_module}
            ${dep_nn_specific_module}
-           ${dep_modelhandler}
            ${dep_eval}
            ${dep_stat}
            ${dep_io}
            ${dep_others}
            ${dep_nn_4compatibility}
            ${model_template}
-           ${cl_model}
+           ${cl_model_files}
 )
+# because cl_model for cws layers depend on the general layers. What's more, exe needs both cl_mode and layers. IS IT OK in logic?
+# ( I think it is ok. )
+TARGET_LINK_LIBRARIES(cl_model
+                     layers) 
 
 add_executable(${exe_name}
                "classification/${exe_name}.cpp"
+               ${dep_modelhandler}
 )
 
 target_link_libraries(${exe_name} 

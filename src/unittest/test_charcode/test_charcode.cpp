@@ -15,16 +15,16 @@ TEST_CASE("charcode-1", "[UTF8-UNICODE]-SPECIFIC")
     char32_t unicode_normal_cn = 0x4E70, // <==> UTF8 char 'Mai' (buy in Englist) 
         unicode_extend_cn = 0x20005, //   U+20005, see http://www.utf8-chartable.de/unicode-utf8-table.pl
         unicode_ascii = 'b';
-    string u8_normal_cn = u8"\x4E70",
-        u8_extend_cn = u8"\x20005",
+    string u8_normal_cn = u8"\u4E70",
+        u8_extend_cn = u8"\u20005",
         u8_ascii = u8"b";
 
     cout << hex << unicode_normal_cn << " " << unicode_extend_cn << " " << unicode_ascii << endl;
 
-    u32string unicode_str_cn = U"\x4E70\x20005", // the two continues Chinese Characters
-        unicode_str_mix = U"\x4E70\x62\x20005";     // the Chinese - English - Chinese Characters
-    string u8_str_cn = u8"\x4E70\x20005",
-        u8_str_mix = u8"\x4E70\x62\x20005";
+    u32string unicode_str_cn = U"\u4E70\u20005", // the two continues Chinese Characters
+        unicode_str_mix = U"\u4E70\u0062\u20005";     // the Chinese - English - Chinese Characters
+    string u8_str_cn = u8"\u4E70\u20005",
+        u8_str_mix = u8"\u4E70\u0062\u20005";
     
 
     // char level, UTF8 <==> UNICODE
@@ -84,7 +84,7 @@ TEST_CASE("charcode-2", "[UTF8-UNICODE]-RANGE_RANDOM")
         0x6317,
         0x81B2,
         0xA5F1,
-        0xDA0B,
+        0xC80B,
         0x121B8,
         0x18128,
         0x209AE,
@@ -96,28 +96,28 @@ TEST_CASE("charcode-2", "[UTF8-UNICODE]-RANGE_RANDOM")
     };
     string u8_range_list[] = 
     {
-        u8"\x7B",
-        u8"\x501",
-        u8"\x62E",
-        u8"\xF0C",
-        u8"\x1900",
-        u8"\x212D",
-        u8"\x2BA9",
-        u8"\x330A",
-        u8"\x42D1",
-        u8"\x51AC",
-        u8"\x6317",
-        u8"\x81B2",
-        u8"\xA5F1",
-        u8"\xDA0B",
-        u8"\x121B8",
-        u8"\x18128",
-        u8"\x209AE",
-        u8"\x2CEC6",
-        u8"\x3F002",
-        u8"\x5A6AB",
-        u8"\x84839",
-        u8"\xC50C9"
+        u8"\u007B",
+        u8"\u0501",
+        u8"\u062E",
+        u8"\u0F0C",
+        u8"\u1900",
+        u8"\u212D",
+        u8"\u2BA9",
+        u8"\u330A",
+        u8"\u42D1",
+        u8"\u51AC",
+        u8"\u6317",
+        u8"\u81B2",
+        u8"\uA5F1",
+        u8"\uC80B",
+        u8"\u121B8",
+        u8"\u18128",
+        u8"\u209AE",
+        u8"\u2CEC6",
+        u8"\u3F002",
+        u8"\u5A6AB",
+        u8"\u84839",
+        u8"\uC50C9"
     };
     // char level
     bool check_result = true;

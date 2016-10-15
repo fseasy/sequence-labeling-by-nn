@@ -11,7 +11,7 @@
 #include <sstream>
 #include <random>
 #include <functional>
-#include <functional>
+#include <memory>
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
@@ -154,12 +154,13 @@ class LookupTableWithCnt : public LookupTable<TokenType, Hash, KeyEqual>
 {
     friend class boost::serialization::access;
 public:
+    using typename LookupTable<TokenType, Hash, KeyEqual>::Index;
     LookupTableWithCnt(
         ::std::function<::std::string(const TokenType &)> token2str_func
         =static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
     // hidden the base class function with the same name
     Index convert(const TokenType &token);
-    using LookupTable::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
+    using LookupTable<TokenType, Hash, KeyEqual>::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
 
     /** 
      *  count str occurrence times (N).
@@ -184,11 +185,12 @@ class LookupTableWithReplace : public LookupTableWithCnt<TokenType, Hash, KeyEqu
 {
     friend class boost::serialization::access;
 public:
+    using typename LookupTableWithCnt<TokenType, Hash, KeyEqual>::Index;
     LookupTableWithReplace(std::size_t seed = 1234, unsigned cnt_threshold = 1, float prob_threshold = 0.2f, 
         ::std::function<::std::string(const TokenType&)> token2str_func
         = static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
     template <typename Generator>
-    LookupTableWithReplace(const Generator &rng, unsigned cnt_threshold = 1, float prob_threshold = 0.2f,
+    LookupTableWithReplace(std::shared_ptr<Generator> prng, unsigned cnt_threshold = 1, float prob_threshold = 0.2f,
         ::std::function<::std::string(const TokenType&)> token2str_func
         = static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
 
@@ -270,14 +272,14 @@ LookupTable<TokenType, Hash, KeyEqual>::convert_ban_unk(Index idx) const
 {
     if(idx == get_unk_idx_without_throw() && has_set_unk() )
     { 
-        throw domain_error("unk index('" + to_string(idx) + "') was banned."); 
+        throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); 
     }
     else
     {
         if( idx >= static_cast<Index>(size()) || idx < 0 )
         {
-            throw std::out_of_range("index '" + to_string(idx) + "' was out of range( size = " +
-                to_string(size()) + ")");
+            throw std::out_of_range("index '" + std::to_string(idx) + "' was out of range( size = " +
+                std::to_string(size()) + ")");
         }
         else{ return idx2token[idx]; }
     }
@@ -349,7 +351,7 @@ size_t LookupTable<TokenType, Hash, KeyEqual>::count(const TokenType& token) con
 template <typename TokenType, typename Hash,  typename KeyEqual>
 size_t LookupTable<TokenType, Hash, KeyEqual>::count_ban_unk(Index idx) const
 {
-    if( idx == get_unk_idx_without_throw() && has_set_unk() ){ throw std::domain_error("unk index('" + to_string(idx) + "') was banned."); }
+    if( idx == get_unk_idx_without_throw() && has_set_unk() ){ throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); }
     else
     {
         return idx >= 0 && idx < size_without_unk();
@@ -393,15 +395,15 @@ void LookupTable<TokenType, Hash, KeyEqual>::serialize(Archive& ar, const unsign
 template <typename TokenType, typename Hash, typename KeyEqual>
 LookupTableWithCnt<TokenType, Hash, KeyEqual>::LookupTableWithCnt(
     ::std::function<::std::string(const TokenType&)> token2str_func) noexcept 
-    :LookupTable(token2str_func)
+    :LookupTable<TokenType, Hash, KeyEqual>(token2str_func)
 {}
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 typename LookupTableWithCnt<TokenType, Hash, KeyEqual>::Index
 LookupTableWithCnt<TokenType, Hash, KeyEqual>::convert(const TokenType &token)
 {
-    Index idx = LookupTable::convert(token);
-    if( !has_frozen() )
+    Index idx = LookupTable<TokenType, Hash, KeyEqual>::convert(token);
+    if( !this->has_frozen() )
     {
         if( idx == static_cast<Index>(cnt.size()) )
         {
@@ -416,21 +418,21 @@ LookupTableWithCnt<TokenType, Hash, KeyEqual>::convert(const TokenType &token)
 template <typename TokenType, typename Hash,  typename KeyEqual>
 std::size_t LookupTableWithCnt<TokenType, Hash, KeyEqual>::count(const TokenType &token) const noexcept
 {
-    auto iter = get_token2idx_dict().find(token);
-    if( iter == get_token2idx_dict().cend() ){ return 0U; }
+    auto iter = this->get_token2idx_dict().find(token);
+    if( iter == this->get_token2idx_dict().cend() ){ return 0U; }
     else{ return cnt[iter->second]; }
 }
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 std::size_t LookupTableWithCnt<TokenType, Hash, KeyEqual>::count_ban_unk(Index idx) const
 {
-    if( idx == get_unk_idx_without_throw() && has_set_unk() )
+    if( idx == this->get_unk_idx_without_throw() && this->has_set_unk() )
     { 
         throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); 
     }
     else
     {
-        if( idx >= 0 && idx < size_without_unk() ){ return cnt[idx]; }
+        if( idx >= 0 && idx < this->size_without_unk() ){ return cnt[idx]; }
         else{ return 0U; }
     }
 }
@@ -438,7 +440,7 @@ std::size_t LookupTableWithCnt<TokenType, Hash, KeyEqual>::count_ban_unk(Index i
 template <typename TokenType, typename Hash,  typename KeyEqual>
 void LookupTableWithCnt<TokenType, Hash, KeyEqual>::reset() noexcept
 {
-    LookupTable::reset();
+    LookupTable<TokenType, Hash, KeyEqual>::reset();
     cnt.clear();
 }
 
@@ -447,7 +449,7 @@ template<class Archive>
 void LookupTableWithCnt<TokenType, Hash, KeyEqual>::serialize(Archive& ar, const unsigned int version)
 {
     ar &cnt;
-    LookupTable::serialize(ar, version);
+    LookupTable<TokenType, Hash, KeyEqual>::serialize(ar, version);
 }
 
 /***************************************
@@ -455,11 +457,11 @@ void LookupTableWithCnt<TokenType, Hash, KeyEqual>::serialize(Archive& ar, const
  ***************************************/
 template <typename TokenType, typename Hash,  typename KeyEqual>
 template <typename Generator>
-LookupTableWithReplace<TokenType, Hash, KeyEqual>::LookupTableWithReplace(const Generator &rng, 
+LookupTableWithReplace<TokenType, Hash, KeyEqual>::LookupTableWithReplace(std::shared_ptr<Generator> prng, 
     unsigned cnt_threshold, float prob_threshold,
     ::std::function<::std::string(const TokenType &)> token2str_func) noexcept
-    : LookupTableWithCnt(token2str_func),
-    rand_generator(std::bind(std::uniform_real_distribution<float>(0, 1), rng)),
+    : LookupTableWithCnt<TokenType, Hash, KeyEqual>(token2str_func),
+    rand_generator([prng](){ return std::uniform_real_distribution<float>(0, 1)(*prng); } ), // prng will be stored as value, life-time is ok.
     cnt_threshold(cnt_threshold),
     prob_threshold(prob_threshold)
 {}
@@ -468,7 +470,7 @@ template <typename TokenType, typename Hash,  typename KeyEqual>
 LookupTableWithReplace<TokenType, Hash, KeyEqual>::LookupTableWithReplace(std::size_t seed, 
     unsigned cnt_threshold, float prob_threshold,
     ::std::function<::std::string(const TokenType &)> token2str_func) noexcept
-    :LookupTableWithReplace(std::mt19937(seed), cnt_threshold, prob_threshold, token2str_func)
+    :LookupTableWithReplace(std::shared_ptr<std::mt19937>(new std::mt19937(seed)), cnt_threshold, prob_threshold, token2str_func)
 {}
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
@@ -482,17 +484,17 @@ template <typename TokenType, typename Hash,  typename KeyEqual>
 typename LookupTableWithReplace<TokenType, Hash, KeyEqual>::Index
 LookupTableWithReplace<TokenType, Hash, KeyEqual>::unk_replace_in_probability(Index idx) const
 {
-    if( !has_set_unk() ){ throw std::logic_error("unk was not set."); }
-    else if( idx == get_unk_idx_without_throw() ){ return idx; }
-    else if( idx >= 0 && idx < static_cast<Index>(size_without_unk()) )
+    if( !this->has_set_unk() ){ throw std::logic_error("unk was not set."); }
+    else if( idx == this->get_unk_idx_without_throw() ){ return idx; }
+    else if( idx >= 0 && idx < static_cast<Index>(this->size_without_unk()) )
     {
-        if( count_ban_unk(idx) <= cnt_threshold && rand_generator() <= prob_threshold ){ return get_unk_idx(); }
+        if( this->count_ban_unk(idx) <= cnt_threshold && rand_generator() <= prob_threshold ){ return this->get_unk_idx(); }
         else{ return idx; }
     }
     else
     {
         std::ostringstream oss;
-        oss << "index '" << idx << "' was out of range( size = " << size() << ")";
+        oss << "index '" << idx << "' was out of range( size = " << this->size() << ")";
         throw std::out_of_range(oss.str());
     }
 }
@@ -502,7 +504,7 @@ template<class Archive>
 void LookupTableWithReplace<TokenType, Hash, KeyEqual>::serialize(Archive& ar, const unsigned int version)
 {
     ar &cnt_threshold &prob_threshold;
-    LookupTableWithCnt::serialize(ar, version);
+    LookupTableWithCnt<TokenType, Hash, KeyEqual>::serialize(ar, version);
 }
 
 } // end of namespace lookup_table

@@ -67,18 +67,18 @@ std::vector<cnn::expr::Expression>
 WindowExprGenerateLayer::generate_window_expr_by_concatenating(const std::vector<cnn::expr::Expression> &unit_exprs)
 {
     std::deque<cnn::expr::Expression> window_expr_list(window_sz);
-    int len = unit_exprs.size();
+    unsigned len = unit_exprs.size();
     // init
-    int half_sz = window_sz / 2;
-    for( int i = 0; i < half_sz; ++i ){ window_expr_list[i] = sos_expr; }
-    for( int i = half_sz; i < window_sz; ++i )
+    unsigned half_sz = window_sz / 2;
+    for( unsigned i = 0; i < half_sz; ++i ){ window_expr_list[i] = sos_expr; }
+    for( unsigned i = half_sz; i < window_sz; ++i )
     {
         window_expr_list[i] = i < len ? unit_exprs[i] : eos_expr;
     }
     // generate window concatenated expr 
     std::vector<cnn::expr::Expression> concat_expr_list(len);
     concat_expr_list[0] = cnn::expr::concatenate(window_expr_list);
-    for( int i = 1; i < len; ++i )
+    for( unsigned i = 1; i < len; ++i )
     {
         // scroll
         window_expr_list.pop_front();

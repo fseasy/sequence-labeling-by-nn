@@ -34,6 +34,7 @@ public:
     virtual bool reset2stashed_model() override;
 public:
     void init(int argc, char **argv);
+    void clear_cg(){ pcg->clear(); };
 protected:
     cnn::ComputationGraph* get_cg(){ return pcg; }
     cnn::Model* get_cnn_model(){ return cnn_model; }

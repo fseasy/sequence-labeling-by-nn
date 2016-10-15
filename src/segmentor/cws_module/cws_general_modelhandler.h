@@ -7,7 +7,7 @@
 #include <algorithm>
 #include <boost/program_options/variables_map.hpp>
 #include "utils/stat.hpp"
-#include "cws_reader.h"
+#include "cws_reader_unicode.h"
 #include "cws_writer.h"
 #include "token_module/cws_tag_definition.h"
 #include "cws_eval.h"
@@ -61,7 +61,7 @@ const std::u32string& WordOutputDelimiter()
 }
 
 template <typename SLModel>
-bool set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args);
+void set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args);
 
 template <typename SLModel>
 void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLModel::AnnotatedDataProcessedT> &out_training_processed_data);
@@ -189,7 +189,7 @@ bool TrainingUpdateRecorder::is_training_ok()
 
 
 template <typename SLModel>
-bool set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args)
+void set_model_structure_param(SLModel &slm, const boost::program_options::variables_map &args)
 {
     slm.set_model_structure_from_outer(args);
 }
@@ -200,7 +200,7 @@ void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLM
     std::cerr << "+ Process training data.\n";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
     std::cerr << "= Training data processed done. ( line count: " << line_cnt << ", instance number: " <<
-        out_training_processed_data.size() << "\n";
+        out_training_processed_data.size() << ")\n";
     slm.finish_read_training_data();
 }
 
@@ -209,7 +209,7 @@ void read_devel_data(std::istream &is, SLModel &slm, std::vector<typename SLMode
 {
     std::cerr << "+ Process devel data.\n";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_devel_processed_data);
-    std::cerr << "= devel data processed done. (line count: " << line_cnt << ", instance number: " 
+    std::cerr << "= Devel data processed done. (line count: " << line_cnt << ", instance number: " 
         << out_devel_processed_data.size() << ")\n";
 }
 
@@ -220,7 +220,7 @@ void read_test_data(std::istream &is, SLModel &slm,
 {
     std::cerr << "+ Process test data.\n";
     unsigned line_cnt = modelhandler_inner::read_unannotated_data(is, slm, out_test_processed_data, out_test_raw_data);
-    std::cerr << "= test data processed done. (line count: " << line_cnt << ", instance number: "
+    std::cerr << "= Test data processed done. (line count: " << line_cnt << ", instance number: "
         << out_test_processed_data.size() << ")\n";
 }
 
@@ -271,7 +271,7 @@ void train(SLModel &slm,
         for( unsigned i = 0; i < nr_samples; ++i )
         {
             unsigned access_idx = access_order[i];
-            const  typename SLModel::AnnotatedDataProcessedT &instance = training_data[i];
+            const  typename SLModel::AnnotatedDataProcessedT &instance = training_data[access_idx];
             // GO
             slm.build_training_graph(instance);
             slnn::type::real loss = slm.get_nn()->forward_as_scalar();
@@ -337,9 +337,9 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
     eval_ins.start_eval();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        typename const SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
+        const typename SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
         std::vector<Index> pred_tagseq = slm.predict(
-            slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
+            *slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
         eval_ins.eval_iteratively(*instance.ptagseq, pred_tagseq);
     }
     stat.end_time_stat();
