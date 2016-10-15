@@ -285,10 +285,10 @@ int main(int argc, char *argv[])
     ostringstream oss;
     string program_name = argv[0];
     oss << PROGRAM_HEADER << "\n"
-        << "usage     : " << program_name << " [task] <options>" << "\n"
-        << "task      : [ train, devel, predict ] , anyone of the list is optional\n"
-        << "<options> : options for specific task and model .\n"
-        << "            using '" << program_name << " [task] [rnn-type] -h' for details" ;
+        << "usage     : " << program_name << " [task] [options]" << "\n\n"
+        << "task      : [ train, devel, predict ] , one of the list is optional\n"
+        << "options   : options for specific task and model .\n"
+        << "            using '" << program_name << " [task] -h' for details" ;
     string usage = oss.str();
 
     if (argc <= 2)

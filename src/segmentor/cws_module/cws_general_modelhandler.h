@@ -199,7 +199,7 @@ void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLM
 {
     std::cerr << "+ Process training data.\n";
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
-    std::cerr << "= Training data processed done. ( line count: " << line_cnt << ", instance number: " <<
+    std::cerr << "= Training data processed done. (line count: " << line_cnt << ", instance number: " <<
         out_training_processed_data.size() << ")\n";
     slm.finish_read_training_data();
 }
@@ -322,7 +322,7 @@ void train(SLModel &slm,
         << "| best score(F1): " << update_recorder.get_best_score() << "%, \n"
         << "| at epoch: " << update_recorder.get_best_epoch() << ", \n"
         << "| devel order: " << update_recorder.get_best_devel_order() << "\n"
-        << "= - - - - -";
+        << "= - - - - -\n";
 }
 
 template <typename SLModel>
