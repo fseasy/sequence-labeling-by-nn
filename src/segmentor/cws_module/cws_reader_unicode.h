@@ -2,6 +2,7 @@
 #define SLNN_SEGMENTOR_CWS_MODULE_CWS_READER_UNICODE_H_
 #include <functional>
 #include <memory>
+#include <vector>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "utils/reader.hpp"

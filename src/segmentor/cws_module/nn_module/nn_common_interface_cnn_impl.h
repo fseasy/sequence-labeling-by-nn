@@ -33,8 +33,8 @@ public:
     virtual bool stash_model_when_best(slnn::type::real current_score) override;
     virtual bool reset2stashed_model() override;
 public:
-    void init(int argc, char **argv);
-    void clear_cg(){ pcg->clear(); };
+    void clear_cg(){ pcg->clear(); }; // ! BUG: using clear() will cause Error -> CNN get dim error!(BUG for it.)
+    void reset_cg(){ delete pcg; pcg = new cnn::ComputationGraph(); }
 protected:
     cnn::ComputationGraph* get_cg(){ return pcg; }
     cnn::Model* get_cnn_model(){ return cnn_model; }

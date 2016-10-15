@@ -280,7 +280,7 @@ void train(SLModel &slm,
             // record loss
             training_stat_per_epoch.loss += loss;
             training_stat_per_epoch.total_tags += instance.size() ;
-            if( 0 == (i + 1) % opts.trivial_report_freq ) // Report 
+            if( 0 == (i + 1) % opts.trivial_report_freq && false) // Report 
             {
                 std::string trivial_header = std::to_string(i + 1) + " instances have been trained.";
                 std::cerr << training_stat_per_epoch.get_stat_str(trivial_header) << "\n";
@@ -319,7 +319,7 @@ void train(SLModel &slm,
         std::cerr << "! Gradient may have been updated error ! Exit ahead of time.\n" ; 
     }
     std::cerr << "= Training finished. Time cost:" << total_time_cost_in_seconds << "s, \n"
-        << "| best score(F1): " << update_recorder.get_best_score() << ", \n"
+        << "| best score(F1): " << update_recorder.get_best_score() << "%, \n"
         << "| at epoch: " << update_recorder.get_best_epoch() << ", \n"
         << "| devel order: " << update_recorder.get_best_devel_order() << "\n"
         << "= - - - - -";

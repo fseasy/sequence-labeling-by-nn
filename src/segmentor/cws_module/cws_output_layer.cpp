@@ -442,7 +442,6 @@ build_output(const std::vector<cnn::expr::Expression> &input_expr_seq, std::vect
     {
         cnn::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
         std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
-
         Index max_prob_tag_in_constrain = segmentor::token_module::select_best_tag_constrained(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
         pre_tag_id = max_prob_tag_in_constrain ;
