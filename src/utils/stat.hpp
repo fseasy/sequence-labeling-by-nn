@@ -22,7 +22,7 @@
 #include <boost/log/expressions.hpp>
 
 #include "cnn/dict.h"
-#include "segmentor/cws_module/cws_tagging_system.h"
+#include "segmenter/cws_module/cws_tagging_system.h"
 
 /*************************************
  * Stat 

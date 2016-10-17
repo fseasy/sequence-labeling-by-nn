@@ -77,4 +77,4 @@ add_subdirectory(unittest)
 
 add_subdirectory(postagger)
 #add_subdirectory(ner)
-add_subdirectory(segmentor)
+add_subdirectory(segmenter)
