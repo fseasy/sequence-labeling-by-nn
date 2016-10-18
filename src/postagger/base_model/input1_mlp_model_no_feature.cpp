@@ -7,7 +7,7 @@
 #include "utils/utf8processing.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 const string Input1MLPModelNoFeature::UNK_STR = "unk_str";
 const string Input1MLPModelNoFeature::StrOfReplaceNumber = "##";
@@ -48,7 +48,7 @@ void Input1MLPModelNoFeature::set_model_param_from_outer(const boost::program_op
         cerr << "bad argument for 'mlp_hidden_dim_list' : " << var_map["mlp_hidden_dim_list"].as<string>();
         throw e ;
     }
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
     unsigned context_left_size = var_map["context_left_size"].as<unsigned>();
     unsigned context_right_size = var_map["context_right_size"].as<unsigned>();
     this->context_feature.set_parameters(context_left_size, context_right_size, word_embedding_dim);

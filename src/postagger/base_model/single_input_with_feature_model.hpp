@@ -3,8 +3,8 @@
 
 #include <boost/program_options.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 
 #include "postagger/postagger_module/pos_feature.h"
 #include "postagger/postagger_module/pos_feature_extractor.h"
@@ -46,26 +46,26 @@ public:
                                IndexSeq &replaced_sent, POSFeature::POSFeatureIndexGroupSeq &replaced_feature_gp_seq);
     void postag_index_seq2postag_str_seq(const IndexSeq &postag_index_seq, Seq &postag_str_seq);
 
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
                                               const IndexSeq &input_seq, 
                                               const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
                                               const IndexSeq &gold_seq)  = 0 ;
-    virtual void predict(cnn::ComputationGraph &cg ,
+    virtual void predict(dynet::ComputationGraph &cg ,
                          const IndexSeq &input_seq, 
                          const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
                          IndexSeq &pred_seq) = 0 ;
 
-    cnn::Dict& get_word_dict(){ return word_dict ;  } 
-    cnn::Dict& get_postag_dict(){ return postag_dict ; } 
+    dynet::Dict& get_word_dict(){ return word_dict ;  } 
+    dynet::Dict& get_postag_dict(){ return postag_dict ; } 
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
-    cnn::Model *get_cnn_model(){ return m ; } 
+    dynet::Model *get_dynet_model(){ return m ; } 
 
 
 protected:
-    cnn::Model *m;
+    dynet::Model *m;
 
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
     DictWrapper word_dict_wrapper;
 
 public:

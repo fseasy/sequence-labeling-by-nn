@@ -8,7 +8,7 @@
 #include "doublechannel_modelhandler.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn
 {
 

@@ -25,5 +25,5 @@ add_executable(${exe_name}
                )
                
 target_link_libraries(${exe_name}
-                      cnn
+                      dynet
                       ${Boost_LIBRARIES})

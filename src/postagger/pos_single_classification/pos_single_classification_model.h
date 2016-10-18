@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "postagger/base_model/single_input_model.h"
 namespace slnn{
@@ -20,10 +20,10 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
+    dynet::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
 
-    cnn::Dict &word_dict ;
-    cnn::Dict &tag_dict ;
+    dynet::Dict &word_dict ;
+    dynet::Dict &tag_dict ;
 
     POSSingleClassificationModel() ;
     ~POSSingleClassificationModel() ;

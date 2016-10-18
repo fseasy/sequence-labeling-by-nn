@@ -66,9 +66,9 @@ bool CWSTaggingSystem::static_can_trans(Index pre_static_tag_id, Index cur_stati
         ) ;
 }
 
-Index CWSTaggingSystem::static_select_tag_constrained(std::vector<cnn::real> &dist, size_t time, Index pre_time_static_tag_id)
+Index CWSTaggingSystem::static_select_tag_constrained(std::vector<dynet::real> &dist, size_t time, Index pre_time_static_tag_id)
 {
-    cnn::real max_prob = std::numeric_limits<cnn::real>::lowest();
+    dynet::real max_prob = std::numeric_limits<dynet::real>::lowest();
     Index tag_with_max_prob = STATIC_NONE_ID;
     constexpr Index max_tag_id = get_tag_num() - 1;
     for( Index tag_id = 0; tag_id <= max_tag_id; ++tag_id )
@@ -167,7 +167,7 @@ void CWSTaggingSystem::parse_word_tag2words(const Seq &raw_words, const IndexSeq
     std::swap(o_words, tmp_words) ;
 }
 
-void CWSTaggingSystem::build(cnn::Dict &tag_dict)
+void CWSTaggingSystem::build(dynet::Dict &tag_dict)
 {
     B_ID = tag_dict.Convert(B_TAG) ;
     M_ID = tag_dict.Convert(M_TAG) ;

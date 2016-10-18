@@ -58,7 +58,7 @@ void SingleInputBigramModelHandler<SIModel>::do_read_annotated_dataset(std::istr
     tag_seq.reserve(SingleInputModelHandler<SIModel>::SentMaxLen);
 
     DictWrapper &word_dict_wrapper = SingleInputModelHandler<SIModel>::sim->get_input_dict_wrapper() ;
-    cnn::Dict &tag_dict = SingleInputModelHandler<SIModel>::sim->get_output_dict() ;
+    dynet::Dict &tag_dict = SingleInputModelHandler<SIModel>::sim->get_output_dict() ;
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         sent.clear() ;
@@ -102,7 +102,7 @@ void SingleInputBigramModelHandler<SIModel>::read_test_data(std::istream &is,
                                                       std::vector<Seq> &raw_test_sents, 
                                                       std::vector<IndexSeq> &sents)
 {
-    cnn::Dict &word_dict = SingleInputModelHandler<SIModel>::sim->get_input_dict() ;
+    dynet::Dict &word_dict = SingleInputModelHandler<SIModel>::sim->get_input_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_sents ;

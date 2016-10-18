@@ -68,8 +68,8 @@ void Input2BigramModelHandler<I2Model>::do_read_annotated_dataset(std::istream &
     tag_seq.reserve(this->SentMaxLen);
 
     DictWrapper &dynamic_dict_wrapper = this->i2m->get_dynamic_dict_wrapper() ;
-    cnn::Dict &fixed_dict = this->i2m->get_fixed_dict();
-    cnn::Dict &tag_dict = this->i2m->get_tag_dict();
+    dynet::Dict &fixed_dict = this->i2m->get_fixed_dict();
+    dynet::Dict &tag_dict = this->i2m->get_tag_dict();
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         dsent.clear();
@@ -119,8 +119,8 @@ void Input2BigramModelHandler<I2Model>::read_test_data(std::istream &is,
                                                  std::vector<IndexSeq> &dsents,
                                                  std::vector<IndexSeq> &fsents)
 {
-    cnn::Dict &dword_dict = this->i2m->get_dynamic_dict() ;
-    cnn::Dict &fword_dict = this->i2m->get_fixed_dict() ;
+    dynet::Dict &dword_dict = this->i2m->get_dynamic_dict() ;
+    dynet::Dict &fword_dict = this->i2m->get_fixed_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_dsents,

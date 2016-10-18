@@ -6,7 +6,7 @@
 #include "input1_mlp_model.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 const string Input1MLPModel::UNK_STR = "unk_str";
 const string Input1MLPModel::StrOfReplaceNumber = "##";
@@ -48,7 +48,7 @@ void Input1MLPModel::set_model_param_from_outer(const boost::program_options::va
         throw e ;
     }
 
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
 
     unsigned prefix_suffix_len1_embedding_dim = var_map["prefix_suffix_len1_embedding_dim"].as<unsigned>();
     unsigned prefix_suffix_len2_embedding_dim = var_map["prefix_suffix_len2_embedding_dim"].as<unsigned>();

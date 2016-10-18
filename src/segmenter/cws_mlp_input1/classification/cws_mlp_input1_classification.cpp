@@ -19,7 +19,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("rng_seed", po::value<unsigned>()->default_value(DEFAULT_RNG_SEED), "Random Number Generator seed.")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
@@ -103,13 +103,13 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
 
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    std::shared_ptr<MlpInput1Cl>  mi1 = MlpInput1Cl::create_new_model(cnn_argc, cnn_argv_ptr, rng_seed);
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    std::shared_ptr<MlpInput1Cl>  mi1 = MlpInput1Cl::create_new_model(dynet_argc, dynet_argv_ptr, rng_seed);
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -157,7 +157,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -174,12 +174,12 @@ int devel_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified !");
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
     
     // Load model 
     ifstream model_is(model_path);
@@ -187,7 +187,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' .");
     }
-    std::shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(model_is, cnn_argc, cnn_argv_ptr);
+    std::shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
     model_is.close();
 
     // read devel data
@@ -210,7 +210,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("input", po::value<string>(&raw_data_path), "The path to input data.")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
@@ -236,12 +236,12 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
 
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
 
     // load model 
     ifstream is(model_path);
@@ -249,7 +249,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' . ");
     }
-    shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(is, cnn_argc, cnn_argv_ptr);
+    shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
     is.close();
 
     // open raw_data

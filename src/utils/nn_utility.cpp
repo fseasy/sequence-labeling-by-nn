@@ -2,13 +2,13 @@
 namespace slnn{
 namespace utils{
 
-auto get_nonlinear_function_from_name(const std::string &name) -> cnn::expr::Expression(*)(const cnn::expr::Expression &)
+auto get_nonlinear_function_from_name(const std::string &name) -> dynet::expr::Expression(*)(const dynet::expr::Expression &)
 {
     std::string lower_name(name);
     for( char &c : lower_name ){ c = ::tolower(c); }
-    if( lower_name == "relu" || lower_name == "rectify" ){ return &cnn::expr::rectify; }
-    else if( lower_name == "sigmoid" || lower_name == "softmax" ){ return &cnn::expr::softmax; } // a bit strange...
-    else if( lower_name == "tanh" ){ return &cnn::expr::tanh; }
+    if( lower_name == "relu" || lower_name == "rectify" ){ return &dynet::expr::rectify; }
+    else if( lower_name == "sigmoid" || lower_name == "softmax" ){ return &dynet::expr::softmax; } // a bit strange...
+    else if( lower_name == "tanh" ){ return &dynet::expr::tanh; }
     else
     {
         std::ostringstream oss;

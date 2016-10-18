@@ -3,8 +3,8 @@
 
 #include <fstream>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 
 namespace slnn{
 struct Word2vecEmbeddingHelper
@@ -15,7 +15,7 @@ struct Word2vecEmbeddingHelper
     * -------
     * is : [in] , ifstream .
     *      reference to wordembedding file stream
-    * fixed_dict : [in], cnn::Dict
+    * fixed_dict : [in], dynet::Dict
     *              reference to fixed dict ,
     * unk_str : [in] , string
     *           to build UNK
@@ -28,7 +28,7 @@ struct Word2vecEmbeddingHelper
     * void
     */
     static
-        void build_fixed_dict(std::ifstream &is, cnn::Dict &fixed_dict, const std::string &unk_str,
+        void build_fixed_dict(std::ifstream &is, dynet::Dict &fixed_dict, const std::string &unk_str,
             unsigned *p_dict_size = nullptr, unsigned *p_embedding_dim = nullptr);
 
     /* load_fixed_embedding
@@ -36,20 +36,20 @@ struct Word2vecEmbeddingHelper
     * -------
     * is : [in] , ifstream
     *      wordembedding fstream
-    * fixed_dict : [in], cnn::Dict&
+    * fixed_dict : [in], dynet::Dict&
     *      dict to map word 2 index
     * fixed_word_dim : [in], unsigned
            for check when loading word embedding
-    * fixed_lookup_param : [in], cnn::LookupParameters*
+    * fixed_lookup_param : [in], dynet::LookupParameters*
     *      to store the word embedding
     * RETURN
     * ------
     * void
     */
     static
-        void load_fixed_embedding(std::ifstream &is, cnn::Dict &fixed_dict, unsigned fixed_word_dim, cnn::LookupParameters *fixed_lookup_param);
+        void load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameters *fixed_lookup_param);
 
-    static float calc_hit_rate(cnn::Dict &fixed_dict, cnn::Dict &dynamic_dict, const std::string &fixed_dict_unk_str);
+    static float calc_hit_rate(dynet::Dict &fixed_dict, dynet::Dict &dynamic_dict, const std::string &fixed_dict_unk_str);
 };
 
 } // end of namespace slnn

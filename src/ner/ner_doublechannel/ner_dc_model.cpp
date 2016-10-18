@@ -13,7 +13,7 @@
 #include "ner_dc_model.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 
 const std::string NERDCModel::UNK_STR = "<UNK_REPR>";

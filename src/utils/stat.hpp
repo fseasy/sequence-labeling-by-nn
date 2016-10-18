@@ -21,7 +21,7 @@
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 
-#include "cnn/dict.h"
+#include "dynet/dict.h"
 #include "segmenter/cws_module/cws_tagging_system.h"
 
 /*************************************
@@ -135,7 +135,7 @@ struct NerStat : public BasicStat
     std::array<float , 4>
     conlleval(const std::vector<IndexSeq> &gold_ner_seqs ,
         const std::vector<IndexSeq> &predict_ner_seqs , 
-        const cnn::Dict &ner_dict) 
+        const dynet::Dict &ner_dict) 
     {
         std::array<float , 4> fake_ret = {100.f , 100.f , 100.f , 100.f } ;
 #ifndef _MSC_VER

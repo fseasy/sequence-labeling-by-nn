@@ -5,7 +5,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 namespace slnn{
 
@@ -14,8 +14,8 @@ struct CNNModelStash // we'd better change it's name to TrainingHelper
     float best_score;
     std::stringstream best_model_tmp_ss;
     CNNModelStash(float train_error_threshold=20.f);
-    bool save_when_best(cnn::Model *best_model, float current_score);
-    bool load_if_exists(cnn::Model *cnn_model);
+    bool save_when_best(dynet::Model *best_model, float current_score);
+    bool load_if_exists(dynet::Model *dynet_model);
     void update_training_state(float current_score);
     bool is_training_ok();
     void set_train_error_threshold(float error_threshold);
@@ -41,7 +41,7 @@ CNNModelStash::CNNModelStash(float train_error_threshold)
  *               true if saved(best model), else return false;
 */
 inline
-bool CNNModelStash::save_when_best(cnn::Model *model, float score)
+bool CNNModelStash::save_when_best(dynet::Model *model, float score)
 {
     if( score > best_score )
     {
@@ -56,17 +56,17 @@ bool CNNModelStash::save_when_best(cnn::Model *model, float score)
 }
 
 /***
-* load model to cnn_model ptr if best model has been saved 
+* load model to dynet_model ptr if best model has been saved 
 * return : bool
 *              true if loaded, else return false
 */
 inline
-bool CNNModelStash::load_if_exists(cnn::Model *cnn_model)
+bool CNNModelStash::load_if_exists(dynet::Model *dynet_model)
 {
     if( best_model_tmp_ss.rdbuf()->in_avail() != 0 )
     {
         boost::archive::text_iarchive ti(best_model_tmp_ss);
-        ti >> *cnn_model;
+        ti >> *dynet_model;
         return true;
     }
     else { return false ; }

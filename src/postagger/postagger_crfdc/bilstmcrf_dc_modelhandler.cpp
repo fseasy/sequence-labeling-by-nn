@@ -8,7 +8,7 @@
 #include "bilstmcrf_dc_modelhandler.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn
 {
 
@@ -266,7 +266,7 @@ void BILSTMCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, con
             }
             dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,
                                 p_training_stat_per_report.get());
-            cnn::real E = as_scalar(cg->forward());
+            dynet::real E = as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.0);
             delete cg;

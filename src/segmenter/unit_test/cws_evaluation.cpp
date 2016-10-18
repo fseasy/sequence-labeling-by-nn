@@ -6,7 +6,7 @@
 #include <boost/log/trivial.hpp>
 #include <boost/program_options.hpp>
 
-#include "cnn/dict.h"
+#include "dynet/dict.h"
 
 #include "utils/stat.hpp"
 #include "utils/typedeclaration.h"
@@ -17,7 +17,7 @@ namespace po =  boost::program_options ;
 
 ofstream tmpo("tmp.out") ;
 
-void read_annotated_dataset(ifstream &is , cnn::Dict &tag_dict , vector<slnn::IndexSeq> &tag_seqs, bool is_print=false)
+void read_annotated_dataset(ifstream &is , dynet::Dict &tag_dict , vector<slnn::IndexSeq> &tag_seqs, bool is_print=false)
 {
     unsigned line_cnt = 0;
     std::string line;
@@ -74,7 +74,7 @@ int main(int argc, char *argv[])
         return 1 ;
     }
 
-    cnn::Dict tag_dict ;
+    dynet::Dict tag_dict ;
     vector<slnn::IndexSeq> gold_seqs, pred_seqs ;
     read_annotated_dataset(gold_f, tag_dict, gold_seqs, true) ;
     read_annotated_dataset(pred_f, tag_dict, pred_seqs) ;
@@ -84,9 +84,9 @@ int main(int argc, char *argv[])
 
     slnn::CWSStat stat(tag_sys) ;
 
-    array<cnn::real , 4> eval_rst = stat.eval(gold_seqs, pred_seqs) ;
+    array<dynet::real , 4> eval_rst = stat.eval(gold_seqs, pred_seqs) ;
 
-    cnn::real acc = eval_rst[0],
+    dynet::real acc = eval_rst[0],
         p = eval_rst[1],
         r = eval_rst[2],
         f1 = eval_rst[3] ;

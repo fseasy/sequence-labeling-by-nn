@@ -17,7 +17,7 @@ void CWSDoublePretagModel::set_model_param(const boost::program_options::variabl
 void CWSDoublePretagModel::build_model_structure()
 {
     tag_sys.build(tag_dict) ; // init B_ID , M_ID and so on 
-    m = new cnn::Model() ;
+    m = new dynet::Model() ;
     input_layer = new Input2(m, dynamic_dict_size, dynamic_word_dim , fixed_dict_size , fixed_word_dim , lstm_x_dim) ;
     bilstm_layer = new BILSTMLayer(m, lstm_nr_stacked_layer, lstm_x_dim, lstm_h_dim, dropout_rate) ;
     output_layer = new CWSPretagOutput(m, tag_dim, lstm_h_dim, lstm_h_dim, hidden_dim, output_dim , tag_sys) ;

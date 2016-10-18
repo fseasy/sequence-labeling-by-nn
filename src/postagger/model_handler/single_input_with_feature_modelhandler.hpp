@@ -220,14 +220,14 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
     bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(sim->get_dynet_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -243,12 +243,12 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
             const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = p_feature_gp_seqs->at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 IndexSeq sent_after_replace ;
                 POSFeature::POSFeatureIndexGroupSeq feature_gp_seq_after_replace;
                 sim->replace_word_with_unk(sent, feature_gp_seq, sent_after_replace, feature_gp_seq_after_replace);
                 sim->build_loss(cg, sent_after_replace, feature_gp_seq_after_replace, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
+                dynet::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
@@ -266,7 +266,7 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
             if( p_dev_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq )
             {
                 float acc = devel(p_dev_sents, p_dev_feature_gp_seqs, p_dev_tag_seqs);
-                model_stash.save_when_best(sim->get_cnn_model(), acc);
+                model_stash.save_when_best(sim->get_dynet_model(), acc);
                 line_cnt_for_devel = 0; // avoid overflow
                 if( model_stash.is_train_error_occurs(acc) )
                 {
@@ -292,7 +292,7 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::train(const std::v
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
             float acc = devel(p_dev_sents, p_dev_feature_gp_seqs, p_dev_tag_seqs);
-            model_stash.save_when_best(sim->get_cnn_model(), acc);
+            model_stash.save_when_best(sim->get_dynet_model(), acc);
             if( model_stash.is_train_error_occurs(acc) )
             {
                 is_train_ok = false;
@@ -318,7 +318,7 @@ float SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::devel(const std::
     stat.start_time_stat();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &sent = p_sents->at(access_idx),
             &gold_tag = p_tag_seqs->at(access_idx);
@@ -362,7 +362,7 @@ void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::predict(std::istre
         IndexSeq &sent = sents.at(i) ;
         POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = feature_gp_seqs.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         sim->predict(cg, sent, feature_gp_seq, pred_tag_seq);
         Seq postag_seq;
         sim->postag_index_seq2postag_str_seq(pred_tag_seq, postag_seq);
@@ -383,7 +383,7 @@ template <typename RNNDerived, typename SIModel>
 void SingleInputWithFeatureModelHandler<RNNDerived, SIModel>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
-    model_stash.load_if_exists(sim->get_cnn_model());
+    model_stash.load_if_exists(sim->get_dynet_model());
     boost::archive::text_oarchive to(os);
     to << *(static_cast<SIModel*>(sim));
     BOOST_LOG_TRIVIAL(info) << "save model done .";

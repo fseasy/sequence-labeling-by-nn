@@ -4,7 +4,7 @@
 #include <vector>
 #include <sstream>
 #include <iostream>
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 namespace slnn{

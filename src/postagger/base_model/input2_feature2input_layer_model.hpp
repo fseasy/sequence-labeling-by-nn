@@ -8,8 +8,8 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 #include "input2_with_feature_model.hpp"
 namespace slnn{
 
@@ -33,12 +33,12 @@ public:
 
    
 
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &dynamic_sent,
         const IndexSeq &fixed_sent,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq) override;
-    virtual void predict(cnn::ComputationGraph &cg,
+    virtual void predict(dynet::ComputationGraph &cg,
         const IndexSeq &dynamic_sent,
         const IndexSeq &fixed_sent,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -69,7 +69,7 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; 
+    dynet::real dropout_rate ; 
 
 };
 
@@ -108,7 +108,7 @@ void Input2F2IModel<RNNDerived>::set_model_param(const boost::program_options::v
     rnn_h_dim = var_map["rnn_h_dim"].as<unsigned>() ;
     hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
 
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
 
     unsigned prefix_suffix_len1_embedding_dim = var_map["prefix_suffix_len1_embedding_dim"].as<unsigned>();
     unsigned prefix_suffix_len2_embedding_dim = var_map["prefix_suffix_len2_embedding_dim"].as<unsigned>();
@@ -135,7 +135,7 @@ void Input2F2IModel<RNNDerived>::load_fixed_embedding(std::ifstream &is)
 }
 
 template<typename RNNDerived>
-cnn::expr::Expression Input2F2IModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
+dynet::expr::Expression Input2F2IModel<RNNDerived>::build_loss(dynet::ComputationGraph &cg,
     const IndexSeq &dynamic_sent,
     const IndexSeq &fixed_sent,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -149,20 +149,20 @@ cnn::expr::Expression Input2F2IModel<RNNDerived>::build_loss(cnn::ComputationGra
     birnn_layer->set_dropout() ;
     birnn_layer->start_new_sequence() ;
 
-    std::vector<cnn::expr::Expression> features_exprs;
+    std::vector<dynet::expr::Expression> features_exprs;
     pos_feature_layer->build_feature_exprs(features_gp_seq, features_exprs);
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(dynamic_sent, fixed_sent, features_exprs, inputs_exprs) ;
 
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     return output_layer->build_output_loss(l2r_exprs, r2l_exprs, gold_seq) ;
 }
 
 template<typename RNNDerived>
-void Input2F2IModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
+void Input2F2IModel<RNNDerived>::predict(dynet::ComputationGraph &cg,
     const IndexSeq &dynamic_sent,
     const IndexSeq &fixed_sent,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -176,12 +176,12 @@ void Input2F2IModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     birnn_layer->disable_dropout() ;
     birnn_layer->start_new_sequence();
 
-    std::vector<cnn::expr::Expression> feature_exprs;
+    std::vector<dynet::expr::Expression> feature_exprs;
     pos_feature_layer->build_feature_exprs(features_gp_seq, feature_exprs);
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(dynamic_sent, fixed_sent, feature_exprs, inputs_exprs) ;
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     output_layer->build_output(l2r_exprs, r2l_exprs, pred_seq) ;

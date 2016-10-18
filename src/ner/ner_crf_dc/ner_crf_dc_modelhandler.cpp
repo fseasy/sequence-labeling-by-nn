@@ -8,7 +8,7 @@
 #include "ner_crf_dc_modelhandler.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn
 {
 
@@ -305,7 +305,7 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
                                         p_postag_seq, p_ner_seq ,  
                                         dropout_rate , 
                                         training_stat4trivial.get());
-            cnn::real loss =  as_scalar(cg->forward());
+            dynet::real loss =  as_scalar(cg->forward());
             cg->backward();
             sgd.update(1.0f);
             delete cg;

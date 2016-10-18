@@ -10,8 +10,8 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 #include "modelmodule/hyper_layers.h"
@@ -50,11 +50,11 @@ public:
         IndexSeq &replaced_sent, CWSFeatureDataSeq &replaced_cws_feature_data_seq);
     void char_and_tag2word_seq(const Seq &char_seq, const IndexSeq &tag_seq, Seq &word_seq);
 
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
         const IndexSeq &gold_seq) = 0 ;
-    virtual void predict(cnn::ComputationGraph &cg,
+    virtual void predict(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
         IndexSeq &pred_seq) = 0 ;
@@ -62,7 +62,7 @@ public:
     size_t get_word_dict_size(){ return word_dict.size(); }
     size_t get_tag_dict_size(){ return CWSTaggingSystem::get_tag_num(); }
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
-    cnn::Model *get_cnn_model(){ return m ; } ;
+    dynet::Model *get_dynet_model(){ return m ; } ;
 
     // CWSFeature interface promote to this class
     void count_word_frequency(const Seq &word_seq){ cws_feature.count_word_frequency(word_seq); };
@@ -78,9 +78,9 @@ public:
     }
 
 protected:
-    cnn::Model *m;
+    dynet::Model *m;
 
-    cnn::Dict word_dict;
+    dynet::Dict word_dict;
     DictWrapper word_dict_wrapper;
 
     CWSFeature cws_feature;

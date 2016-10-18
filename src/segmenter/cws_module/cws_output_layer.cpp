@@ -4,18 +4,18 @@
 #include "segmenter/cws_module/token_module/cws_tag_utility.h"
 namespace slnn{
 
-CWSSimpleOutput::CWSSimpleOutput(cnn::Model *m,
+CWSSimpleOutput::CWSSimpleOutput(dynet::Model *m,
     unsigned input_dim1, unsigned input_dim2,
     unsigned hidden_dim, unsigned output_dim,
     CWSTaggingSystem &tag_sys,
-    cnn::real dropout_rate,
+    dynet::real dropout_rate,
     NonLinearFunc *nonlinear_func)
     : SimpleOutput(m, input_dim1, input_dim2, hidden_dim, output_dim, dropout_rate, nonlinear_func),
     tag_sys(tag_sys)
 {}
 
-void CWSSimpleOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                                   const std::vector<cnn::expr::Expression> &expr_cont2,
+void CWSSimpleOutput::build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+                                   const std::vector<dynet::expr::Expression> &expr_cont2,
                                    IndexSeq &pred_out_seq)
 {
     size_t len = expr_cont1.size();
@@ -28,10 +28,10 @@ void CWSSimpleOutput::build_output(const std::vector<cnn::expr::Expression> &exp
     Index pre_tag_id = -1 ;
     for (size_t i = 0; i < len - 1; ++i)
     {
-        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i]);
-        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
-        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        dynet::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i]);
+        dynet::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        dynet::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<dynet::real> out_probs = dynet::as_vector(pcg->get_value(out_expr));
         
         Index max_prob_tag_in_constrain = select_pred_tag_in_constrain(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
@@ -42,10 +42,10 @@ void CWSSimpleOutput::build_output(const std::vector<cnn::expr::Expression> &exp
     std::swap(pred_out_seq, tmp_pred_out);
 }
 
-Index CWSSimpleOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag_id)
+Index CWSSimpleOutput::select_pred_tag_in_constrain(std::vector<dynet::real> &dist, size_t pos , Index pre_tag_id)
 {
     // dist value must bigger than zero
-    cnn::real max_prob = std::numeric_limits<cnn::real>::lowest() ;
+    dynet::real max_prob = std::numeric_limits<dynet::real>::lowest() ;
     Index selected_tag = -1 ;
     for( size_t cur_tag_id = 0 ; cur_tag_id < dist.size() ; ++cur_tag_id )
     {
@@ -63,19 +63,19 @@ Index CWSSimpleOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist
 
 /**************** CWS Pretag Output ***************/
 
-CWSPretagOutput::CWSPretagOutput(cnn::Model *m,
+CWSPretagOutput::CWSPretagOutput(dynet::Model *m,
     unsigned tag_embedding_dim,
     unsigned input_dim1, unsigned input_dim2,
     unsigned hidden_dim, unsigned output_dim,
     CWSTaggingSystem &tag_sys,
-    cnn::real dropout_rate,
+    dynet::real dropout_rate,
     NonLinearFunc *nonlinear_fun)
     :PretagOutput(m, tag_embedding_dim, input_dim1, input_dim2, hidden_dim, output_dim, dropout_rate, nonlinear_fun),
     tag_sys(tag_sys)
 {}
 
-void CWSPretagOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                                   const std::vector<cnn::expr::Expression> &expr_cont2,
+void CWSPretagOutput::build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+                                   const std::vector<dynet::expr::Expression> &expr_cont2,
                                    IndexSeq &pred_seq)
 {
     
@@ -86,14 +86,14 @@ void CWSPretagOutput::build_output(const std::vector<cnn::expr::Expression> &exp
         return ;
     }
     IndexSeq tmp_pred(len) ;
-    cnn::expr::Expression pretag_exp = parameter(*pcg, TAG_SOS) ;
+    dynet::expr::Expression pretag_exp = parameter(*pcg, TAG_SOS) ;
     Index pre_tag_id = -1 ;
     for( size_t i = 0; i < len-1; ++i )
     {
-        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i], pretag_exp);
-        cnn::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
-        std::vector<cnn::real> dist = as_vector(pcg->get_value(out_expr)) ;
+        dynet::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i], pretag_exp);
+        dynet::expr::Expression nonlinear_expr = (*nonlinear_func)(merge_out_expr);
+        dynet::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<dynet::real> dist = as_vector(pcg->get_value(out_expr)) ;
         Index id_of_constrained_max_prob = select_pred_tag_in_constrain(dist, i, pre_tag_id) ;
         tmp_pred[i] = id_of_constrained_max_prob ;
         pretag_exp = lookup(*pcg, tag_lookup_param,id_of_constrained_max_prob) ;
@@ -105,10 +105,10 @@ void CWSPretagOutput::build_output(const std::vector<cnn::expr::Expression> &exp
     std::swap(pred_seq, tmp_pred) ;
 }
 
-Index CWSPretagOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag_id)
+Index CWSPretagOutput::select_pred_tag_in_constrain(std::vector<dynet::real> &dist, size_t pos , Index pre_tag_id)
 {
     // dist value must bigger than zero
-    cnn::real max_prob = std::numeric_limits<cnn::real>::lowest() ;
+    dynet::real max_prob = std::numeric_limits<dynet::real>::lowest() ;
     Index selected_tag = -1 ;
     for( size_t cur_tag_id = 0 ; cur_tag_id < dist.size() ; ++cur_tag_id )
     {
@@ -126,37 +126,37 @@ Index CWSPretagOutput::select_pred_tag_in_constrain(std::vector<cnn::real> &dist
 
 /************** CWS CRF OUTPUT *****************/
 
-CWSCRFOutput::CWSCRFOutput(cnn::Model *m,
+CWSCRFOutput::CWSCRFOutput(dynet::Model *m,
                            unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
                            unsigned hidden_dim,
                            unsigned tag_num,
-                           cnn::real dropout_rate,
+                           dynet::real dropout_rate,
                            CWSTaggingSystem &tag_sys,
                            NonLinearFunc *nonlinear_func)
     :CRFOutput(m , tag_embedding_dim , input_dim1 , input_dim2 ,hidden_dim , tag_num, dropout_rate, nonlinear_func) ,
     tag_sys(tag_sys)
 {}
 
-cnn::expr::Expression 
-CWSCRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
-                  const std::vector<cnn::expr::Expression> &expr_cont2,
+dynet::expr::Expression 
+CWSCRFOutput::build_output_loss(const std::vector<dynet::expr::Expression> &expr_cont1,
+                  const std::vector<dynet::expr::Expression> &expr_cont2,
                   const IndexSeq &gold_seq)
 {
     size_t len = expr_cont1.size() ;
     // viterbi data preparation
-    std::vector<cnn::expr::Expression> all_tag_expr_cont(tag_num);
-    std::vector<cnn::expr::Expression> init_score(tag_num);
-    std::vector<cnn::expr::Expression> trans_score(tag_num * tag_num);
-    std::vector<std::vector<cnn::expr::Expression>> emit_score(len,
-                                                               std::vector<cnn::expr::Expression>(tag_num));
-    std::vector<cnn::expr::Expression> cur_score_expr_cont(tag_num),
+    std::vector<dynet::expr::Expression> all_tag_expr_cont(tag_num);
+    std::vector<dynet::expr::Expression> init_score(tag_num);
+    std::vector<dynet::expr::Expression> trans_score(tag_num * tag_num);
+    std::vector<std::vector<dynet::expr::Expression>> emit_score(len,
+                                                               std::vector<dynet::expr::Expression>(tag_num));
+    std::vector<dynet::expr::Expression> cur_score_expr_cont(tag_num),
         pre_score_expr_cont(tag_num);
-    std::vector<cnn::expr::Expression> gold_score_expr_cont(len) ;
+    std::vector<dynet::expr::Expression> gold_score_expr_cont(len) ;
     // init tag expr , init score
     for( size_t i = 0; i < tag_num ; ++i )
     {
-        all_tag_expr_cont[i] = cnn::expr::lookup(*pcg, tag_lookup_param, i);
-        init_score[i] = cnn::expr::lookup(*pcg, init_score_lookup_param, i);
+        all_tag_expr_cont[i] = dynet::expr::lookup(*pcg, tag_lookup_param, i);
+        init_score[i] = dynet::expr::lookup(*pcg, init_score_lookup_param, i);
     }
     // init translation score
     for( size_t pre_tag_id = 0 ; pre_tag_id < tag_num ; ++pre_tag_id )
@@ -174,10 +174,10 @@ CWSCRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_c
         for( size_t i = 0; i < tag_num; ++i )
         {
             if( !tag_sys.can_emit(time_step, i) ) continue ;
-            cnn::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
+            dynet::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
                                                                              expr_cont2[time_step], all_tag_expr_cont[i]);
-            cnn::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
-            cnn::expr::Expression dropout_expr = dropout(non_linear_expr, dropout_rate) ;
+            dynet::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
+            dynet::expr::Expression dropout_expr = dropout(non_linear_expr, dropout_rate) ;
             emit_score[time_step][i] = emit_layer.build_graph(dropout_expr);
         }
     }
@@ -201,7 +201,7 @@ CWSCRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_c
         for( size_t cur_idx = 0; cur_idx < tag_num ; ++cur_idx )
         {
             // for every possible trans
-            std::vector<cnn::expr::Expression> partial_score_expr_cont;
+            std::vector<dynet::expr::Expression> partial_score_expr_cont;
             for( size_t pre_idx = 0; pre_idx < tag_num; ++pre_idx )
             {
                 // constrain : if pre-tag can't emit , or no from pre_tag to cur_tag transition , skip . 
@@ -210,7 +210,7 @@ CWSCRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_c
                 // from-tag score + trans_score
                 partial_score_expr_cont.push_back(pre_score_expr_cont[pre_idx] + trans_score[flatten_idx]);
             }
-            cur_score_expr_cont[cur_idx] = cnn::expr::logsumexp(partial_score_expr_cont) +
+            cur_score_expr_cont[cur_idx] = dynet::expr::logsumexp(partial_score_expr_cont) +
                 emit_score[time_step][cur_idx];
         }
         // calc gold 
@@ -219,20 +219,20 @@ CWSCRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_c
             emit_score[time_step][gold_seq.at(time_step)];
     }
     // the last position , only TAG `E` or `S` is valid .
-    std::vector<cnn::expr::Expression> valid_expr = {  
+    std::vector<dynet::expr::Expression> valid_expr = {  
         cur_score_expr_cont[tag_sys.E_ID] ,
         cur_score_expr_cont[tag_sys.S_ID]
     };
-    cnn::expr::Expression predict_score_expr = cnn::expr::logsumexp(valid_expr);
+    dynet::expr::Expression predict_score_expr = dynet::expr::logsumexp(valid_expr);
 
     // if totally correct , loss = 0 (predict_score = gold_score , that is , predict sequence equal to gold sequence)
     // else , loss = predict_score - gold_score
-    cnn::expr::Expression loss = predict_score_expr - cnn::expr::sum(gold_score_expr_cont);
+    dynet::expr::Expression loss = predict_score_expr - dynet::expr::sum(gold_score_expr_cont);
     return loss;
 }
 
-void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                                const std::vector<cnn::expr::Expression> &expr_cont2,
+void CWSCRFOutput::build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+                                const std::vector<dynet::expr::Expression> &expr_cont2,
                                 IndexSeq &pred_seq)
 {
     size_t len = expr_cont1.size() ;
@@ -242,16 +242,16 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
         return ;
     }
     // viterbi data preparation
-    std::vector<cnn::expr::Expression> all_tag_expr_cont(tag_num);
-    std::vector<cnn::real> init_score(tag_num , std::numeric_limits<cnn::real>::min());
-    std::vector < cnn::real> trans_score(tag_num * tag_num);
-    std::vector<std::vector<cnn::real>> emit_score(len, std::vector<cnn::real>(tag_num));
+    std::vector<dynet::expr::Expression> all_tag_expr_cont(tag_num);
+    std::vector<dynet::real> init_score(tag_num , std::numeric_limits<dynet::real>::min());
+    std::vector < dynet::real> trans_score(tag_num * tag_num);
+    std::vector<std::vector<dynet::real>> emit_score(len, std::vector<dynet::real>(tag_num));
     // get initial score
     for( size_t i = 0 ; i < tag_num ; ++i )
     {
         if( !tag_sys.can_emit(0, i) ) continue ;
-        cnn::expr::Expression init_score_expr = cnn::expr::lookup(*pcg, init_score_lookup_param, i);
-        init_score[i] = cnn::as_scalar(pcg->get_value(init_score_expr)) ;
+        dynet::expr::Expression init_score_expr = dynet::expr::lookup(*pcg, init_score_lookup_param, i);
+        init_score[i] = dynet::as_scalar(pcg->get_value(init_score_expr)) ;
     }
     // get translation score
     for( size_t pre_idx = 0 ; pre_idx < tag_num ; ++pre_idx )
@@ -260,30 +260,30 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
         {
             if( !tag_sys.can_trans(pre_idx, cur_idx) ) continue ;
             size_t flat_idx = pre_idx * tag_num + cur_idx ;
-            cnn::expr::Expression trans_score_expr = lookup(*pcg, trans_score_lookup_param, flat_idx);
-            trans_score[flat_idx] = cnn::as_scalar(pcg->get_value(trans_score_expr)) ;
+            dynet::expr::Expression trans_score_expr = lookup(*pcg, trans_score_lookup_param, flat_idx);
+            trans_score[flat_idx] = dynet::as_scalar(pcg->get_value(trans_score_expr)) ;
         }
     }
     // get emit score
     for( size_t i = 0; i < tag_num ; ++i )
     {
-        all_tag_expr_cont[i] = cnn::expr::lookup(*pcg, tag_lookup_param, i);
+        all_tag_expr_cont[i] = dynet::expr::lookup(*pcg, tag_lookup_param, i);
     }
     for( size_t time_step = 0; time_step < len; ++time_step )
     {
         for( size_t i = 0; i < tag_num; ++i )
         {
             if( !tag_sys.can_emit(time_step, i) ) continue ;
-            cnn::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
+            dynet::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
                                                                              expr_cont2[time_step], all_tag_expr_cont[i]);
-            cnn::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
-            cnn::expr::Expression emit_expr = emit_layer.build_graph(non_linear_expr);
-            emit_score[time_step][i] = cnn::as_scalar( pcg->get_value(emit_expr) );
+            dynet::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
+            dynet::expr::Expression emit_expr = emit_layer.build_graph(non_linear_expr);
+            emit_score[time_step][i] = dynet::as_scalar( pcg->get_value(emit_expr) );
         }
     }
     // viterbi - process
     std::vector<std::vector<size_t>> path_matrix(len, std::vector<size_t>(tag_num));
-    std::vector<cnn::real> current_scores(tag_num); 
+    std::vector<dynet::real> current_scores(tag_num); 
     // time 0
     for (size_t i = 0; i < tag_num ; ++i)
     {
@@ -291,7 +291,7 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
         current_scores[i] = init_score[i] + emit_score[0][i];
     }
     // continues time
-    std::vector<cnn::real>  pre_timestep_scores(tag_num);
+    std::vector<dynet::real>  pre_timestep_scores(tag_num);
     for (size_t time_step = 1; time_step < len ; ++time_step)
     {
         std::swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
@@ -299,12 +299,12 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
         {
             
             Index pre_tag_with_max_score = -1;
-            cnn::real max_score = std::numeric_limits<cnn::real>::lowest() ;
+            dynet::real max_score = std::numeric_limits<dynet::real>::lowest() ;
             for (size_t pre_i = 0 ; pre_i < tag_num ; ++pre_i)
             {
                 if( !tag_sys.can_emit(time_step - 1, pre_i) || !tag_sys.can_trans(pre_i, i) ) continue ;
                 size_t flat_idx = pre_i * tag_num + pre_i ;
-                cnn::real score = pre_timestep_scores[pre_i] + trans_score[flat_idx];
+                dynet::real score = pre_timestep_scores[pre_i] + trans_score[flat_idx];
                 if (score > max_score)
                 {
                     pre_tag_with_max_score = pre_i;
@@ -320,8 +320,8 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
     IndexSeq tmp_predict_ner_seq(len);
     // from TAG `E` or `S` to select the id with the max score 
     Index end_predicted_idx ;
-    cnn::real end_of_E_score = current_scores.at(tag_sys.E_ID) ;
-    cnn::real end_of_S_score = current_scores.at(tag_sys.S_ID) ;
+    dynet::real end_of_E_score = current_scores.at(tag_sys.E_ID) ;
+    dynet::real end_of_S_score = current_scores.at(tag_sys.S_ID) ;
     if( end_of_E_score <= end_of_S_score ){ end_predicted_idx = tag_sys.S_ID ; }
     else { end_predicted_idx = tag_sys.E_ID ; }
     tmp_predict_ner_seq[len - 1] = end_predicted_idx;
@@ -336,15 +336,15 @@ void CWSCRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_c
 
 /* CWSSimpleOutputWithFeature */
 
-CWSSimpleOutputWithFeature::CWSSimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+CWSSimpleOutputWithFeature::CWSSimpleOutputWithFeature(dynet::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
     unsigned hidden_dim, unsigned output_dim,
-    cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
+    dynet::real dropout_rate, NonLinearFunc *nonlinear_func)
     : SimpleOutputWithFeature(m, input_dim1, input_dim2, feature_dim, hidden_dim, output_dim, dropout_rate, nonlinear_func)
 {}
 
-void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-    const std::vector<cnn::expr::Expression> &expr_cont2,
-    const std::vector<cnn::expr::Expression> &feature_expr_cont,
+void CWSSimpleOutputWithFeature::build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+    const std::vector<dynet::expr::Expression> &expr_cont2,
+    const std::vector<dynet::expr::Expression> &feature_expr_cont,
     IndexSeq &pred_out_seq)
 {
     using std::swap;
@@ -358,10 +358,10 @@ void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expre
     Index pre_tag_id = CWSTaggingSystem::STATIC_NONE_ID ;
     for (size_t i = 0; i < len - 1; ++i)
     {
-        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i], feature_expr_cont[i]);
-        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
-        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        dynet::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i], feature_expr_cont[i]);
+        dynet::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        dynet::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<dynet::real> out_probs = dynet::as_vector(pcg->get_value(out_expr));
 
         Index max_prob_tag_in_constrain = CWSTaggingSystem::static_select_tag_constrained(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
@@ -377,16 +377,16 @@ void CWSSimpleOutputWithFeature::build_output(const std::vector<cnn::expr::Expre
 }
 
 /* CWSSimpleOutput NEW (0628) */
-CWSSimpleOutputNew::CWSSimpleOutputNew(cnn::Model *m,
+CWSSimpleOutputNew::CWSSimpleOutputNew(dynet::Model *m,
     unsigned input_dim1, unsigned input_dim2,
     unsigned hidden_dim, unsigned output_dim,
-    cnn::real dropout_rate,
+    dynet::real dropout_rate,
     NonLinearFunc *nonlinear_func)
     : SimpleOutput(m , input_dim1 , input_dim2 , hidden_dim , output_dim, dropout_rate, nonlinear_func)
 {}
 
-void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-    const std::vector<cnn::expr::Expression> &expr_cont2,
+void CWSSimpleOutputNew::build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+    const std::vector<dynet::expr::Expression> &expr_cont2,
     IndexSeq &pred_out_seq)
 {
     using std::swap;
@@ -400,10 +400,10 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
     Index pre_tag_id = CWSTaggingSystem::STATIC_NONE_ID ;
     for (size_t i = 0; i < len - 1; ++i)
     {
-        cnn::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i]);
-        cnn::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
-        cnn::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
-        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        dynet::expr::Expression merge_out_expr = hidden_layer.build_graph(expr_cont1[i], expr_cont2[i]);
+        dynet::expr::Expression nonlinear_expr = nonlinear_func(merge_out_expr);
+        dynet::expr::Expression out_expr = output_layer.build_graph(nonlinear_expr);
+        std::vector<dynet::real> out_probs = dynet::as_vector(pcg->get_value(out_expr));
 
         Index max_prob_tag_in_constrain = CWSTaggingSystem::static_select_tag_constrained(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
@@ -422,12 +422,12 @@ void CWSSimpleOutputNew::build_output(const std::vector<cnn::expr::Expression> &
  * Segmentor output :  Simple Bare output (re-write @2016-10-13)
  ***************************************************/
 
-CWSSimpleBareOutput::CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim)
+CWSSimpleBareOutput::CWSSimpleBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim)
     :SimpleBareOutput(m, input_dim, output_dim)
 {}
 
 void CWSSimpleBareOutput::
-build_output(const std::vector<cnn::expr::Expression> &input_expr_seq, std::vector<Index> &out_pred_seq)
+build_output(const std::vector<dynet::expr::Expression> &input_expr_seq, std::vector<Index> &out_pred_seq)
 {
     using std::swap;
     std::size_t len = input_expr_seq.size();
@@ -440,8 +440,8 @@ build_output(const std::vector<cnn::expr::Expression> &input_expr_seq, std::vect
     Index pre_tag_id = segmenter::Tag::TAG_NONE_ID;
     for (std::size_t i = 0; i < len - 1; ++i) // select first and middle tags
     {
-        cnn::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
-        std::vector<cnn::real> out_probs = cnn::as_vector(pcg->get_value(out_expr));
+        dynet::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
+        std::vector<dynet::real> out_probs = dynet::as_vector(pcg->get_value(out_expr));
         Index max_prob_tag_in_constrain = segmenter::token_module::select_best_tag_constrained(out_probs , i , pre_tag_id );
         tmp_pred_out[i] = max_prob_tag_in_constrain ;
         pre_tag_id = max_prob_tag_in_constrain ;

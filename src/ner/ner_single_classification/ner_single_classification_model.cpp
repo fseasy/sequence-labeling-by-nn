@@ -20,14 +20,14 @@ void NERSingleClassificationModel::set_model_param(const boost::program_options:
     lstm_h_dim = var_map["lstm_h_dim"].as<unsigned>() ;
     hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
 
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
     word_dict_size = word_dict.size() ;
     postag_dict_size = postag_dict.size() ;
     output_dim = ner_dict.size() ;
 }
 void NERSingleClassificationModel::build_model_structure()
 {
-    m = new cnn::Model() ;
+    m = new dynet::Model() ;
     input_layer = new Input2D(m, word_dict_size, word_embedding_dim , postag_dict_size , postag_embedding_dim , lstm_x_dim) ;
     bilstm_layer = new BILSTMLayer(m, lstm_nr_stacked_layer, lstm_x_dim , lstm_h_dim, dropout_rate) ;
     output_layer = new SimpleOutput(m, lstm_h_dim, lstm_h_dim, hidden_dim, output_dim) ;

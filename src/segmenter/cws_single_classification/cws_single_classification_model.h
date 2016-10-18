@@ -8,7 +8,7 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "segmenter/base_model/single_input_model.h"
 #include "segmenter/cws_module/cws_tagging_system.h"
@@ -19,8 +19,8 @@ class CWSSingleClassificationModel : public SingleInputModel
     friend class boost::serialization::access;
 public:
     
-    cnn::Dict &word_dict ;
-    cnn::Dict &tag_dict ;
+    dynet::Dict &word_dict ;
+    dynet::Dict &tag_dict ;
 
     CWSSingleClassificationModel() ;
     ~CWSSingleClassificationModel() ;

@@ -256,14 +256,14 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::train(const std::vector
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
     bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(i2m->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(i2m->get_dynet_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -280,12 +280,12 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::train(const std::vector
             const POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = p_feature_gp_seqs->at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 IndexSeq sent_after_replace ;
                 POSFeature::POSFeatureIndexGroupSeq feature_gp_seq_after_replace;
                 i2m->replace_word_with_unk(dynamic_sent, feature_gp_seq, sent_after_replace, feature_gp_seq_after_replace);
                 i2m->build_loss(cg, sent_after_replace, fixed_sent, feature_gp_seq_after_replace, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
+                dynet::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
@@ -303,7 +303,7 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::train(const std::vector
             if( p_dev_dynamic_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq )
             {
                 float acc = devel(p_dev_dynamic_sents, p_dev_fixed_sents, p_dev_feature_gp_seqs, p_dev_tag_seqs);
-                model_stash.save_when_best(i2m->get_cnn_model(), acc);
+                model_stash.save_when_best(i2m->get_dynet_model(), acc);
                 line_cnt_for_devel = 0; // avoid overflow
                 if( model_stash.is_train_error_occurs(acc) )
                 {
@@ -329,7 +329,7 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::train(const std::vector
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
             float acc = devel(p_dev_dynamic_sents, p_dev_fixed_sents, p_dev_feature_gp_seqs, p_dev_tag_seqs);
-            model_stash.save_when_best(i2m->get_cnn_model(), acc);
+            model_stash.save_when_best(i2m->get_dynet_model(), acc);
             if( model_stash.is_train_error_occurs(acc) )
             {
                 is_train_ok = false;
@@ -355,7 +355,7 @@ float Input2WithFeatureModelHandler<RNNDerived, I2Model>::devel(const std::vecto
     stat.start_time_stat();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &dynamic_sent = p_dynamic_sents->at(access_idx),
             &fixed_sent = p_fixed_sents->at(access_idx),
@@ -402,7 +402,7 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::predict(std::istream &i
             fixed_sent = fixed_sents.at(i);
         POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = feature_gp_seqs.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         i2m->predict(cg, dynamic_sent, fixed_sent, feature_gp_seq, pred_tag_seq);
         Seq postag_seq;
         i2m->postag_index_seq2postag_str_seq(pred_tag_seq, postag_seq);
@@ -423,7 +423,7 @@ template <typename RNNDerived, typename I2Model>
 void Input2WithFeatureModelHandler<RNNDerived, I2Model>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
-    model_stash.load_if_exists(i2m->get_cnn_model());
+    model_stash.load_if_exists(i2m->get_dynet_model());
     boost::archive::text_oarchive to(os);
     to << *(static_cast<I2Model*>(i2m));
     BOOST_LOG_TRIVIAL(info) << "save model done .";

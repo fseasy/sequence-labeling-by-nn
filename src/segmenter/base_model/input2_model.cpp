@@ -36,15 +36,15 @@ void Input2Model::set_model_param(const boost::program_options::variables_map &v
     lstm_h_dim = var_map["lstm_h_dim"].as<unsigned>() ;
     hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
 
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
 
     dynamic_dict_size = dynamic_dict.size() ;
     assert(fixed_dict_size == fixed_dict.size()) ;
     output_dim = tag_dict.size() ;
 }
 
-cnn::expr::Expression
-Input2Model::build_loss(cnn::ComputationGraph &cg ,
+dynet::expr::Expression
+Input2Model::build_loss(dynet::ComputationGraph &cg ,
                         const IndexSeq &dynamic_sent, const IndexSeq &fixed_sent, 
                         const IndexSeq &gold_seq)
 {
@@ -55,17 +55,17 @@ Input2Model::build_loss(cnn::ComputationGraph &cg ,
     bilstm_layer->set_dropout() ;
     bilstm_layer->start_new_sequence() ;
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(dynamic_sent, fixed_sent , inputs_exprs) ;
 
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
                                        r2l_exprs ;
     bilstm_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     return output_layer->build_output_loss(l2r_exprs, r2l_exprs, gold_seq) ;
 }
 
 void 
-Input2Model::predict(cnn::ComputationGraph &cg,
+Input2Model::predict(dynet::ComputationGraph &cg,
                      const IndexSeq &dynamic_sent, const IndexSeq &fixed_sent,
                      IndexSeq &pred_seq)
 {
@@ -76,9 +76,9 @@ Input2Model::predict(cnn::ComputationGraph &cg,
     bilstm_layer->disable_dropout() ;
     bilstm_layer->start_new_sequence();
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(dynamic_sent, fixed_sent, inputs_exprs) ;
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
                                        r2l_exprs ;
     bilstm_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     output_layer->build_output(l2r_exprs, r2l_exprs , pred_seq) ;

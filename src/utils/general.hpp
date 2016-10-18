@@ -67,39 +67,39 @@ void varmap_key_fatal_check(boost::program_options::variables_map &var_map , con
     if(0 == var_map.count(key)) fatal_error(exit_msg) ;
 }
 
-void build_cnn_parameters(const std::string &program_name, unsigned cnn_mem, int &cnn_argc, std::shared_ptr<char *> &cnn_argv_sp)
+void build_dynet_parameters(const std::string &program_name, unsigned dynet_mem, int &dynet_argc, std::shared_ptr<char *> &dynet_argv_sp)
 {
     char * program_name_cstr = new char[program_name.length() + 1](); // value initialization
     //std::copy(std::begin(program_name), std::end(program_name), program_name_cstr);
     strncpy(program_name_cstr, program_name.c_str(), program_name.length() + 1);
-    auto deleter = [&cnn_argc](char **ptr)
+    auto deleter = [&dynet_argc](char **ptr)
     {
-        for( int i = 0 ; i < cnn_argc ; ++i ) { delete[] ptr[i]; }
+        for( int i = 0 ; i < dynet_argc ; ++i ) { delete[] ptr[i]; }
     } ;
-    if( cnn_mem != 0 )
+    if( dynet_mem != 0 )
     {
-        std::string cnn_mem_key = "--cnn-mem";
-        char * cnn_mem_key_cstr = new char[cnn_mem_key.length() + 1]();
-        //std::copy(std::begin(cnn_mem_key), std::end(cnn_mem_key), cnn_mem_key_cstr);
-        strncpy(cnn_mem_key_cstr, cnn_mem_key.c_str(), cnn_mem_key.length() + 1);
+        std::string dynet_mem_key = "--dynet-mem";
+        char * dynet_mem_key_cstr = new char[dynet_mem_key.length() + 1]();
+        //std::copy(std::begin(dynet_mem_key), std::end(dynet_mem_key), dynet_mem_key_cstr);
+        strncpy(dynet_mem_key_cstr, dynet_mem_key.c_str(), dynet_mem_key.length() + 1);
 
-        std::string cnn_mem_value = "";
-        cnn_mem_value = std::to_string(cnn_mem);
-        char * cnn_mem_value_cstr = new char[cnn_mem_value.length() + 1]();
-        //std::copy(std::begin(cnn_mem_value), std::end(cnn_mem_value), cnn_mem_value_cstr);
-        strncpy(cnn_mem_value_cstr, cnn_mem_value.c_str(), cnn_mem_value.length() + 1);
+        std::string dynet_mem_value = "";
+        dynet_mem_value = std::to_string(dynet_mem);
+        char * dynet_mem_value_cstr = new char[dynet_mem_value.length() + 1]();
+        //std::copy(std::begin(dynet_mem_value), std::end(dynet_mem_value), dynet_mem_value_cstr);
+        strncpy(dynet_mem_value_cstr, dynet_mem_value.c_str(), dynet_mem_value.length() + 1);
 
-        const int const_cnn_argc = 3 ; // program_name --cnn-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
-        char **cnn_argv_cstr = new char*[const_cnn_argc+1]{ program_name_cstr, cnn_mem_key_cstr, cnn_mem_value_cstr, nullptr };
-        cnn_argc = const_cnn_argc;
-        cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
+        const int const_dynet_argc = 3 ; // program_name --dynet-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
+        char **dynet_argv_cstr = new char*[const_dynet_argc+1]{ program_name_cstr, dynet_mem_key_cstr, dynet_mem_value_cstr, nullptr };
+        dynet_argc = const_dynet_argc;
+        dynet_argv_sp = std::shared_ptr<char *>(dynet_argv_cstr, deleter);
     }
     else
     {
-        const int const_cnn_argc = 1 ;
-        char **cnn_argv_cstr = new char*[const_cnn_argc + 1]{ program_name_cstr, nullptr };
-        cnn_argc = const_cnn_argc;
-        cnn_argv_sp = std::shared_ptr<char *>(cnn_argv_cstr, deleter);
+        const int const_dynet_argc = 1 ;
+        char **dynet_argv_cstr = new char*[const_dynet_argc + 1]{ program_name_cstr, nullptr };
+        dynet_argc = const_dynet_argc;
+        dynet_argv_sp = std::shared_ptr<char *>(dynet_argv_cstr, deleter);
     }
 }
 

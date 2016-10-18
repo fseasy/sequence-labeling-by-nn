@@ -4,16 +4,16 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/gru.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/gru.h"
 
 #include "pos_input2_crf_feature2input_layer_model.h"
 #include "postagger/model_handler/input2_with_feature_modelhandler.hpp"
 #include "utils/general.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 using namespace slnn;
 namespace po = boost::program_options;
 static const string ProgramHeader = "Postagger Input2-CRF F2I Procedure based on CNN Library";
@@ -27,7 +27,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("word2vec_embedding" , po::value<string>(), "The path to word2vec embedding")
@@ -107,13 +107,13 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input2WithFeatureModelHandler<RNNDerived, POSInput2CRFF2IModel<RNNDerived>> model_handler;
 
     ifstream embedding_is(word2vec_embedding_path);
@@ -183,7 +183,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -201,13 +201,13 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
    
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input2WithFeatureModelHandler<RNNDerived, POSInput2CRFF2IModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -243,7 +243,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
         ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
@@ -269,13 +269,13 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
     
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input2WithFeatureModelHandler<RNNDerived, POSInput2CRFF2IModel<RNNDerived>> model_handler ;
 
     // load model 

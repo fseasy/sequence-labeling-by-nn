@@ -1,5 +1,5 @@
 #include <iostream>
-#include "nn_common_interface_cnn_impl.h"
+#include "nn_common_interface_dynet_impl.h"
 
 namespace slnn{
 namespace segmenter{
@@ -11,11 +11,11 @@ void NeuralNetworkCommonInterfaceCnnImpl::set_update_method(const std::string &o
     for( char &c : opt_norm_name ){ c = ::tolower(c); }
     if( opt_norm_name == "sgd" )
     {
-        trainer = new cnn::SimpleSGDTrainer(cnn_model);
+        trainer = new dynet::SimpleSGDTrainer(dynet_model);
     }
     else if( opt_norm_name == "adagrad" )
     {
-        trainer = new cnn::AdagradTrainer(cnn_model);
+        trainer = new dynet::AdagradTrainer(dynet_model);
     }
     else
     {

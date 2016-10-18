@@ -13,7 +13,7 @@
 #include "ner_crf_dc_model.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 
 const std::string NERCRFDCModel::UNK_STR = "<UNK_REPR>";
@@ -163,10 +163,10 @@ Expression NERCRFDCModel::viterbi_train(ComputationGraph *p_cg,
             if (p_stat)
             {
                 size_t pre_ner_idx_with_max_score = 0;
-                cnn::real max_score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_ner_idx_with_max_score]));
+                dynet::real max_score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_ner_idx_with_max_score]));
                 for (size_t pre_ner_idx = 1; pre_ner_idx < ner_embedding_dict_size; ++pre_ner_idx)
                 {
-                    cnn::real score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_ner_idx]));
+                    dynet::real score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_ner_idx]));
                     if (score_value > max_score_value)
                     {
                         max_score_value = score_value;
@@ -191,10 +191,10 @@ Expression NERCRFDCModel::viterbi_train(ComputationGraph *p_cg,
     if (p_stat)
     {
         Index end_predicted_idx = 0;
-        cnn::real max_score_value = as_scalar(cg.get_value(cur_score_exp_cont[end_predicted_idx]));
+        dynet::real max_score_value = as_scalar(cg.get_value(cur_score_exp_cont[end_predicted_idx]));
         for (size_t ner_idx = 1; ner_idx < ner_embedding_dict_size; ++ner_idx)
         {
-            cnn::real score_value = as_scalar(cg.get_value(cur_score_exp_cont[ner_idx]));
+            dynet::real score_value = as_scalar(cg.get_value(cur_score_exp_cont[ner_idx]));
             if (score_value > max_score_value)
             {
                 max_score_value = score_value;
@@ -250,9 +250,9 @@ void NERCRFDCModel::viterbi_predict(ComputationGraph *p_cg,
    
     //viterbi - preparing score
     vector<Expression> all_ner_exp_cont(ner_embedding_dict_size);
-    vector<cnn::real> init_score(ner_embedding_dict_size);
-    vector<cnn::real> trans_score(ner_embedding_dict_size * ner_embedding_dict_size);
-    vector<vector<cnn::real>> emit_score(sent_len, vector<cnn::real>(ner_embedding_dict_size));
+    vector<dynet::real> init_score(ner_embedding_dict_size);
+    vector<dynet::real> trans_score(ner_embedding_dict_size * ner_embedding_dict_size);
+    vector<vector<dynet::real>> emit_score(sent_len, vector<dynet::real>(ner_embedding_dict_size));
 
     // get init score
     for (size_t ner_idx = 0; ner_idx < ner_embedding_dict_size; ++ner_idx)
@@ -284,26 +284,26 @@ void NERCRFDCModel::viterbi_predict(ComputationGraph *p_cg,
     }
     // viterbi - process
     vector<vector<size_t>> path_matrix(sent_len, vector<size_t>(ner_embedding_dict_size));
-    vector<cnn::real> current_scores(ner_embedding_dict_size); 
+    vector<dynet::real> current_scores(ner_embedding_dict_size); 
     // time 0
     for (size_t ner_idx = 0; ner_idx < ner_embedding_dict_size; ++ner_idx)
     {
         current_scores[ner_idx] = init_score[ner_idx] + emit_score[0][ner_idx];
     }
     // continues time
-    vector<cnn::real>  pre_timestep_scores(current_scores.size());
+    vector<dynet::real>  pre_timestep_scores(current_scores.size());
     for (size_t time_step = 1; time_step < sent_len; ++time_step)
     {
         swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
         for (size_t ner_idx = 0; ner_idx < ner_embedding_dict_size; ++ner_idx)
         {
             size_t pre_tag_with_max_score = 0;
-            cnn::real max_score = pre_timestep_scores[pre_tag_with_max_score] + 
+            dynet::real max_score = pre_timestep_scores[pre_tag_with_max_score] + 
                 trans_score[pre_tag_with_max_score * ner_embedding_dict_size + ner_idx];
             for (size_t pre_ner_idx = 1 ; pre_ner_idx < ner_embedding_dict_size; ++pre_ner_idx)
             {
                 size_t flat_idx = pre_ner_idx * ner_embedding_dict_size + ner_idx;
-                cnn::real score = pre_timestep_scores[pre_ner_idx] + trans_score[flat_idx];
+                dynet::real score = pre_timestep_scores[pre_ner_idx] + trans_score[flat_idx];
                 if (score > max_score)
                 {
                     pre_tag_with_max_score = pre_ner_idx;

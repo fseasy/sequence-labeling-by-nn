@@ -20,8 +20,8 @@ Input2DModel::~Input2DModel()
     delete m ;
 }
 
-cnn::expr::Expression
-Input2DModel::build_loss(cnn::ComputationGraph &cg,
+dynet::expr::Expression
+Input2DModel::build_loss(dynet::ComputationGraph &cg,
                          const IndexSeq &words_seq, const IndexSeq &postag_seq,
                          const IndexSeq &gold_ner_seq)
 {
@@ -32,17 +32,17 @@ Input2DModel::build_loss(cnn::ComputationGraph &cg,
     bilstm_layer->set_dropout() ;
     bilstm_layer->start_new_sequence() ;
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(words_seq, postag_seq , inputs_exprs) ;
 
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
         r2l_exprs ;
     bilstm_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     return output_layer->build_output_loss(l2r_exprs, r2l_exprs, gold_ner_seq) ;
 }
 
 void 
-Input2DModel::predict(cnn::ComputationGraph &cg,
+Input2DModel::predict(dynet::ComputationGraph &cg,
                       const IndexSeq &words_seq, const IndexSeq &postag_seq , 
                       IndexSeq &pred_ner_seq)
 {
@@ -53,9 +53,9 @@ Input2DModel::predict(cnn::ComputationGraph &cg,
     bilstm_layer->disable_dropout() ;
     bilstm_layer->start_new_sequence();
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(words_seq , postag_seq, inputs_exprs) ;
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
                                        r2l_exprs ;
     bilstm_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
     output_layer->build_output(l2r_exprs, r2l_exprs , pred_ner_seq) ;

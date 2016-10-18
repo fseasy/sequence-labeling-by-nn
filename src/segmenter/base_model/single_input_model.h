@@ -10,8 +10,8 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 #include "modelmodule/hyper_layers.h"
@@ -32,18 +32,18 @@ public :
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
     
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
                                               const IndexSeq &input_seq, const IndexSeq &gold_seq) ;
-    virtual void predict(cnn::ComputationGraph &cg ,
+    virtual void predict(dynet::ComputationGraph &cg ,
                          const IndexSeq &input_seq, IndexSeq &pred_seq) ;
 
-    cnn::Dict& get_input_dict(){ return input_dict ;  } 
-    cnn::Dict& get_output_dict(){ return output_dict ; } 
+    dynet::Dict& get_input_dict(){ return input_dict ;  } 
+    dynet::Dict& get_output_dict(){ return output_dict ; } 
     DictWrapper& get_input_dict_wrapper(){ return input_dict_wrapper ; } 
-    cnn::Model *get_cnn_model(){ return m ; } ;
+    dynet::Model *get_dynet_model(){ return m ; } ;
     CWSTaggingSystem& get_tag_sys(){ return tag_sys ; }
 
-    void set_cnn_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
+    void set_dynet_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
 
     template <typename Archive>
     void save(Archive &ar, const unsigned versoin) const; 
@@ -62,12 +62,12 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; 
+    dynet::real dropout_rate ; 
 
 protected :
-    cnn::Model *m ;
-    cnn::Dict input_dict ;
-    cnn::Dict output_dict ;
+    dynet::Model *m ;
+    dynet::Dict input_dict ;
+    dynet::Dict output_dict ;
     DictWrapper input_dict_wrapper ;
 
     Input1 *input_layer ;

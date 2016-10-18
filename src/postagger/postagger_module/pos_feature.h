@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 #include <boost/serialization/serialization.hpp>
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 #include "utils/dict_wrapper.hpp"
 #include "utils/typedeclaration.h"
 
@@ -26,9 +26,9 @@ struct POSFeature
     unsigned char_length_embedding_dim;
     unsigned concatenated_feature_embedding_dim;
 
-    cnn::Dict prefix_suffix_len1_dict;
-    cnn::Dict prefix_suffix_len2_dict;
-    cnn::Dict prefix_suffix_len3_dict;
+    dynet::Dict prefix_suffix_len1_dict;
+    dynet::Dict prefix_suffix_len2_dict;
+    dynet::Dict prefix_suffix_len3_dict;
 
     DictWrapper prefix_suffix_len1_dict_wrapper;
     DictWrapper prefix_suffix_len2_dict_wrapper;

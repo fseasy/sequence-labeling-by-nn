@@ -6,8 +6,8 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/core.hpp>
 
-#include "cnn/dict.h"
-#include "cnn/cnn.h"
+#include "dynet/dict.h"
+#include "dynet/dynet.h"
 #include "utils/utf8processing.hpp"
 #include "utils/typedeclaration.h"
 
@@ -33,7 +33,7 @@ struct CWSTaggingSystem
     static void static_parse_chars_indextag2word_seq(const Seq &char_seq, const IndexSeq &static_tag_indices, Seq &word_seq);
     static bool static_can_emit(size_t cur_pos, Index cur_static_tag_id);
     static bool static_can_trans(Index pre_static_tag_id, Index cur_static_tag_id);
-    static Index static_select_tag_constrained(std::vector<cnn::real> &dist, size_t time, Index pre_tag_id=STATIC_NONE_ID);
+    static Index static_select_tag_constrained(std::vector<dynet::real> &dist, size_t time, Index pre_tag_id=STATIC_NONE_ID);
 
 
     // below is previous implementation . it is not good ! ( no need to use dynamic tag id for CWS TASK )
@@ -48,7 +48,7 @@ struct CWSTaggingSystem
         E_ID,
         S_ID ;
 
-    void build(cnn::Dict &tag_dict) ;
+    void build(dynet::Dict &tag_dict) ;
     bool can_emit(size_t cur_pos , Index cur_tag_id) ;
     bool can_trans(Index pre_tag_id, Index cur_tag_id) ;
     void parse_word_tag2words(const Seq &raw_words, const IndexSeq &tag_ids, Seq &o_words) ; // overide

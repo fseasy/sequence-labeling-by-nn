@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "segmenter/base_model/single_input_model.h"
 #include "segmenter/cws_module/cws_tagging_system.h"
@@ -17,8 +17,8 @@ class CWSSinglePretagModel : public SingleInputModel
 public:
     unsigned tag_embedding_dim ;
     
-    cnn::Dict &word_dict ;
-    cnn::Dict &tag_dict ;
+    dynet::Dict &word_dict ;
+    dynet::Dict &tag_dict ;
 
     CWSSinglePretagModel() ;
     ~CWSSinglePretagModel() ;

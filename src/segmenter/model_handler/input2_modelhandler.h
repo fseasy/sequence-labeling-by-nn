@@ -112,7 +112,7 @@ void Input2ModelHandler<I2Model>::save_current_best_model(float F1)
     best_F1 = F1;
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
-    to << *i2m->get_cnn_model();
+    to << *i2m->get_dynet_model();
 }
 
 template <typename I2Model>
@@ -154,7 +154,7 @@ void Input2ModelHandler<I2Model>::build_fixed_dict_from_word2vec_file(std::ifstr
         fixed_dict_sz = std::stol(split_cont[0]) + 1; // another UNK
         fixed_word_dim = std::stol(split_cont[1]);
     }
-    cnn::Dict &fixed_dict = i2m->get_fixed_dict() ;
+    dynet::Dict &fixed_dict = i2m->get_fixed_dict() ;
     // read all words and add to dc_m.fixed_dict
     while (getline(is, line))
     {
@@ -191,10 +191,10 @@ void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
     split_cont.reserve(i2m->fixed_word_dim + 1); // word + numbers 
     unsigned long line_cnt = 0; // for warning when read embedding error
     unsigned long words_cnt_hit = 0;
-    std::vector<cnn::real> embedding_vec(i2m->fixed_word_dim , 0.f);
-    cnn::Dict &fixed_dict = i2m->get_fixed_dict() ;
-    cnn::Dict &dynamic_dict = i2m->get_fixed_dict() ;
-    cnn::LookupParameters *fixed_lookup_param = i2m->get_fixed_lookup_param() ;
+    std::vector<dynet::real> embedding_vec(i2m->fixed_word_dim , 0.f);
+    dynet::Dict &fixed_dict = i2m->get_fixed_dict() ;
+    dynet::Dict &dynamic_dict = i2m->get_fixed_dict() ;
+    dynet::LookupParameters *fixed_lookup_param = i2m->get_fixed_lookup_param() ;
     Index dynamic_unk = dynamic_dict.Convert(i2m->UNK_STR); // for calc hit rate
     while (getline(is, line))
     {
@@ -246,8 +246,8 @@ void Input2ModelHandler<I2Model>::do_read_annotated_dataset(std::istream &is,
     tag_seq.reserve(SentMaxLen);
 
     DictWrapper &dynamic_dict_wrapper = i2m->get_dynamic_dict_wrapper() ;
-    cnn::Dict &fixed_dict = i2m->get_fixed_dict();
-    cnn::Dict &tag_dict = i2m->get_tag_dict();
+    dynet::Dict &fixed_dict = i2m->get_fixed_dict();
+    dynet::Dict &tag_dict = i2m->get_tag_dict();
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         dsent.clear();
@@ -286,9 +286,9 @@ void Input2ModelHandler<I2Model>::read_training_data_and_build_dicts(std::istrea
                                                                      std::vector<IndexSeq> &fsents,
                                                                      std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &dword_dict = i2m->get_dynamic_dict() ;
-    cnn::Dict &tag_dict = i2m->get_tag_dict() ;
-    cnn::Dict &fword_dict = i2m->get_fixed_dict();
+    dynet::Dict &dword_dict = i2m->get_dynamic_dict() ;
+    dynet::Dict &tag_dict = i2m->get_tag_dict() ;
+    dynet::Dict &fword_dict = i2m->get_fixed_dict();
     DictWrapper &word_dict_wrapper = i2m->get_dynamic_dict_wrapper() ;
 
     assert(!dword_dict.is_frozen() && !tag_dict.is_frozen() && fword_dict.is_frozen()); // fixed dict should be frozen already
@@ -306,9 +306,9 @@ void Input2ModelHandler<I2Model>::read_devel_data(std::istream &is,
                                                   std::vector<IndexSeq> &fsents,
                                                   std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &dword_dict = i2m->get_dynamic_dict() ;
-    cnn::Dict &fword_dict = i2m->get_fixed_dict();
-    cnn::Dict &tag_dict = i2m->get_tag_dict() ;
+    dynet::Dict &dword_dict = i2m->get_dynamic_dict() ;
+    dynet::Dict &fword_dict = i2m->get_fixed_dict();
+    dynet::Dict &tag_dict = i2m->get_tag_dict() ;
     assert(dword_dict.is_frozen() && fword_dict.is_frozen() && tag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, dsents, fsents, tag_seqs);
@@ -321,8 +321,8 @@ void Input2ModelHandler<I2Model>::read_test_data(std::istream &is,
                                                  std::vector<IndexSeq> &dsents,
                                                  std::vector<IndexSeq> &fsents)
 {
-    cnn::Dict &dword_dict = i2m->get_dynamic_dict() ;
-    cnn::Dict &fword_dict = i2m->get_fixed_dict() ;
+    dynet::Dict &dword_dict = i2m->get_dynamic_dict() ;
+    dynet::Dict &fword_dict = i2m->get_fixed_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_dsents,
@@ -385,7 +385,7 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
     bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(i2m->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(i2m->get_dynet_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq dynamic_sent_after_replace_unk(SentMaxLen, 0);
@@ -393,7 +393,7 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -409,7 +409,7 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
                 &tag_seq = p_tag_seqs->at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 dynamic_sent_after_replace_unk.resize(dsent.size());
                 for( size_t word_idx = 0; word_idx < dsent.size(); ++word_idx )
                 {
@@ -417,7 +417,7 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
                         dynamic_dict_wrapper.ConvertProbability(dsent.at(word_idx));
                 }
                 i2m->build_loss(cg, dynamic_sent_after_replace_unk, fsent, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
+                dynet::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
@@ -487,7 +487,7 @@ float Input2ModelHandler<I2Model>::devel(const std::vector<IndexSeq> *p_dsents,
     std::vector<IndexSeq> predict_tag_seqs(p_tag_seqs->size());
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &dsent = p_dsents->at(access_idx),
             &fsent = p_fsents->at(access_idx);
@@ -530,7 +530,7 @@ void Input2ModelHandler<I2Model>::predict(std::istream &is, std::ostream &os)
         IndexSeq &dsent = dsents.at(i),
             &fsent = fsents.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         i2m->predict(cg, dsent, fsent, pred_tag_seq);
         Seq words ;
         i2m->get_tag_sys().parse_word_tag2words(raw_sent, pred_tag_seq, words) ;
@@ -550,7 +550,7 @@ void Input2ModelHandler<I2Model>::save_model(std::ostream &os)
     if( best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail() )
     {
         BOOST_LOG_TRIVIAL(info) << "fetch best model ...";
-        i2m->set_cnn_model(best_model_tmp_ss) ;
+        i2m->set_dynet_model(best_model_tmp_ss) ;
     }
     boost::archive::text_oarchive to(os);
     to << *(static_cast<I2Model*>(i2m)) ;

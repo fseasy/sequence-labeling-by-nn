@@ -3,7 +3,7 @@
 
 #include <boost/program_options.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "modelmodule/context_feature.h"
 #include "modelmodule/context_feature_layer.h"
@@ -31,10 +31,10 @@ public:
     void set_replace_threshold(int freq_threshold, float prob_threshold);
     bool is_dict_frozen();
     void freeze_dict();
-    cnn::Dict& get_word_dict(){ return word_dict ;  } 
-    cnn::Dict& get_postag_dict(){ return postag_dict ; } 
+    dynet::Dict& get_word_dict(){ return word_dict ;  } 
+    dynet::Dict& get_postag_dict(){ return postag_dict ; } 
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
-    cnn::Model *get_cnn_model(){ return m ; } 
+    dynet::Model *get_dynet_model(){ return m ; } 
 
 
     // dirived class should override
@@ -65,12 +65,12 @@ public:
     void postag_index_seq2postag_str_seq(const IndexSeq &postag_index_seq, Seq &postag_str_seq);
 
     // training and predict
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq, 
         const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq)  = 0 ;
-    virtual void predict(cnn::ComputationGraph &cg ,
+    virtual void predict(dynet::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
         const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -88,10 +88,10 @@ public:
     void serialize(Archive &ar, unsigned version);
 
 protected:
-    cnn::Model *m;
+    dynet::Model *m;
 
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
     DictWrapper word_dict_wrapper;
 public:
     POSFeature pos_feature; // also as parameters
@@ -103,7 +103,7 @@ public :
         input_dim,
         output_dim;
     std::vector<unsigned> mlp_hidden_dim_list;
-    cnn::real dropout_rate;
+    dynet::real dropout_rate;
 };
 
 /*********** inline funtion implemantation **********/

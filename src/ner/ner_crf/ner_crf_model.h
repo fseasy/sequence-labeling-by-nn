@@ -4,13 +4,13 @@
 #include <string>
 #include <sstream>
 
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <boost/program_options.hpp>
 
@@ -39,25 +39,25 @@ struct NERCRFModel
         emit_hidden_layer_dim;
 
     // Model param
-    cnn::Model *m;
+    dynet::Model *m;
 
     Merge2Layer *merge_input_layer;
     BILSTMLayer *bilstm_layer;
     Merge3Layer *emit_hidden_layer;
     DenseLayer *emit_output_layer;
 
-    cnn::LookupParameters *words_lookup_param;
-    cnn::LookupParameters *postag_lookup_param;
-    cnn::LookupParameters *ner_lookup_param;
+    dynet::LookupParameters *words_lookup_param;
+    dynet::LookupParameters *postag_lookup_param;
+    dynet::LookupParameters *ner_lookup_param;
     
-    cnn::LookupParameters *init_score_lookup_param;
-    cnn::LookupParameters *trans_score_lookup_param;
+    dynet::LookupParameters *init_score_lookup_param;
+    dynet::LookupParameters *trans_score_lookup_param;
 
 
     // Dict
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
-    cnn::Dict ner_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
+    dynet::Dict ner_dict;
     DictWrapper word_dict_wrapper;
     
     static const std::string UNK_STR ; 
@@ -71,12 +71,12 @@ struct NERCRFModel
     void print_model_info();
 
 
-    cnn::expr::Expression viterbi_train(cnn::ComputationGraph *p_cg, 
+    dynet::expr::Expression viterbi_train(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_sent, const IndexSeq *p_postag_seq,
         const IndexSeq *p_ner_seq ,
         float dropout_rate ,
         Stat *p_stat = nullptr);
-    void viterbi_predict(cnn::ComputationGraph *p_cg, 
+    void viterbi_predict(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_sent, const IndexSeq *p_postag_seq ,
         IndexSeq *p_predict_ner_seq);
 

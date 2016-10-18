@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "postagger/base_model/bareinput1_f2i_no_merge_model.hpp"
 namespace slnn{
@@ -41,7 +41,7 @@ void POSBareInput1ClassificationF2IModel<RNNDerived>::set_model_param(const boos
 template <typename RNNDerived>
 void POSBareInput1ClassificationF2IModel<RNNDerived>::build_model_structure()
 {
-    this->m = new cnn::Model() ;
+    this->m = new dynet::Model() ;
     this->pos_feature_layer = new POSFeatureLayer(this->m, this->pos_feature);
     this->input_layer = new AnotherBareInput1(this->m, this->word_dict_size, this->word_embedding_dim) ;
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, 

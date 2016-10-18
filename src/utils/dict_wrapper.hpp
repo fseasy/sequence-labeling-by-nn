@@ -2,7 +2,7 @@
 #define DICT_WRAPPER_HPP_INCLUDED_
 
 #include "typedeclaration.h"
-#include "cnn/dict.h"
+#include "dynet/dict.h"
 
 #include <functional>
 #include <algorithm>
@@ -15,7 +15,7 @@
 namespace slnn {
     struct DictWrapper
     {
-        DictWrapper(cnn::Dict &d) : rd(d), freq_threshold(1), prob_threshold(0.2f), prob_rand(std::bind(std::uniform_real_distribution<float>(0, 1), *(cnn::rndeng) ))
+        DictWrapper(dynet::Dict &d) : rd(d), freq_threshold(1), prob_threshold(0.2f), prob_rand(std::bind(std::uniform_real_distribution<float>(0, 1), *(dynet::rndeng) ))
         {
             freq_records.reserve(0xFFFF); // 60K space
         }
@@ -53,7 +53,7 @@ namespace slnn {
             this->freq_threshold = freq_threshold;
             this->prob_threshold = prob_threshold;
         }
-        cnn::Dict &rd;
+        dynet::Dict &rd;
         std::vector<int> freq_records;
         Index UNK;
         int freq_threshold;

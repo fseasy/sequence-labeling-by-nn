@@ -11,56 +11,56 @@ struct CWSSimpleOutput : SimpleOutput
     // add tagging system viriable
     // and add comstrained decoding when predict 
     CWSTaggingSystem &tag_sys ;
-    CWSSimpleOutput(cnn::Model *m,
+    CWSSimpleOutput(dynet::Model *m,
         unsigned input_dim1, unsigned input_dim2,
         unsigned hidden_dim, unsigned output_dim,
         CWSTaggingSystem &tag_sys,
-        cnn::real dropout_rate = 0.f,
-        NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
-    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                      const std::vector<cnn::expr::Expression> &expr_cont2,
+        dynet::real dropout_rate = 0.f,
+        NonLinearFunc *nonlinear_func = &dynet::expr::rectify) ;
+    void build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+                      const std::vector<dynet::expr::Expression> &expr_cont2,
                       IndexSeq &pred_out_seq);
 
 protected :
-    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag) ;
+    Index select_pred_tag_in_constrain(std::vector<dynet::real> &dist, size_t pos , Index pre_tag) ;
 
 };
 
 struct CWSPretagOutput : PretagOutput
 {
     CWSTaggingSystem &tag_sys ;
-    CWSPretagOutput(cnn::Model *m,
+    CWSPretagOutput(dynet::Model *m,
         unsigned tag_embedding_dim,
         unsigned input_dim1, unsigned input_dim2,
         unsigned hidden_dim, unsigned output_dim,
         CWSTaggingSystem &tag_sys,
-        cnn::real dropout_rate = 0.f,
-        NonLinearFunc *nonlinear_fun = &cnn::expr::rectify);
-    void build_output(const std::vector<cnn::expr::Expression> &expr_1,
-                      const std::vector<cnn::expr::Expression> &expr_2,
+        dynet::real dropout_rate = 0.f,
+        NonLinearFunc *nonlinear_fun = &dynet::expr::rectify);
+    void build_output(const std::vector<dynet::expr::Expression> &expr_1,
+                      const std::vector<dynet::expr::Expression> &expr_2,
                       IndexSeq &pred_out_seq) ;
 protected :
-    Index select_pred_tag_in_constrain(std::vector<cnn::real> &dist, size_t pos , Index pre_tag) ;
+    Index select_pred_tag_in_constrain(std::vector<dynet::real> &dist, size_t pos , Index pre_tag) ;
 };
 
 struct CWSCRFOutput : CRFOutput
 {
     CWSTaggingSystem &tag_sys ;
-    CWSCRFOutput(cnn::Model *m,
+    CWSCRFOutput(dynet::Model *m,
                  unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
                  unsigned hidden_dim,
                  unsigned tag_num,
-                 cnn::real dropout_rate,
+                 dynet::real dropout_rate,
                  CWSTaggingSystem &tag_sys,
-                 NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
+                 NonLinearFunc *nonlinear_func = &dynet::expr::rectify) ;
 
-    cnn::expr::Expression 
-    build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
-                        const std::vector<cnn::expr::Expression> &expr_cont2,
+    dynet::expr::Expression 
+    build_output_loss(const std::vector<dynet::expr::Expression> &expr_cont1,
+                        const std::vector<dynet::expr::Expression> &expr_cont2,
                         const IndexSeq &gold_seq) ;
 
-    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                      const std::vector<cnn::expr::Expression> &expr_cont2,
+    void build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+                      const std::vector<dynet::expr::Expression> &expr_cont2,
                       IndexSeq &pred_seq) ;
 
 };
@@ -68,12 +68,12 @@ struct CWSCRFOutput : CRFOutput
 
 struct CWSSimpleOutputWithFeature : SimpleOutputWithFeature
 {
-    CWSSimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
+    CWSSimpleOutputWithFeature(dynet::Model *m, unsigned input_dim1, unsigned input_dim2, unsigned feature_dim,
         unsigned hidden_dim, unsigned output_dim,
-        cnn::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&cnn::expr::rectify);
-    virtual void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-        const std::vector<cnn::expr::Expression> &expr_cont2,
-        const std::vector<cnn::expr::Expression> &feature_expr_cont,
+        dynet::real dropout_rate=0.f, NonLinearFunc *nonlinear_func=&dynet::expr::rectify);
+    virtual void build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+        const std::vector<dynet::expr::Expression> &expr_cont2,
+        const std::vector<dynet::expr::Expression> &feature_expr_cont,
         IndexSeq &pred_out_seq);
 };
 
@@ -82,13 +82,13 @@ struct CWSSimpleOutputWithFeature : SimpleOutputWithFeature
 
 struct CWSSimpleOutputNew : SimpleOutput
 {
-    CWSSimpleOutputNew(cnn::Model *m,
+    CWSSimpleOutputNew(dynet::Model *m,
         unsigned input_dim1, unsigned input_dim2,
         unsigned hidden_dim, unsigned output_dim,
-        cnn::real dropout_rate=0.f,
-        NonLinearFunc *nonlinear_func = &cnn::expr::rectify) ;
-    void build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-        const std::vector<cnn::expr::Expression> &expr_cont2,
+        dynet::real dropout_rate=0.f,
+        NonLinearFunc *nonlinear_func = &dynet::expr::rectify) ;
+    void build_output(const std::vector<dynet::expr::Expression> &expr_cont1,
+        const std::vector<dynet::expr::Expression> &expr_cont2,
         IndexSeq &pred_out_seq) override ;
 
 };
@@ -98,8 +98,8 @@ struct CWSSimpleOutputNew : SimpleOutput
  ******************************************************/
 struct CWSSimpleBareOutput : public SimpleBareOutput
 {
-    CWSSimpleBareOutput(cnn::Model *m, unsigned input_dim, unsigned output_dim);
-    void build_output(const std::vector<cnn::expr::Expression>& input_expr_seq, std::vector<Index>& out_pred_seq) override;
+    CWSSimpleBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim);
+    void build_output(const std::vector<dynet::expr::Expression>& input_expr_seq, std::vector<Index>& out_pred_seq) override;
 };
 
 

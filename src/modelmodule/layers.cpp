@@ -1,6 +1,6 @@
 #include "layers.h" 
 
-using namespace cnn;
+using namespace dynet;
 using namespace std;
 namespace slnn {
 
@@ -51,7 +51,7 @@ Merge4Layer::~Merge4Layer(){}
 // MLPHiddenLayer
 
 MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsigned> &layers_dim, 
-    cnn::real dropout_rate,
+    dynet::real dropout_rate,
     NonLinearFunc *nonlinear_func)
     :nr_hidden_layer(layers_dim.size()),
     w_list(nr_hidden_layer),

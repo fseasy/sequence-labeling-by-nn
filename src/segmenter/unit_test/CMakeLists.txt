@@ -5,5 +5,5 @@ add_executable(cws_evaluation_test
                ${cws_common_libs}
                )
 target_link_libraries(cws_evaluation_test 
-                      cnn
+                      dynet
                       ${Boost_LIBRARIES})

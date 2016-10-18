@@ -5,8 +5,8 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/serialization/access.hpp>
-#include "cnn/cnn.h"
-#include "cnn/training.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
 #include "nn_common_interface.h"
 namespace slnn{
 namespace segmenter{
@@ -34,20 +34,20 @@ public:
     virtual bool reset2stashed_model() override;
 public:
     void clear_cg(){ pcg->clear(); }; // ! BUG: using clear() will cause Error -> CNN get dim error!(BUG for it.)
-    void reset_cg(){ delete pcg; pcg = new cnn::ComputationGraph(); }
+    void reset_cg(){ delete pcg; pcg = new dynet::ComputationGraph(); }
 protected:
-    cnn::ComputationGraph* get_cg(){ return pcg; }
-    cnn::Model* get_cnn_model(){ return cnn_model; }
+    dynet::ComputationGraph* get_cg(){ return pcg; }
+    dynet::Model* get_dynet_model(){ return dynet_model; }
 private:
     template <typename Archive>
     void serialize(Archive &ar, const unsigned version);
 private:
     slnn::type::real best_score;
     std::stringstream best_model_tmp_ss;
-    cnn::Trainer *trainer;
-    cnn::ComputationGraph *pcg;
-    cnn::Model *cnn_model;
-    unsigned cnn_rng_seed;
+    dynet::Trainer *trainer;
+    dynet::ComputationGraph *pcg;
+    dynet::Model *dynet_model;
+    unsigned dynet_rng_seed;
 };
 
 /*********************************************
@@ -59,10 +59,10 @@ NeuralNetworkCommonInterfaceCnnImpl::NeuralNetworkCommonInterfaceCnnImpl(int arg
     :best_score(0.f),
     best_model_tmp_ss(""),
     trainer(nullptr),
-    pcg(new cnn::ComputationGraph()),
-    cnn_model(new cnn::Model())
+    pcg(new dynet::ComputationGraph()),
+    dynet_model(new dynet::Model())
 {
-    cnn::Initialize(argc, argv, seed); 
+    dynet::Initialize(argc, argv, seed); 
 }
 
 inline
@@ -70,7 +70,7 @@ NeuralNetworkCommonInterfaceCnnImpl::~NeuralNetworkCommonInterfaceCnnImpl()
 {
     delete trainer;
     delete pcg;
-    delete cnn_model;
+    delete dynet_model;
 }
 
 inline
@@ -94,13 +94,13 @@ void NeuralNetworkCommonInterfaceCnnImpl::forward()
 inline
 slnn::type::real NeuralNetworkCommonInterfaceCnnImpl::forward_as_scalar()
 {
-    return cnn::as_scalar(pcg->forward());
+    return dynet::as_scalar(pcg->forward());
 }
 
 inline
 std::vector<slnn::type::real> NeuralNetworkCommonInterfaceCnnImpl::forward_as_vector()
 {
-    return cnn::as_vector(pcg->forward());
+    return dynet::as_vector(pcg->forward());
 }
 
 inline
@@ -114,7 +114,7 @@ void NeuralNetworkCommonInterfaceCnnImpl::stash_model()
 {
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss); // to construct a text_oarchive using stringstream
-    to << *cnn_model;
+    to << *dynet_model;
 }
 
 inline 
@@ -136,7 +136,7 @@ bool NeuralNetworkCommonInterfaceCnnImpl::reset2stashed_model()
     if( best_model_tmp_ss.rdbuf()->in_avail() != 0 )
     {
         boost::archive::text_iarchive ti(best_model_tmp_ss);
-        ti >> *cnn_model;
+        ti >> *dynet_model;
         return true;
     }
     else { return false; }
@@ -146,7 +146,7 @@ template <typename Archive>
 inline
 void NeuralNetworkCommonInterfaceCnnImpl::serialize(Archive &ar, const unsigned version)
 {
-    ar & *cnn_model;
+    ar & *dynet_model;
 }
 
 } // end of namespace nn-module

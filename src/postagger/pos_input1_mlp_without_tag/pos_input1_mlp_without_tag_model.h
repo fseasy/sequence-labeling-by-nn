@@ -20,12 +20,12 @@ public :
     void build_model_structure() override;
     void print_model_info() override;
 
-    cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq, 
         const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq)  override ;
-    void predict(cnn::ComputationGraph &cg ,
+    void predict(dynet::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
         const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,

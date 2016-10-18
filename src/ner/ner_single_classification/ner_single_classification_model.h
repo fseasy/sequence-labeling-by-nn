@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "ner/base_model/input2D_model.h"
 namespace slnn{
@@ -23,7 +23,7 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
+    dynet::real dropout_rate ; // only for bilstm (output doesn't enable dropout)
 
     NERSingleClassificationModel() ;
     ~NERSingleClassificationModel() ;

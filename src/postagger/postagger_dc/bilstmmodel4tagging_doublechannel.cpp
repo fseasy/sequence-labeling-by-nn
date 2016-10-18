@@ -13,7 +13,7 @@
 #include "bilstmmodel4tagging_doublechannel.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 
 const std::string DoubleChannelModel4POSTAG::UNK_STR = "<UNK_REPR>";

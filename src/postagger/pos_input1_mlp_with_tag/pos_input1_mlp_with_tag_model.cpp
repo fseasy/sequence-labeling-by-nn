@@ -32,10 +32,10 @@ void POSInput1MLPWithTagModel::set_model_param_from_outer(const boost::program_o
 
 void POSInput1MLPWithTagModel::build_model_structure()
 {
-    if( nonlinear_func_indicate == "rectify" ){ nonlinear_func = &cnn::expr::rectify;  }
-    else if( nonlinear_func_indicate == "tanh" ){ nonlinear_func = &cnn::expr::tanh;  }
+    if( nonlinear_func_indicate == "rectify" ){ nonlinear_func = &dynet::expr::rectify;  }
+    else if( nonlinear_func_indicate == "tanh" ){ nonlinear_func = &dynet::expr::tanh;  }
     else { throw std::runtime_error("unsupported nonlinear function : " + nonlinear_func_indicate) ;  }
-    m = new cnn::Model();
+    m = new dynet::Model();
     word_expr_layer = new Index2ExprLayer(m, word_dict_size, word_embedding_dim);
     tag_expr_layer = new ShiftedIndex2ExprLayer(m, output_dim, tag_embedding_dim, ShiftedIndex2ExprLayer::RightShift, 1);
     pos_feature_layer = new POSFeatureLayer(m, pos_feature);
@@ -59,8 +59,8 @@ void POSInput1MLPWithTagModel::print_model_info()
 }
 
 
-cnn::expr::Expression  
-POSInput1MLPWithTagModel::build_loss(cnn::ComputationGraph &cg,
+dynet::expr::Expression  
+POSInput1MLPWithTagModel::build_loss(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -74,7 +74,7 @@ POSInput1MLPWithTagModel::build_loss(cnn::ComputationGraph &cg,
     output_layer->new_graph(cg);
     unsigned sent_len = input_seq.size();
 
-    std::vector<cnn::expr::Expression> word_exprs(sent_len),
+    std::vector<dynet::expr::Expression> word_exprs(sent_len),
         pre_tag_exprs(sent_len),
         pos_feature_exprs(sent_len),
         context_feature_exprs(sent_len);
@@ -83,17 +83,17 @@ POSInput1MLPWithTagModel::build_loss(cnn::ComputationGraph &cg,
     pos_feature_layer->build_feature_exprs(features_gp_seq, pos_feature_exprs);
     pos_context_feature_layer->build_feature_exprs(context_feature_gp_seq, context_feature_exprs);
     // concate
-    std::vector<cnn::expr::Expression> input_exprs(sent_len);
-    StaticConcatenateLayer::concatenate_exprs(std::vector<std::vector<cnn::expr::Expression> *>({
+    std::vector<dynet::expr::Expression> input_exprs(sent_len);
+    StaticConcatenateLayer::concatenate_exprs(std::vector<std::vector<dynet::expr::Expression> *>({
         &word_exprs, &pre_tag_exprs, &pos_feature_exprs, &context_feature_exprs }), input_exprs);
 
-    std::vector<cnn::expr::Expression> output_exprs;
+    std::vector<dynet::expr::Expression> output_exprs;
     mlp_hidden_layer->build_graph(input_exprs, output_exprs);
     return output_layer->build_output_loss(output_exprs, gold_seq);
 }
 
 void 
-POSInput1MLPWithTagModel::predict(cnn::ComputationGraph &cg,
+POSInput1MLPWithTagModel::predict(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -109,16 +109,16 @@ POSInput1MLPWithTagModel::predict(cnn::ComputationGraph &cg,
     unsigned sent_len = input_seq.size();
 
     std::vector<Index> tmp_pred_seq(sent_len);
-    cnn::expr::Expression pre_tag_expr = tag_expr_layer->get_padding_expr(0);
+    dynet::expr::Expression pre_tag_expr = tag_expr_layer->get_padding_expr(0);
     for( size_t i = 0; i < sent_len ; ++i )
     {
-        cnn::expr::Expression word_expr = word_expr_layer->index2expr(input_seq[i]),
+        dynet::expr::Expression word_expr = word_expr_layer->index2expr(input_seq[i]),
             pos_feature_expr = pos_feature_layer->build_feature_expr(features_gp_seq[i]),
             context_feature_expr = pos_context_feature_layer->build_feature_expr(context_feature_gp_seq[i]);
-        cnn::expr::Expression input_expr = StaticConcatenateLayer::concatenate_exprs(std::vector<cnn::expr::Expression>({
+        dynet::expr::Expression input_expr = StaticConcatenateLayer::concatenate_exprs(std::vector<dynet::expr::Expression>({
             word_expr, pre_tag_expr, pos_feature_expr, context_feature_expr
         }));
-        cnn::expr::Expression hidden_expr = mlp_hidden_layer->build_graph(input_expr);
+        dynet::expr::Expression hidden_expr = mlp_hidden_layer->build_graph(input_expr);
         tmp_pred_seq[i] = output_layer->build_output(hidden_expr);
         pre_tag_expr = tag_expr_layer->index2expr(tmp_pred_seq[i]);
     }

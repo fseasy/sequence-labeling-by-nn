@@ -5,7 +5,7 @@
 #include "word2vec_embedding_helper.h"
 #include "utils/typedeclaration.h"
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 
 void Word2vecEmbeddingHelper::build_fixed_dict(ifstream &is, Dict &fixed_dict, const string &unk_str,
@@ -55,7 +55,7 @@ void Word2vecEmbeddingHelper::build_fixed_dict(ifstream &is, Dict &fixed_dict, c
     BOOST_LOG_TRIVIAL(info) << "build fixed dict done .";
 }
 
-void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, cnn::Dict &fixed_dict, unsigned fixed_word_dim, cnn::LookupParameters *fixed_lookup_param)
+void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameters *fixed_lookup_param)
 {
     // set lookup parameters from outer word embedding
     // using words_loopup_param.Initialize( word_id , value_vector )
@@ -64,7 +64,7 @@ void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, cnn::Dict 
     std::vector<std::string> split_cont;
     getline(is, line); // first line is the infomation , skip
     unsigned long line_cnt = 0; // for warning when read embedding error
-    std::vector<cnn::real> embedding_vec(fixed_word_dim, 0.f);
+    std::vector<dynet::real> embedding_vec(fixed_word_dim, 0.f);
     while( getline(is, line) )
     {
         ++line_cnt;
@@ -86,7 +86,7 @@ void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, cnn::Dict 
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done ." ;
 }
 
-float Word2vecEmbeddingHelper::calc_hit_rate(cnn::Dict &fixed_dict, cnn::Dict &dynamic_dict, const std::string &fixed_dict_unk_str)
+float Word2vecEmbeddingHelper::calc_hit_rate(dynet::Dict &fixed_dict, dynet::Dict &dynamic_dict, const std::string &fixed_dict_unk_str)
 {
     unsigned fixed_dict_sz = fixed_dict.size(),
         dynamic_dict_sz = dynamic_dict.size() - 1; // except the fdynamic dict unk str

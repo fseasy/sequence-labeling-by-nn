@@ -9,7 +9,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "segmenter/base_model/input2_model.h"
 #include "segmenter/cws_module/cws_tagging_system.h"

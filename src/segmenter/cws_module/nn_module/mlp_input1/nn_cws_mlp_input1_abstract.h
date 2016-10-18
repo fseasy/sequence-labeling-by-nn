@@ -2,7 +2,7 @@
 #define SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_ABSTRACT_H_
 #include <functional>
 #include "utils/typedeclaration.h"
-#include "segmenter/cws_module/nn_module/nn_common_interface_cnn_impl.h"
+#include "segmenter/cws_module/nn_module/nn_common_interface_dynet_impl.h"
 #include "segmenter/cws_module/token_module/cws_tag_definition.h"
 #include "segmenter/cws_module/cws_output_layer.h"
 
@@ -15,11 +15,11 @@ class NnSegmentorInput1Abstract : public NeuralNetworkCommonInterfaceCnnImpl
 public:
     NnSegmentorInput1Abstract(int argc, char **argv, unsigned seed);
     template <typename AnnotatedDataProcessedT>
-    cnn::expr::Expression build_training_graph(const AnnotatedDataProcessedT &ann_processed_data);
+    dynet::expr::Expression build_training_graph(const AnnotatedDataProcessedT &ann_processed_data);
     template <typename UnannotatedDataProcessedT>
     std::vector<Index> predict(const UnannotatedDataProcessedT &unann_processed_data);
 protected:
-    cnn::expr::Expression build_training_graph_impl(const std::vector<Index> &charseq, const std::vector<Index> &tagseq);
+    dynet::expr::Expression build_training_graph_impl(const std::vector<Index> &charseq, const std::vector<Index> &tagseq);
     std::vector<Index> predict_impl(const std::vector<Index> &charseq);
 protected:
     std::shared_ptr<Index2ExprLayer> word_expr_layer;
@@ -37,7 +37,7 @@ protected:
 
 template <typename AnnotatedDataProcessedT>
 inline
-cnn::expr::Expression 
+dynet::expr::Expression 
 NnSegmentorInput1Abstract::build_training_graph(const AnnotatedDataProcessedT &ann_processed_data)
 {
     return build_training_graph_impl(*ann_processed_data.pcharseq, *ann_processed_data.ptagseq);

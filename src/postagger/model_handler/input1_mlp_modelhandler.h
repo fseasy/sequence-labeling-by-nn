@@ -248,13 +248,13 @@ void Input1MLPModelHandler<MLPModel>::train(const std::vector<IndexSeq> &sents,
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
-    cnn::SimpleSGDTrainer sgd(mlp_model->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(mlp_model->get_dynet_model());
 
     auto do_devel_in_training = [this, &dev_sents, &dev_context_feature_gp_seqs, &dev_feature_gp_seqs ,&dev_tag_seqs](CNNModelStash &model_stash) 
     {
         // CNNModelStash as param to remind we'll change it's state !
         float acc = this->devel(dev_sents, dev_context_feature_gp_seqs, dev_feature_gp_seqs, dev_tag_seqs);
-        model_stash.save_when_best(this->mlp_model->get_cnn_model(), acc);
+        model_stash.save_when_best(this->mlp_model->get_dynet_model(), acc);
         model_stash.update_training_state(acc);
     };
 
@@ -264,7 +264,7 @@ void Input1MLPModelHandler<MLPModel>::train(const std::vector<IndexSeq> &sents,
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -281,14 +281,14 @@ void Input1MLPModelHandler<MLPModel>::train(const std::vector<IndexSeq> &sents,
             const ContextFeatureDataSeq &context_feature_gp_seq = context_feature_gp_seqs.at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 IndexSeq sent_after_replace ;
                 POSFeature::POSFeatureIndexGroupSeq feature_gp_seq_after_replace;
                 ContextFeatureDataSeq context_feature_gp_seq_after_replace;
                 mlp_model->replace_word_with_unk(sent, context_feature_gp_seq, feature_gp_seq,
                     sent_after_replace, context_feature_gp_seq_after_replace, feature_gp_seq_after_replace);
                 mlp_model->build_loss(cg, sent_after_replace, context_feature_gp_seq_after_replace, feature_gp_seq_after_replace, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
+                dynet::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
@@ -347,7 +347,7 @@ float Input1MLPModelHandler<MLPModel>::devel(const std::vector<IndexSeq> &sents,
     stat.start_time_stat();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &sent = sents.at(access_idx),
             &gold_tag = tag_seqs.at(access_idx);
@@ -394,7 +394,7 @@ void Input1MLPModelHandler<MLPModel>::predict(std::istream &is, std::ostream &os
         ContextFeatureDataSeq &context_feature_gp_seq = context_feature_gp_seqs.at(i);
         POSFeature::POSFeatureIndexGroupSeq &feature_gp_seq = feature_gp_seqs.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         mlp_model->predict(cg, sent, context_feature_gp_seq, feature_gp_seq, pred_tag_seq);
         Seq postag_seq;
         mlp_model->postag_index_seq2postag_str_seq(pred_tag_seq, postag_seq);
@@ -415,7 +415,7 @@ template <typename MLPModel>
 void Input1MLPModelHandler<MLPModel>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
-    model_stash.load_if_exists(mlp_model->get_cnn_model());
+    model_stash.load_if_exists(mlp_model->get_dynet_model());
     boost::archive::text_oarchive to(os);
     to << *(static_cast<MLPModel*>(mlp_model));
     BOOST_LOG_TRIVIAL(info) << "save model done .";

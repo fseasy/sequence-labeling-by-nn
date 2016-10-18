@@ -238,13 +238,13 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
-    cnn::SimpleSGDTrainer sgd(i1m->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(i1m->get_dynet_model());
 
     auto do_devel_in_training = [this, &dev_sents, &dev_cws_feature_seqs, &dev_tag_seqs](CNNModelStash &model_stash) 
     {
         // CNNModelStash as param to remind we'll change it's state !
         float F1 = this->devel(dev_sents, dev_cws_feature_seqs, dev_tag_seqs);
-        model_stash.save_when_best(this->i1m->get_cnn_model(), F1);
+        model_stash.save_when_best(this->i1m->get_dynet_model(), F1);
         model_stash.update_training_state(F1);
     };
     unsigned line_cnt_for_devel = 0;
@@ -253,7 +253,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
     {
         BOOST_LOG_TRIVIAL(info) << "++ Epoch " << nr_epoch + 1 << "/" << max_epoch << " start ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -269,12 +269,12 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
             const CWSFeatureDataSeq &cws_feature_seq = cws_feature_seqs.at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 IndexSeq replaced_sent;
                 CWSFeatureDataSeq replaced_feature_data;
                 i1m->replace_word_with_unk(sent, cws_feature_seq, replaced_sent, replaced_feature_data);
                 i1m->build_loss(cg, replaced_sent, replaced_feature_data, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
+                dynet::real loss = as_scalar(cg.forward());
                 cg.backward();
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
@@ -331,7 +331,7 @@ float CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::devel(const std::ve
     std::vector<IndexSeq> predict_tag_seqs(tag_seqs.size());
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         const IndexSeq &sent = sents.at(access_idx);
         const CWSFeatureDataSeq &feature_seq = cws_feature_seqs.at(access_idx);
         i1m->predict(cg, sent, feature_seq, predict_tag_seqs[access_idx]);
@@ -372,7 +372,7 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::predict(std::istream
         IndexSeq &sent = sents.at(i) ;
         CWSFeatureDataSeq &cws_feature_seq = cws_feature_seqs.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         i1m->predict(cg, sent, cws_feature_seq, pred_tag_seq);
         Seq words ;
         CWSTaggingSystem::static_parse_chars_indextag2word_seq(raw_sent, pred_tag_seq, words) ;
@@ -389,7 +389,7 @@ template <typename RNNDerived, typename I1Model>
 void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
-    model_stash.load_if_exists(i1m->get_cnn_model());
+    model_stash.load_if_exists(i1m->get_dynet_model());
     boost::archive::text_oarchive to(os);
     to << *(static_cast<I1Model*>(i1m));
     BOOST_LOG_TRIVIAL(info) << "save model done .";

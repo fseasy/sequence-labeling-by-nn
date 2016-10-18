@@ -8,7 +8,7 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "segmenter/base_model/input1_f2o_model_0628.hpp"
 #include "segmenter/cws_module/cws_output_layer.h"
@@ -37,7 +37,7 @@ CWSInput1CLF2OModel<RNNDerived>::~CWSInput1CLF2OModel(){}
 template <typename RNNDerived>
 void CWSInput1CLF2OModel<RNNDerived>::build_model_structure()
 {
-    this->m = new cnn::Model() ;
+    this->m = new dynet::Model() ;
     this->input_layer = new Input1(this->m, this->word_dict_size, this->word_embedding_dim) ;
     this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature, this->input_layer->get_lookup_param());
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, this->word_embedding_dim, this->rnn_h_dim, 

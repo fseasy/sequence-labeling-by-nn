@@ -17,5 +17,5 @@ add_executable(cws_single_classification
                )
                
 target_link_libraries(cws_single_classification 
-                      cnn
+                      dynet
                       ${Boost_LIBRARIES})

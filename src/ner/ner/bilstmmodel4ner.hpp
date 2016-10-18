@@ -1,13 +1,13 @@
 #ifndef BILSTMMODEL4NER_HPP_INCLUDED_
 #define BILSTMMODEL4NER_HPP_INCLUDED_
 
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <iostream>
 #include <fstream>
@@ -33,7 +33,7 @@
 #include "utils/stat.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace po = boost::program_options;
 
 
@@ -85,9 +85,9 @@ struct BILSTMModel4NER
     stringstream best_model_tmp_ss;
 
     // others 
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
-    cnn::Dict ner_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
+    dynet::Dict ner_dict;
     DictWrapper word_dict_wrapper;
     //const string SOS_STR = "<START_OF_SEQUENCE_REPR>";
     //const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
@@ -397,7 +397,7 @@ struct BILSTMModel4NER
         // 1. model structure parameters : WORD_DICT_SIZE , INPUT_DIM , LSTM_LAYER , LSTM_HIDDEN_DIM , TAG_HIDDEN_DIM , TAG_OUTPUT_DIM
         //                                 TAG_EMBEDDING_DIM , TAG_DICT_SIZE
         // 2. Dict : word_dict , tag_dict 
-        // 3. Model of cnn
+        // 3. Model of dynet
         boost::archive::text_oarchive to(os);
         to << WORD_EMBEDDING_DIM << WORD_DICT_SIZE
             << POSTAG_EMBEDDING_DIM << POSTAG_DICT_SIZE
@@ -501,7 +501,7 @@ struct BILSTMModel4NER
             // rectify is suggested as activation function
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp_cont[i]);
-            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp);
+            Expression tag_hidden_layer_output_at_timestep_t = dynet::expr::rectify(bilstm_pretag_merge_exp);
             Expression tag_output_layer_output_at_timestep_t = output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
             
             // if statistic , calc output at timestep t
@@ -573,7 +573,7 @@ struct BILSTMModel4NER
         {
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp);
-            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp);
+            Expression tag_hidden_layer_output_at_timestep_t = dynet::expr::rectify(bilstm_pretag_merge_exp);
             output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t); 
             vector<float> output_values = as_vector(cg.incremental_forward());
             float max_value = output_values[0];

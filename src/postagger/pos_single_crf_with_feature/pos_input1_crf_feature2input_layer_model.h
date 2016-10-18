@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "postagger/base_model/input1_feature2input_layer_model.hpp"
 namespace slnn{
@@ -48,7 +48,7 @@ void POSInput1CRFF2IModel<RNNDerived>::set_model_param(const boost::program_opti
 template <typename RNNDerived>
 void POSInput1CRFF2IModel<RNNDerived>::build_model_structure()
 {
-    this->m = new cnn::Model() ;
+    this->m = new dynet::Model() ;
     this->pos_feature_layer = new POSFeatureLayer(this->m, this->pos_feature);
     this->input_layer = new Input1WithFeature(this->m, this->word_dict_size, this->word_embedding_dim, 
                                               this->pos_feature.concatenated_feature_embedding_dim,

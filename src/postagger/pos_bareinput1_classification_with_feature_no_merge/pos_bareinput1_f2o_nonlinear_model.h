@@ -5,7 +5,7 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/archive/text_oarchive.hpp>
 
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 
 #include "postagger/base_model/bareinput1_f2o_nonlinear_model.hpp"
 namespace slnn{
@@ -41,7 +41,7 @@ void POSBareInput1ClassificationF2ONonlinearModel<RNNDerived>::set_model_param(c
 template <typename RNNDerived>
 void POSBareInput1ClassificationF2ONonlinearModel<RNNDerived>::build_model_structure()
 {
-    this->m = new cnn::Model() ;
+    this->m = new dynet::Model() ;
     this->pos_feature_layer = new POSFeatureLayer(this->m, this->pos_feature);
     this->pos_feature_hidden_layer = new DenseLayer(this->m, this->pos_feature.get_pos_feature_dim(), this->pos_feature_hidden_layer_dim);
     this->input_layer = new Input1(this->m, this->word_dict_size, this->word_embedding_dim) ;

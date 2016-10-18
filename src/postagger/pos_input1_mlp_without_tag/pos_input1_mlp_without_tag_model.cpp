@@ -27,7 +27,7 @@ void Input1MLPWithoutTagModel::set_model_param_from_outer(const boost::program_o
 
 void Input1MLPWithoutTagModel::build_model_structure()
 {
-    m = new cnn::Model();
+    m = new dynet::Model();
     input_layer = new BareInput1(m, word_dict_size, word_embedding_dim, 2);
     mlp_hidden_layer = new MLPHiddenLayer(m, input_dim, mlp_hidden_dim_list, dropout_rate);
     output_layer = new SoftmaxLayer(m, mlp_hidden_dim_list.at(mlp_hidden_dim_list.size() - 1), output_dim);
@@ -49,8 +49,8 @@ void Input1MLPWithoutTagModel::print_model_info()
 }
 
 
-cnn::expr::Expression  
-Input1MLPWithoutTagModel::build_loss(cnn::ComputationGraph &cg,
+dynet::expr::Expression  
+Input1MLPWithoutTagModel::build_loss(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -63,8 +63,8 @@ Input1MLPWithoutTagModel::build_loss(cnn::ComputationGraph &cg,
     output_layer->new_graph(cg);
     unsigned sent_len = input_seq.size();
 
-    std::vector<cnn::expr::Expression> input_exprs(sent_len);
-    std::vector<cnn::expr::Expression> tmp_feature_cont(2) ;
+    std::vector<dynet::expr::Expression> input_exprs(sent_len);
+    std::vector<dynet::expr::Expression> tmp_feature_cont(2) ;
     for( unsigned i = 0 ; i < sent_len; ++i )
     {
         tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr(
@@ -73,13 +73,13 @@ Input1MLPWithoutTagModel::build_loss(cnn::ComputationGraph &cg,
         tmp_feature_cont.at(1) = pos_feature_layer->build_feature_expr(features_gp_seq.at(i));
         input_exprs.at(i) = input_layer->build_input(input_seq.at(i), tmp_feature_cont);
     }
-    std::vector<cnn::expr::Expression> output_exprs;
+    std::vector<dynet::expr::Expression> output_exprs;
     mlp_hidden_layer->build_graph(input_exprs, output_exprs);
     return output_layer->build_output_loss(output_exprs, gold_seq);
 }
 
 void 
-Input1MLPWithoutTagModel::predict(cnn::ComputationGraph &cg,
+Input1MLPWithoutTagModel::predict(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const ContextFeatureDataSeq &context_feature_gp_seq,
     const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
@@ -92,8 +92,8 @@ Input1MLPWithoutTagModel::predict(cnn::ComputationGraph &cg,
     output_layer->new_graph(cg);
     unsigned sent_len = input_seq.size();
 
-    std::vector<cnn::expr::Expression> input_exprs(sent_len);
-    std::vector<cnn::expr::Expression> tmp_feature_cont(2) ;
+    std::vector<dynet::expr::Expression> input_exprs(sent_len);
+    std::vector<dynet::expr::Expression> tmp_feature_cont(2) ;
     for( unsigned i = 0 ; i < sent_len; ++i )
     {
         tmp_feature_cont.at(0) = pos_context_feature_layer->build_feature_expr(
@@ -102,7 +102,7 @@ Input1MLPWithoutTagModel::predict(cnn::ComputationGraph &cg,
         tmp_feature_cont.at(1) = pos_feature_layer->build_feature_expr(features_gp_seq.at(i));
         input_exprs.at(i) = input_layer->build_input(input_seq.at(i), tmp_feature_cont);
     }
-    std::vector<cnn::expr::Expression> output_exprs;
+    std::vector<dynet::expr::Expression> output_exprs;
     mlp_hidden_layer->build_graph(input_exprs, output_exprs);
     output_layer->build_output(output_exprs, pred_seq);
 }

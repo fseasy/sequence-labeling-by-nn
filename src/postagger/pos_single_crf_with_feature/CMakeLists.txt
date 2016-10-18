@@ -23,7 +23,7 @@ add_executable(${feature2input_exe_name}
                )
                
 target_link_libraries(${feature2input_exe_name}
-                      cnn
+                      dynet
                       ${Boost_LIBRARIES})
 
 ############# feature2output  ###########   
@@ -53,5 +53,5 @@ add_executable(${feature2output_exe_name}
                )
                
 target_link_libraries(${feature2output_exe_name}
-                      cnn
+                      dynet
                       ${Boost_LIBRARIES})

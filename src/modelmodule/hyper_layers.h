@@ -11,14 +11,14 @@ namespace slnn{
 
 struct Index2ExprLayer
 {
-    Index2ExprLayer(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim);
-    void new_graph(cnn::ComputationGraph &cg);
-    void index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<cnn::expr::Expression> &exprs);
-    cnn::expr::Expression index2expr(Index index);
-    cnn::LookupParameters* get_lookup_param(){ return lookup_param; }
+    Index2ExprLayer(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim);
+    void new_graph(dynet::ComputationGraph &cg);
+    void index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<dynet::expr::Expression> &exprs);
+    dynet::expr::Expression index2expr(Index index);
+    dynet::LookupParameters* get_lookup_param(){ return lookup_param; }
 protected:
-    cnn::LookupParameters *lookup_param;
-    cnn::ComputationGraph *pcg;
+    dynet::LookupParameters *lookup_param;
+    dynet::ComputationGraph *pcg;
 };
 
 struct ShiftedIndex2ExprLayer : public Index2ExprLayer
@@ -29,33 +29,33 @@ struct ShiftedIndex2ExprLayer : public Index2ExprLayer
     using ShiftDirection = int;
     static constexpr ShiftDirection LeftShift = -1;
     static constexpr ShiftDirection RightShift = 1;
-    ShiftedIndex2ExprLayer(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim, ShiftDirection direction=RightShift,
+    ShiftedIndex2ExprLayer(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim, ShiftDirection direction=RightShift,
         unsigned shift_distance=1);
-    void index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<cnn::expr::Expression> &exprs);
-    cnn::expr::Expression get_padding_expr(unsigned padding_position = 0);
+    void index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<dynet::expr::Expression> &exprs);
+    dynet::expr::Expression get_padding_expr(unsigned padding_position = 0);
 private:
     ShiftDirection shift_direction;
     unsigned shift_distance;
-    std::vector<cnn::Parameters *> padding_parameters;
+    std::vector<dynet::Parameters *> padding_parameters;
 };
 
 
 struct StaticConcatenateLayer
 {
-    static void concatenate_exprs(const std::vector<std::vector<cnn::expr::Expression> *> &multi_exprs, std::vector<cnn::expr::Expression> &exprs);
-    static cnn::expr::Expression concatenate_exprs(const std::vector<cnn::expr::Expression> &to_be_concated_exprs);
+    static void concatenate_exprs(const std::vector<std::vector<dynet::expr::Expression> *> &multi_exprs, std::vector<dynet::expr::Expression> &exprs);
+    static dynet::expr::Expression concatenate_exprs(const std::vector<dynet::expr::Expression> &to_be_concated_exprs);
 };
 
 struct WindowExprGenerateLayer
 {
-    WindowExprGenerateLayer(cnn::Model *cnn_model, unsigned window_sz, unsigned embedding_dim);
-    void new_graph(cnn::ComputationGraph &cg);
-    std::vector<cnn::expr::Expression> generate_window_expr_by_concatenating(const std::vector<cnn::expr::Expression> &unit_exprs);
+    WindowExprGenerateLayer(dynet::Model *dynet_model, unsigned window_sz, unsigned embedding_dim);
+    void new_graph(dynet::ComputationGraph &cg);
+    std::vector<dynet::expr::Expression> generate_window_expr_by_concatenating(const std::vector<dynet::expr::Expression> &unit_exprs);
     // data
-    cnn::Parameters *sos_param;
-    cnn::Parameters *eos_param;
-    cnn::expr::Expression sos_expr;
-    cnn::expr::Expression eos_expr;
+    dynet::Parameters *sos_param;
+    dynet::Parameters *eos_param;
+    dynet::expr::Expression sos_expr;
+    dynet::expr::Expression eos_expr;
     unsigned window_sz;
 };
 
@@ -66,70 +66,70 @@ struct WindowExprGenerateLayer
  ********************************************/
 
 inline 
-void Index2ExprLayer::new_graph(cnn::ComputationGraph &cg)
+void Index2ExprLayer::new_graph(dynet::ComputationGraph &cg)
 {
     pcg = &cg;
 }
 
 inline
-void Index2ExprLayer::index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<cnn::expr::Expression> &exprs)
+void Index2ExprLayer::index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<dynet::expr::Expression> &exprs)
 {
     using std::swap;
     size_t sz = indexSeq.size();
-    std::vector<cnn::expr::Expression> tmp_exprs(sz);
+    std::vector<dynet::expr::Expression> tmp_exprs(sz);
     for( size_t i = 0; i < sz; ++i )
     {
-        tmp_exprs[i] = cnn::expr::lookup(*pcg, lookup_param, indexSeq[i]);
+        tmp_exprs[i] = dynet::expr::lookup(*pcg, lookup_param, indexSeq[i]);
     }
     swap(exprs, tmp_exprs);
 }
 
 inline
-cnn::expr::Expression Index2ExprLayer::index2expr(Index index)
+dynet::expr::Expression Index2ExprLayer::index2expr(Index index)
 {
-    return cnn::expr::lookup(*pcg, lookup_param, index);
+    return dynet::expr::lookup(*pcg, lookup_param, index);
 }
 
 inline
-cnn::expr::Expression ShiftedIndex2ExprLayer::get_padding_expr(unsigned padding_position)
+dynet::expr::Expression ShiftedIndex2ExprLayer::get_padding_expr(unsigned padding_position)
 {
     assert(padding_position < shift_distance);
-    return cnn::expr::parameter(*pcg, padding_parameters[padding_position]);
+    return dynet::expr::parameter(*pcg, padding_parameters[padding_position]);
 }
 
 
 inline
-cnn::expr::Expression StaticConcatenateLayer::concatenate_exprs(const std::vector<cnn::expr::Expression> &to_be_concated_exprs)
+dynet::expr::Expression StaticConcatenateLayer::concatenate_exprs(const std::vector<dynet::expr::Expression> &to_be_concated_exprs)
 {
-    return cnn::expr::concatenate(to_be_concated_exprs);
+    return dynet::expr::concatenate(to_be_concated_exprs);
 }
 
 inline
-void StaticConcatenateLayer::concatenate_exprs(const std::vector<std::vector<cnn::expr::Expression> *> &multi_exprs,
-    std::vector<cnn::expr::Expression> &exprs)
+void StaticConcatenateLayer::concatenate_exprs(const std::vector<std::vector<dynet::expr::Expression> *> &multi_exprs,
+    std::vector<dynet::expr::Expression> &exprs)
 {
     using std::swap;
     size_t nr_expr_variety = multi_exprs.size();
     // assert(nr_expr_variety > 0)
     size_t len = multi_exprs.back()->size();
-    std::vector<cnn::expr::Expression> tmp_exprs(len);
-    std::vector<cnn::expr::Expression> concatenate_exprs(nr_expr_variety);
+    std::vector<dynet::expr::Expression> tmp_exprs(len);
+    std::vector<dynet::expr::Expression> concatenate_exprs(nr_expr_variety);
     for( size_t i = 0; i < len; ++i )
     {
         for( size_t j = 0; j < nr_expr_variety; ++j )
         {
             concatenate_exprs[j] = multi_exprs[j]->at(i);
         }
-        tmp_exprs[i] = cnn::expr::concatenate(concatenate_exprs);
+        tmp_exprs[i] = dynet::expr::concatenate(concatenate_exprs);
     }
     swap(exprs, tmp_exprs);
 }
 
 inline
-void WindowExprGenerateLayer::new_graph(cnn::ComputationGraph &cg)
+void WindowExprGenerateLayer::new_graph(dynet::ComputationGraph &cg)
 {
-    sos_expr = cnn::expr::parameter(cg, sos_param);
-    eos_expr = cnn::expr::parameter(cg, eos_param);
+    sos_expr = dynet::expr::parameter(cg, sos_param);
+    eos_expr = dynet::expr::parameter(cg, eos_param);
 }
 
 } // end of namespace slnn

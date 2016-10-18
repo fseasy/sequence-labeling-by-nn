@@ -8,8 +8,8 @@
 #include <boost/serialization/utility.hpp>
 #include <boost/serialization/split_member.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 #include "input1_with_feature_model_0628.hpp"
 #include "segmenter/cws_module/cws_feature_layer.h"
 
@@ -32,11 +32,11 @@ public:
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
 
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
         const IndexSeq &gold_seq) override;
-    virtual void predict(cnn::ComputationGraph &cg,
+    virtual void predict(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq,
         const CWSFeatureDataSeq &feature_data_seq,
         IndexSeq &pred_seq) override;
@@ -63,7 +63,7 @@ public:
         hidden_dim,
         output_dim ;
 
-    cnn::real dropout_rate ; 
+    dynet::real dropout_rate ; 
 
 };
 
@@ -98,7 +98,7 @@ void CWSInput1F2OModel<RNNDerived>::set_model_param_from_outer(const boost::prog
     rnn_h_dim = var_map["rnn_h_dim"].as<unsigned>() ;
     hidden_dim = var_map["tag_layer_hidden_dim"].as<unsigned>() ;
 
-    dropout_rate = var_map["dropout_rate"].as<cnn::real>() ;
+    dropout_rate = var_map["dropout_rate"].as<dynet::real>() ;
 
     unsigned start_here_embedding_dim = var_map["start_here_embedding_dim"].as<unsigned>();
     unsigned pass_here_embedding_dim = var_map["pass_here_embedding_dim"].as<unsigned>();
@@ -119,7 +119,7 @@ void CWSInput1F2OModel<RNNDerived>::set_model_param_from_inner()
 }
 
 template<typename RNNDerived>
-cnn::expr::Expression CWSInput1F2OModel<RNNDerived>::build_loss(cnn::ComputationGraph &cg,
+dynet::expr::Expression CWSInput1F2OModel<RNNDerived>::build_loss(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq, 
     const CWSFeatureDataSeq &feature_seq,
     const IndexSeq &gold_seq)
@@ -132,21 +132,21 @@ cnn::expr::Expression CWSInput1F2OModel<RNNDerived>::build_loss(cnn::Computation
     birnn_layer->set_dropout() ;
     birnn_layer->start_new_sequence() ;
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(input_seq, inputs_exprs) ;
 
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
 
-    std::vector<cnn::expr::Expression> feature_exprs;
+    std::vector<dynet::expr::Expression> feature_exprs;
     cws_feature_layer->build_cws_feature(feature_seq, feature_exprs);
 
     return output_layer->build_output_loss(l2r_exprs, r2l_exprs, feature_exprs, gold_seq) ;
 }
 
 template<typename RNNDerived>
-void CWSInput1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
+void CWSInput1F2OModel<RNNDerived>::predict(dynet::ComputationGraph &cg,
     const IndexSeq &input_seq,
     const CWSFeatureDataSeq &feature_seq,
     IndexSeq &pred_seq)
@@ -159,14 +159,14 @@ void CWSInput1F2OModel<RNNDerived>::predict(cnn::ComputationGraph &cg,
     birnn_layer->set_dropout() ;
     birnn_layer->start_new_sequence() ;
 
-    std::vector<cnn::expr::Expression> inputs_exprs ;
+    std::vector<dynet::expr::Expression> inputs_exprs ;
     input_layer->build_inputs(input_seq, inputs_exprs) ;
 
-    std::vector<cnn::expr::Expression> l2r_exprs,
+    std::vector<dynet::expr::Expression> l2r_exprs,
         r2l_exprs ;
     birnn_layer->build_graph(inputs_exprs, l2r_exprs, r2l_exprs) ;
 
-    std::vector<cnn::expr::Expression> feature_exprs;
+    std::vector<dynet::expr::Expression> feature_exprs;
     cws_feature_layer->build_cws_feature(feature_seq, feature_exprs);
 
     output_layer->build_output(l2r_exprs, r2l_exprs, feature_exprs, pred_seq) ;

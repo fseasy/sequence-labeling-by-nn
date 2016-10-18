@@ -9,7 +9,7 @@ NnSegmentorInput1Abstract::NnSegmentorInput1Abstract(int argc, char **argv, unsi
     NeuralNetworkCommonInterfaceCnnImpl(argc, argv, seed)
 {}
 
-cnn::expr::Expression 
+dynet::expr::Expression 
 NnSegmentorInput1Abstract::build_training_graph_impl(const std::vector<Index> &charseq, 
     const std::vector<Index> &tagseq)
 {
@@ -24,12 +24,12 @@ NnSegmentorInput1Abstract::build_training_graph_impl(const std::vector<Index> &c
     
     unsigned sent_len = charseq.size();
 
-    std::vector<cnn::expr::Expression> word_exprs(sent_len);
+    std::vector<dynet::expr::Expression> word_exprs(sent_len);
     word_expr_layer->index_seq2expr_seq(charseq, word_exprs);
     // generate window expr(context) using concatenate
-    std::vector<cnn::expr::Expression> input_exprs = window_expr_generate_layer->generate_window_expr_by_concatenating(word_exprs);
+    std::vector<dynet::expr::Expression> input_exprs = window_expr_generate_layer->generate_window_expr_by_concatenating(word_exprs);
 
-    std::vector<cnn::expr::Expression> output_exprs;
+    std::vector<dynet::expr::Expression> output_exprs;
     mlp_hidden_layer->build_graph(input_exprs, output_exprs);
     return output_layer->build_output_loss(output_exprs, tagseq);
 }
@@ -48,12 +48,12 @@ NnSegmentorInput1Abstract::predict_impl(const std::vector<Index> &charseq)
 
     unsigned sent_len = charseq.size();
 
-    std::vector<cnn::expr::Expression> word_exprs(sent_len);
+    std::vector<dynet::expr::Expression> word_exprs(sent_len);
     word_expr_layer->index_seq2expr_seq(charseq, word_exprs);
     // generate window expr(context) using concatenate
-    std::vector<cnn::expr::Expression> input_exprs = window_expr_generate_layer->generate_window_expr_by_concatenating(word_exprs);
+    std::vector<dynet::expr::Expression> input_exprs = window_expr_generate_layer->generate_window_expr_by_concatenating(word_exprs);
 
-    std::vector<cnn::expr::Expression> hidden_output_exprs;
+    std::vector<dynet::expr::Expression> hidden_output_exprs;
     mlp_hidden_layer->build_graph(input_exprs, hidden_output_exprs);
     std::vector<Index> pred_tagseq;
     output_layer->build_output(hidden_output_exprs, pred_tagseq);

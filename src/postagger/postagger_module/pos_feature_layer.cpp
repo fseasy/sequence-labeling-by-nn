@@ -2,7 +2,7 @@
 
 namespace slnn{
 
-POSFeatureLayer::POSFeatureLayer(cnn::Model *m, 
+POSFeatureLayer::POSFeatureLayer(dynet::Model *m, 
                                  size_t prefix_suffix_len1_dict_size, unsigned prefix_suffix_len1_embedding_dim,
                                  size_t prefix_suffix_len2_dict_size, unsigned prefix_suffix_len2_embedding_dim,
                                  size_t prefix_suffix_len3_dict_size, unsigned prefix_suffix_len3_embedding_dim,
@@ -13,7 +13,7 @@ POSFeatureLayer::POSFeatureLayer(cnn::Model *m,
     char_length_lookup_param(m->add_lookup_parameters(char_length_dict_size, {char_length_embedding_dim}))
 {}
 
-POSFeatureLayer::POSFeatureLayer(cnn::Model *m, POSFeature &pos_feature)
+POSFeatureLayer::POSFeatureLayer(dynet::Model *m, POSFeature &pos_feature)
     :POSFeatureLayer(m, 
                      pos_feature.prefix_suffix_len1_dict.size(), pos_feature.prefix_suffix_len1_embedding_dim,
                      pos_feature.prefix_suffix_len2_dict.size(), pos_feature.prefix_suffix_len2_embedding_dim,
