@@ -1,5 +1,5 @@
-#ifndef SEGMENTOR_CWS_MODULE_CWS_READER_H_
-#define SEGMENTOR_CWS_MODULE_CWS_READER_H_
+#ifndef SEGMENTER_CWS_MODULE_CWS_READER_H_
+#define SEGMENTER_CWS_MODULE_CWS_READER_H_
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "utils/reader.hpp"

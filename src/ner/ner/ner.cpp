@@ -17,7 +17,7 @@ namespace po = boost::program_options;
 
 
 
-const string PROGRAM_DESCRIPTION = "NER based on CNN Library";
+const string PROGRAM_DESCRIPTION = "NER based on DyNet Library";
 
 /********************************DEBUG OUPTUT FUNCTION***********************************/
 

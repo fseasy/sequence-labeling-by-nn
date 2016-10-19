@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_FEATURE_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_FEATURE_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_FEATURE_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_FEATURE_H_
 
 #include "lexicon_feature.h"
 #include "modelmodule/context_feature.h"

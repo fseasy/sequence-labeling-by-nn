@@ -7,8 +7,8 @@
  * tag relation constrains : can_emit?, can_trans?
  */
 
-#ifndef SLNN_SEGMENTOR_TOKEN_MODULE_TAG_DEFINITION_H_
-#define SLNN_SEGMENTOR_TOKEN_MODULE_TAG_DEFINITION_H_
+#ifndef SLNN_SEGMENTER_TOKEN_MODULE_TAG_DEFINITION_H_
+#define SLNN_SEGMENTER_TOKEN_MODULE_TAG_DEFINITION_H_
 #include "utils/typedeclaration.h"
 #include <string>
 #include <vector>

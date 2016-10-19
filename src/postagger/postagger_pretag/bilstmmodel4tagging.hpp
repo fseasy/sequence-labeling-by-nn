@@ -39,7 +39,7 @@ namespace po = boost::program_options;
 
 /********************************
  *BILSTMModel4Tagging (for postagging currently)
- *tagging model based on CNN library , do as CNN examples `tag-bilstm.cc`
+ *tagging model based on DyNet library , do as DyNet examples `tag-bilstm.cc`
  *
  * ******************************/
 namespace slnn{

@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_WRITER_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_WRITER_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_WRITER_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_WRITER_H_
 #include <string>
 #include <vector>
 #include <ostream>

@@ -9,7 +9,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "CWS single_input-pretag Procedure based on CNN Library";
+const string PROGRAM_DESCRIPTION = "CWS single_input-pretag Procedure based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)

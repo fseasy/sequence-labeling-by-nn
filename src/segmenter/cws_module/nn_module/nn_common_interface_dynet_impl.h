@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_NN_COMMON_INTERFACE_CNN_IMPL_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_NN_COMMON_INTERFACE_CNN_IMPL_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_NN_MODULE_NN_COMMON_INTERFACE_CNN_IMPL_H_
+#define SLNN_SEGMENTER_CWS_MODULE_NN_MODULE_NN_COMMON_INTERFACE_CNN_IMPL_H_
 #include <sstream>
 #include <boost/log/trivial.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -37,7 +37,7 @@ public:
     bool stash_model_when_best(slnn::type::real current_score);
     bool reset2stashed_model();
 public:
-    void clear_cg(){ pcg->clear(); }; // ! BUG: using clear() will cause Error -> CNN get dim error!(BUG for it.)
+    void clear_cg(){ pcg->clear(); }; // ! BUG: using clear() will cause Error -> DyNet get dim error!(BUG for it.)
     void reset_cg(){ delete pcg; pcg = new dynet::ComputationGraph(); }
 protected:
     dynet::ComputationGraph* get_cg(){ return pcg; }

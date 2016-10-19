@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_OUTPUT_LAYER_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_OUTPUT_LAYER_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_OUTPUT_LAYER_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_OUTPUT_LAYER_H_
 
 #include "modelmodule/hyper_layers.h"
 #include "segmenter/cws_module/cws_tagging_system.h"

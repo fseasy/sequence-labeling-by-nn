@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_BASIC_TOKEN_MODULE_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_BASIC_TOKEN_MODULE_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_BASIC_TOKEN_MODULE_H_
+#define SLNN_SEGMENTER_CWS_MODULE_BASIC_TOKEN_MODULE_H_
 #include "trivial/lookup_table/lookup_table.h"
 #include "cws_tag_definition.h"
 #include "trivial/charcode/charcode_convertor.h"

@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_BAREINPUT1_CL_F2O_MODEL_HPP_
-#define SLNN_SEGMENTOR_CWS_BAREINPUT1_CL_F2O_MODEL_HPP_
+#ifndef SLNN_SEGMENTER_CWS_BAREINPUT1_CL_F2O_MODEL_HPP_
+#define SLNN_SEGMENTER_CWS_BAREINPUT1_CL_F2O_MODEL_HPP_
 
 #include <boost/log/trivial.hpp>
 #include <boost/archive/text_iarchive.hpp>

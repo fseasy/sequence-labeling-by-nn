@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_TYPE_FEATURE_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_TYPE_FEATURE_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_TYPE_FEATURE_H_
+#define SLNN_SEGMENTER_CWS_MODULE_TYPE_FEATURE_H_
 #include <unordered_set>
 #include <string>
 #include <boost/serialization/access.hpp>

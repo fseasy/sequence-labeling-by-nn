@@ -16,7 +16,7 @@ using namespace std;
 using namespace dynet;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger Input2-Pretag F2I Procedure based on CNN Library";
+static const string ProgramHeader = "Postagger Input2-Pretag F2I Procedure based on DyNet Library";
 static const int CNNRandomSeed = 1234;
 
 template <typename RNNDerived>
@@ -27,7 +27,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("word2vec_embedding" , po::value<string>(), "The path to word2vec embedding")
@@ -183,7 +183,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -243,7 +243,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")

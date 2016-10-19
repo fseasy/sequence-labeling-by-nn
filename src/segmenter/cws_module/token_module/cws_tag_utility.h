@@ -2,8 +2,8 @@
  * tag_utility.h, including the utilities for tag system.
  */
 
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_TOKEN_MODULE_TAG_UTILITY_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_TOKEN_MODULE_TAG_UTILITY_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_TAG_UTILITY_H_
+#define SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_TAG_UTILITY_H_
 #include "cws_tag_definition.h"
 
 namespace slnn{

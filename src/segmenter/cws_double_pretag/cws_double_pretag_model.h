@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_DOUBLE_PRETAG_MODEL_H_
-#define SLNN_SEGMENTOR_CWS_DOUBLE_PRETAG_MODEL_H_
+#ifndef SLNN_SEGMENTER_CWS_DOUBLE_PRETAG_MODEL_H_
+#define SLNN_SEGMENTER_CWS_DOUBLE_PRETAG_MODEL_H_
 
 #include <boost/serialization/base_object.hpp>
 #include <boost/serialization/utility.hpp>

@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MLP_INPUT1_TEMPLATE_H_
-#define SLNN_SEGMENTOR_CWS_MLP_INPUT1_TEMPLATE_H_
+#ifndef SLNN_SEGMENTER_CWS_MLP_INPUT1_TEMPLATE_H_
+#define SLNN_SEGMENTER_CWS_MLP_INPUT1_TEMPLATE_H_
 #include <random>
 #include <boost/program_options/variables_map.hpp>
 #include <boost/archive/text_oarchive.hpp>
@@ -45,7 +45,7 @@ public:
     void set_model_structure_param_from_outer(const boost::program_options::variables_map &args);
     void finish_read_training_data();
     void build_model_structure();
-    dynet::expr::Expression build_training_graph(const AnnotatedDataProcessedT& ann_processed_data);
+    NnExprT build_training_graph(const AnnotatedDataProcessedT& ann_processed_data);
     std::vector<Index> predict(const UnannotatedDataProcessedT& unann_processed_data);
 private:
     TokenModuleT token_module;
@@ -150,7 +150,7 @@ build_model_structure()
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-dynet::expr::Expression
+typename SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::NnExprT
 SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 {

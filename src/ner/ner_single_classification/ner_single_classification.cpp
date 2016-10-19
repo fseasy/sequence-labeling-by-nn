@@ -9,7 +9,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "NER single_input-classification Procedure based on CNN Library";
+const string PROGRAM_DESCRIPTION = "NER single_input-classification Procedure based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)

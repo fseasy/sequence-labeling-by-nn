@@ -5,7 +5,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Ner-CRF based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Ner-CRF based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)

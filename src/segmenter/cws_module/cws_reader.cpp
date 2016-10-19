@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_READER_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_READER_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_READER_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_READER_H_
 #include "cws_reader.h"
 #include "utils/utf8processing.hpp"
 namespace slnn{

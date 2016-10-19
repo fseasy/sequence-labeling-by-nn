@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_ABSTRACT_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_ABSTRACT_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_ABSTRACT_H_
+#define SLNN_SEGMENTER_CWS_MODULE_NN_MODULE_CWS_MLP_INPUT1_ABSTRACT_H_
 #include <functional>
 #include "utils/typedeclaration.h"
 #include "segmenter/cws_module/nn_module/nn_common_interface_dynet_impl.h"

@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_EVAL_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_EVAL_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_EVAL_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_EVAL_H_
 #include "token_module/cws_tag_definition.h"
 
 namespace slnn{

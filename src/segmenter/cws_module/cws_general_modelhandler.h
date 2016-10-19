@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTOR_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
-#define SLNN_SEGMENTOR_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
+#define SLNN_SEGMENTER_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
 #include <string>
 #include <vector>
 #include <iostream>
@@ -273,7 +273,7 @@ void train(SLModel &slm,
             unsigned access_idx = access_order[i];
             const  typename SLModel::AnnotatedDataProcessedT &instance = training_data[access_idx];
             // GO
-            SLModel::NnExprT loss_expr = slm.build_training_graph(instance);
+            typename SLModel::NnExprT loss_expr = slm.build_training_graph(instance);
             slnn::type::real loss = slm.get_nn()->as_scalar(slm.get_nn()->forward(loss_expr));
             slm.get_nn()->backward(loss_expr);
             slm.get_nn()->update(opts.training_update_scale);
