@@ -1,3 +1,6 @@
 [submodule "3rdparty/catch"]
 	path = 3rdparty/catch
 	url = https://github.com/philsquared/Catch.git
+[submodule "3rdparty/dynet"]
+	path = 3rdparty/dynet
+	url = https://github.com/memeda/dynet.git
