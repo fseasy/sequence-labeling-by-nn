@@ -92,7 +92,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    dynet::Initialize(argc, argv, 1234); 
+    dynet::initialize(argc, argv, 1234); 
     SingleInputModelHandler<CWSSingleCRFModel> model_handler;
 
     // reading traing data , get word dict size and output tag number
@@ -172,7 +172,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
    
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     SingleInputModelHandler<CWSSingleCRFModel> model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -231,7 +231,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
     
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     SingleInputModelHandler<CWSSingleCRFModel> model_handler ;
 
     // load model 

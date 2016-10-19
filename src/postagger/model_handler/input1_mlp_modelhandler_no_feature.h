@@ -262,9 +262,9 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq>
                 ContextFeatureDataSeq context_feature_gp_seq_after_replace;
                 mlp_model->replace_word_with_unk(sent, context_feature_gp_seq, 
                     sent_after_replace, context_feature_gp_seq_after_replace);
-                mlp_model->build_loss(cg, sent_after_replace, context_feature_gp_seq_after_replace, tag_seq);
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = mlp_model->build_loss(cg, sent_after_replace, context_feature_gp_seq_after_replace, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;

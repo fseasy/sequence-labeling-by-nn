@@ -123,9 +123,9 @@ bool Input2WithFeatureModel<RNNDerived>::is_dict_frozen()
 template <typename RNNDerived>
 void Input2WithFeatureModel<RNNDerived>::freeze_dict()
 {
-    dynamic_word_dict_wrapper.Freeze();
-    postag_dict.Freeze();
-    dynamic_word_dict_wrapper.SetUnk(UNK_STR);
+    dynamic_word_dict_wrapper.freeze();
+    postag_dict.freeze();
+    dynamic_word_dict_wrapper.set_unk(UNK_STR);
     pos_feature.freeze_dict();
 }
 
@@ -153,9 +153,9 @@ void Input2WithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sent,
     for( size_t i = 0 ; i < seq_len; ++i )
     {
         std::string replaced_word = UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber);
-        tmp_dynamic_sent_index_seq[i] = dynamic_word_dict_wrapper.Convert(replaced_word);
-        tmp_fixed_sent_index_seq.at(i) = fixed_word_dict.Convert(replaced_word);
-        tmp_postag_index_seq[i] = postag_dict.Convert(postag_seq[i]);
+        tmp_dynamic_sent_index_seq[i] = dynamic_word_dict_wrapper.convert(replaced_word);
+        tmp_fixed_sent_index_seq.at(i) = fixed_word_dict.convert(replaced_word);
+        tmp_postag_index_seq[i] = postag_dict.convert(postag_seq[i]);
     }
     POSFeature::POSFeatureGroupSeq feature_gp_str_seq;
     POSFeatureExtractor::extract(sent, feature_gp_str_seq);
@@ -179,8 +179,8 @@ void Input2WithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sent,
     for( size_t i = 0 ; i < seq_len; ++i )
     {
         std::string replaced_word = UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber);
-        tmp_dynamic_index_sent[i] = dynamic_word_dict_wrapper.Convert(replaced_word);
-        tmp_fixed_index_sent.at(i) = fixed_word_dict.Convert(replaced_word);
+        tmp_dynamic_index_sent[i] = dynamic_word_dict_wrapper.convert(replaced_word);
+        tmp_fixed_index_sent.at(i) = fixed_word_dict.convert(replaced_word);
     }
     POSFeature::POSFeatureGroupSeq feature_gp_str_seq;
     POSFeatureExtractor::extract(sent, feature_gp_str_seq);
@@ -202,7 +202,7 @@ void Input2WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq &d
     IndexSeq tmp_rep_sent(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_rep_sent[i] = dynamic_word_dict_wrapper.ConvertProbability(dynamic_sent[i]);
+        tmp_rep_sent[i] = dynamic_word_dict_wrapper.unk_replace_probability(dynamic_sent[i]);
     }
     swap(replaced_dynamic_sent, tmp_rep_sent);
     pos_feature.do_repalce_feature_with_unk_in_copy(feature_gp_seq, replaced_feature_gp_seq);
@@ -215,7 +215,7 @@ void Input2WithFeatureModel<RNNDerived>::postag_index_seq2postag_str_seq(const I
     Seq tmp_str_seq(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_str_seq[i] = postag_dict.Convert(postag_index_seq[i]);
+        tmp_str_seq[i] = postag_dict.convert(postag_index_seq[i]);
     }
     swap(postag_str_seq, tmp_str_seq);
 }

@@ -20,8 +20,8 @@ struct BIRNNLayer
 {
     RNNDerived *l2r_builder;
     RNNDerived *r2l_builder;
-    dynet::Parameters *SOS;
-    dynet::Parameters *EOS;
+    dynet::Parameter SOS;
+    dynet::Parameter EOS;
     dynet::expr::Expression SOS_EXP;
     dynet::expr::Expression EOS_EXP;
     dynet::real default_dropout_rate ;
@@ -44,8 +44,8 @@ using BIGRULayer = BIRNNLayer<dynet::GRUBuilder>;
 
 struct DenseLayer
 {
-    dynet::Parameters *w,
-        *b;
+    dynet::Parameter w,
+        b;
     dynet::expr::Expression w_exp,
         b_exp;
     DenseLayer(dynet::Model *m , unsigned input_dim , unsigned output_dim );
@@ -56,9 +56,9 @@ struct DenseLayer
 
 struct Merge2Layer
 {
-    dynet::Parameters *w1,
-        *w2,
-        *b;
+    dynet::Parameter w1,
+        w2,
+        b;
     dynet::expr::Expression w1_exp,
         w2_exp,
         b_exp;
@@ -70,10 +70,10 @@ struct Merge2Layer
 
 struct Merge3Layer
 {
-    dynet::Parameters *w1 ,
-        *w2 , 
-        *w3 ,
-        *b;
+    dynet::Parameter w1 ,
+        w2 , 
+        w3 ,
+        b;
     dynet::expr::Expression w1_exp,
         w2_exp,
         w3_exp,
@@ -86,11 +86,11 @@ struct Merge3Layer
 
 struct Merge4Layer
 {
-    dynet::Parameters *w1 ,
-        *w2, 
-        *w3,
-        *w4,
-        *b;
+    dynet::Parameter w1 ,
+        w2, 
+        w3,
+        w4,
+        b;
     dynet::expr::Expression w1_exp,
         w2_exp,
         w3_exp,
@@ -107,8 +107,8 @@ struct MLPHiddenLayer
 {
     // data
     unsigned nr_hidden_layer;
-    std::vector<dynet::Parameters *> w_list;
-    std::vector<dynet::Parameters *> b_list;
+    std::vector<dynet::Parameter> w_list;
+    std::vector<dynet::Parameter> b_list;
     std::vector<dynet::expr::Expression> w_expr_list;
     std::vector<dynet::expr::Expression> b_expr_list;
     dynet::real dropout_rate;

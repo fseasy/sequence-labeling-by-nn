@@ -18,9 +18,9 @@ public :
         std::vector<dynet::expr::Expression> &lexicon_feature_exprs);
 
 private:
-    dynet::LookupParameters *start_here_lookup_param;
-    dynet::LookupParameters *pass_here_lookup_param;
-    dynet::LookupParameters *end_here_lookup_param;
+    dynet::LookupParameter start_here_lookup_param;
+    dynet::LookupParameter pass_here_lookup_param;
+    dynet::LookupParameter end_here_lookup_param;
     dynet::ComputationGraph *pcg;
 };
 

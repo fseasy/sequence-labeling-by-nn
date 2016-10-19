@@ -14,9 +14,9 @@ public:
     CWSFeatureLayer(dynet::Model *dynet_m, unsigned start_here_dict_size, unsigned start_here_dim,
         unsigned pass_here_dict_size, unsigned pass_here_dim,
         unsigned end_here_dict_size, unsigned end_here_dim,
-        dynet::LookupParameters *word_lookup_param,
+        dynet::LookupParameter word_lookup_param,
         unsigned chartype_category_num, unsigned chartype_dim);
-    CWSFeatureLayer(dynet::Model *dynet_m, const CWSFeature &cws_feature, dynet::LookupParameters *word_lookup_param);
+    CWSFeatureLayer(dynet::Model *dynet_m, const CWSFeature &cws_feature, dynet::LookupParameter word_lookup_param);
     void new_graph(dynet::ComputationGraph &cg);
     void build_cws_feature(const CWSFeatureDataSeq &cws_feature_data_seq, std::vector<dynet::expr::Expression> &cws_feature_exprs);
 

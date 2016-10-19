@@ -49,13 +49,13 @@ struct NERCRFDCModel
     Merge3Layer *emit_hidden_layer;
     DenseLayer *emit_output_layer;
 
-    dynet::LookupParameters *dynamic_words_lookup_param;
-    dynet::LookupParameters *fixed_words_lookup_param;
-    dynet::LookupParameters *postag_lookup_param;
-    dynet::LookupParameters *ner_lookup_param;
+    dynet::LookupParameter dynamic_words_lookup_param;
+    dynet::LookupParameter fixed_words_lookup_param;
+    dynet::LookupParameter postag_lookup_param;
+    dynet::LookupParameter ner_lookup_param;
     
-    dynet::LookupParameters *init_score_lookup_param;
-    dynet::LookupParameters *trans_score_lookup_param;
+    dynet::LookupParameter init_score_lookup_param;
+    dynet::LookupParameter trans_score_lookup_param;
 
 
     // Dict

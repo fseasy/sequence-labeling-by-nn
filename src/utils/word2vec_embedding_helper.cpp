@@ -40,11 +40,11 @@ void Word2vecEmbeddingHelper::build_fixed_dict(ifstream &is, Dict &fixed_dict, c
         std::string::size_type delim_pos = line.find(" ");
         assert(delim_pos != std::string::npos);
         std::string word = line.substr(0, delim_pos);
-        fixed_dict.Convert(word);  // add to dict
+        fixed_dict.convert(word);  // add to dict
     }
     //  freeze & add unk to fixed_dict
-    fixed_dict.Freeze();
-    fixed_dict.SetUnk(unk_str);
+    fixed_dict.freeze();
+    fixed_dict.set_unk(unk_str);
     if( p_dict_size )
     {
         if( is_standard_word2vec_format ){ assert(fixed_dict_sz == fixed_dict.size()) ; }
@@ -55,10 +55,10 @@ void Word2vecEmbeddingHelper::build_fixed_dict(ifstream &is, Dict &fixed_dict, c
     BOOST_LOG_TRIVIAL(info) << "build fixed dict done .";
 }
 
-void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameters *fixed_lookup_param)
+void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameter fixed_lookup_param)
 {
     // set lookup parameters from outer word embedding
-    // using words_loopup_param.Initialize( word_id , value_vector )
+    // using words_loopup_param.initialize( word_id , value_vector )
     BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     std::string line;
     std::vector<std::string> split_cont;
@@ -76,12 +76,12 @@ void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, dynet::Dic
             continue;
         }
         std::string &word = split_cont.at(0);
-        Index word_id = fixed_dict.Convert(word);
+        Index word_id = fixed_dict.convert(word);
         for( size_t idx = 1; idx < split_cont.size(); ++idx )
         {
             embedding_vec[idx - 1] = std::stof(split_cont[idx]);
         }
-        fixed_lookup_param->Initialize(word_id, embedding_vec);
+        fixed_lookup_param->initialize(word_id, embedding_vec);
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done ." ;
 }
@@ -91,12 +91,12 @@ float Word2vecEmbeddingHelper::calc_hit_rate(dynet::Dict &fixed_dict, dynet::Dic
     unsigned fixed_dict_sz = fixed_dict.size(),
         dynamic_dict_sz = dynamic_dict.size() - 1; // except the fdynamic dict unk str
     unsigned nr_hit_word = 0 ;
-    Index fixed_unk = fixed_dict.Convert(fixed_dict_unk_str);
+    Index fixed_unk = fixed_dict.convert(fixed_dict_unk_str);
     for( unsigned word_key = 0; word_key < fixed_dict_sz; ++word_key )
     {
         Index word_idx = word_key; // in fact, to avoid compare between signed and unsigned
         if( word_idx == fixed_unk ){ continue; }
-        string word = fixed_dict.Convert(word_idx);
+        string word = fixed_dict.convert(word_idx);
         if( dynamic_dict.Contains(word) ){ ++nr_hit_word; }
     }
     float hit_rate = (dynamic_dict_sz ? static_cast<float>(nr_hit_word) / dynamic_dict_sz : 0.f) * 100 ;

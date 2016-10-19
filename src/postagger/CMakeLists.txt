@@ -121,21 +121,21 @@ set(pos_common_libs
     ${common_libs}
 )
 
-#add_subdirectory(postagger_pretag)
-#add_subdirectory(postagger_dc)
-#add_subdirectory(postagger_crf)
-#add_subdirectory(postagger_crfdc)
-#add_subdirectory(pos_single_classification)
+add_subdirectory(postagger_pretag)
+add_subdirectory(postagger_dc)
+add_subdirectory(postagger_crf)
+add_subdirectory(postagger_crfdc)
+add_subdirectory(pos_single_classification)
 
-#add_subdirectory(pos_single_classification_with_feature)
-#add_subdirectory(pos_single_pretag_with_feature)
-#add_subdirectory(pos_single_crf_with_feature)
+add_subdirectory(pos_single_classification_with_feature)
+add_subdirectory(pos_single_pretag_with_feature)
+add_subdirectory(pos_single_crf_with_feature)
 
-#add_subdirectory(pos_input2_classification_with_feature)
-#add_subdirectory(pos_input2_pretag_with_feature)
-#add_subdirectory(pos_input2_crf_with_feature)
+add_subdirectory(pos_input2_classification_with_feature)
+add_subdirectory(pos_input2_pretag_with_feature)
+add_subdirectory(pos_input2_crf_with_feature)
 
-#add_subdirectory(pos_bareinput1_classification_with_feature_no_merge)
+add_subdirectory(pos_bareinput1_classification_with_feature_no_merge)
 
 add_subdirectory(pos_input1_mlp_without_tag)
 add_subdirectory(pos_input1_mlp_without_tag_NO_FEATURE)

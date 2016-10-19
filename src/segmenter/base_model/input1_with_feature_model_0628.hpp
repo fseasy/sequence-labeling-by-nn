@@ -73,7 +73,7 @@ public:
     {
         Seq char_seq(index_char_seq.size());
         std::transform(index_char_seq.begin(), index_char_seq.end(), char_seq.begin(),
-            [this](Index word_idx){ return this->word_dict.Convert(word_idx); });
+            [this](Index word_idx){ return this->word_dict.convert(word_idx); });
         cws_feature.debug_one_sent(char_seq, feature_seq);
     }
 
@@ -120,8 +120,8 @@ bool CWSInput1WithFeatureModel<RNNDerived>::is_dict_frozen()
 template <typename RNNDerived>
 void CWSInput1WithFeatureModel<RNNDerived>::freeze_dict()
 {
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(UNK_STR);
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(UNK_STR);
 }
 
 template <typename RNNDerived>
@@ -143,7 +143,7 @@ void CWSInput1WithFeatureModel<RNNDerived>::word_seq2index_seq(const Seq &word_s
         for( size_t i = 0; i < word_char_seq.size(); ++i )
         {
             tmp_tag_index_seq.push_back(word_tag_index_seq[i]);
-            Index word_id = word_dict_wrapper.Convert(word_char_seq[i]);
+            Index word_id = word_dict_wrapper.convert(word_char_seq[i]);
             tmp_word_index_seq.push_back(word_id);
             tmp_char_seq.push_back(std::move(word_char_seq[i]));
         }
@@ -163,7 +163,7 @@ void CWSInput1WithFeatureModel<RNNDerived>::char_seq2index_seq(const Seq &char_s
     IndexSeq tmp_word_index_seq(sz);
     for(size_t i = 0; i < sz; ++i )
     {
-        tmp_word_index_seq[i] = word_dict.Convert(char_seq[i]);
+        tmp_word_index_seq[i] = word_dict.convert(char_seq[i]);
     }
     cws_feature.extract(char_seq, tmp_word_index_seq, feature_data_seq);
     swap(word_index_seq, tmp_word_index_seq);
@@ -180,7 +180,7 @@ void CWSInput1WithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexSeq
     IndexSeq tmp_rep_word_seq(sz);
     for( size_t i = 0; i < sz; ++i )
     {
-        tmp_rep_word_seq[i] = word_dict_wrapper.ConvertProbability(ori_word_seq[i]);
+        tmp_rep_word_seq[i] = word_dict_wrapper.unk_replace_probability(ori_word_seq[i]);
     }
     swap(rep_word_seq, tmp_rep_word_seq);
     cws_feature.random_replace_with_unk(origin_feature_data_seq, rep_feature_data_seq);

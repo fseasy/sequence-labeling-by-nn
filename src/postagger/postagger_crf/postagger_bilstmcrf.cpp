@@ -71,7 +71,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
 
     // Init 
-    dynet::Initialize(argc, argv, 1234); // 
+    dynet::initialize(argc, argv, 1234); // 
     BILSTMCRFModel4POSTAG dc_model;
     BILSTMCRFModelHandler model_handler(dc_model);
     // reading traing data , get word dict size and output tag number
@@ -178,7 +178,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     }
 
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMCRFModel4POSTAG dc_model;
     BILSTMCRFModelHandler model_handler(dc_model);
     // Load model 
@@ -275,7 +275,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     else model_path = var_map["model"].as<string>();
 
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMCRFModel4POSTAG dc_model;
     BILSTMCRFModelHandler model_handler(dc_model);
 

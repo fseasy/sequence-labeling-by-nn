@@ -49,12 +49,12 @@ struct NERDCModel
     Merge3Layer *merge_bilstm_and_pretag_layer;
     DenseLayer *tag_output_linear_layer;
 
-    dynet::LookupParameters *dynamic_words_lookup_param;
-    dynet::LookupParameters *fixed_words_lookup_param;
-    dynet::LookupParameters *postag_lookup_param;
-    dynet::LookupParameters *ner_lookup_param;
+    dynet::LookupParameter dynamic_words_lookup_param;
+    dynet::LookupParameter fixed_words_lookup_param;
+    dynet::LookupParameter postag_lookup_param;
+    dynet::LookupParameter ner_lookup_param;
     
-    dynet::Parameters *TAG_SOS_param; // for tag_hidden_layer , pre-tag
+    dynet::Parameter TAG_SOS_param; // for tag_hidden_layer , pre-tag
 
 
     // Dict

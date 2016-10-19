@@ -125,9 +125,9 @@ bool Input1MLPModel::is_dict_frozen()
 inline
 void Input1MLPModel::freeze_dict()
 {
-    word_dict_wrapper.Freeze();
-    postag_dict.Freeze();
-    word_dict_wrapper.SetUnk(UNK_STR);
+    word_dict_wrapper.freeze();
+    postag_dict.freeze();
+    word_dict_wrapper.set_unk(UNK_STR);
     pos_feature.freeze_dict();
 }
 
@@ -145,7 +145,7 @@ void Input1MLPModel::replace_word_with_unk(const IndexSeq &sent,
     IndexSeq tmp_rep_sent(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_rep_sent[i] = word_dict_wrapper.ConvertProbability(sent[i]);
+        tmp_rep_sent[i] = word_dict_wrapper.unk_replace_probability(sent[i]);
     }
     swap(replaced_sent, tmp_rep_sent);
     pos_feature.do_repalce_feature_with_unk_in_copy(feature_gp_seq, replaced_feature_gp_seq);
@@ -159,7 +159,7 @@ void Input1MLPModel::postag_index_seq2postag_str_seq(const IndexSeq &postag_inde
     Seq tmp_str_seq(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_str_seq[i] = postag_dict.Convert(postag_index_seq[i]);
+        tmp_str_seq[i] = postag_dict.convert(postag_index_seq[i]);
     }
     swap(postag_str_seq, tmp_str_seq);
 }

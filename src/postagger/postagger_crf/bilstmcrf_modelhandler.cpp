@@ -54,8 +54,8 @@ void BILSTMCRFModelHandler::do_read_annotated_dataset(istream &is, vector<IndexS
             std::string word = strpair.substr(0, delim_pos);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = dc_m.word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index postag_id = dc_m.postag_dict.Convert(strpair.substr(delim_pos + 1));
+            Index word_id = dc_m.word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index postag_id = dc_m.postag_dict.convert(strpair.substr(delim_pos + 1));
             sent.push_back(word_id);
             postag_seq.push_back(postag_id);
         }
@@ -74,9 +74,9 @@ void BILSTMCRFModelHandler::read_training_data_and_build_word_and_postag_dicts(i
     assert(!dc_m.word_dict.is_frozen() && !dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents, postag_seqs);
-    dc_m.word_dict_wrapper.Freeze();
-    dc_m.word_dict_wrapper.SetUnk(dc_m.UNK_STR);
-    dc_m.postag_dict.Freeze();
+    dc_m.word_dict_wrapper.freeze();
+    dc_m.word_dict_wrapper.set_unk(dc_m.UNK_STR);
+    dc_m.postag_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic dict done . ";
 }
 
@@ -108,7 +108,7 @@ void BILSTMCRFModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_se
         for (unsigned i = 0; i < seq_len; ++i)
         {
             string number_transed_word = replace_number(words_seq[i]);
-            words_index_seq[i] = dc_m.word_dict.Convert(number_transed_word);
+            words_index_seq[i] = dc_m.word_dict.convert(number_transed_word);
         }
 
     }
@@ -183,12 +183,12 @@ void BILSTMCRFModelHandler::train(const vector<IndexSeq> *p_sents,
             sent_after_replace_unk.resize(p_sent->size());
             for (size_t word_idx = 0; word_idx < p_sent->size(); ++word_idx)
             {
-                sent_after_replace_unk[word_idx] = dc_m.word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
+                sent_after_replace_unk[word_idx] = dc_m.word_dict_wrapper.unk_replace_probability(p_sent->at(word_idx));
             }
-            dc_m.viterbi_train(cg, &sent_after_replace_unk, p_tag_seq,
+            auto loss_expr = dc_m.viterbi_train(cg, &sent_after_replace_unk, p_tag_seq,
                                 p_training_stat_per_report.get());
-            dynet::real E = as_scalar(cg->forward());
-            cg->backward();
+            dynet::real E = as_scalar(cg->forward(loss_expr));
+            cg->backward(loss_expr);
             sgd.update(1.0);
             delete cg;
             
@@ -282,8 +282,8 @@ float BILSTMCRFModelHandler::devel(const std::vector<IndexSeq> *p_sents,
             if (p_tag_seq->at(i) == predict_tag_seq[i]) ++acc_stat.correct_tags;
             else if (p_error_output_os)
             {
-                *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << dc_m.word_dict.Convert(p_sent->at(i))
-                    << "\t" << dc_m.postag_dict.Convert(predict_tag_seq[i]) << "\t" << dc_m.postag_dict.Convert(p_tag_seq->at(i)) << "\n";
+                *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << dc_m.word_dict.convert(p_sent->at(i))
+                    << "\t" << dc_m.postag_dict.convert(predict_tag_seq[i]) << "\t" << dc_m.postag_dict.convert(p_tag_seq->at(i)) << "\n";
             }
         }
     }
@@ -319,11 +319,11 @@ void BILSTMCRFModelHandler::predict(std::istream &is, std::ostream &os)
         ComputationGraph cg;
         dc_m.viterbi_predict(&cg, p_sent, &predict_seq);
         // output the result directly
-        os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.Convert(predict_seq.at(0));
+        os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
         {
             os << SPLIT_DELIMITER
-                << p_raw_sent->at(k) << "_" << dc_m.postag_dict.Convert(predict_seq.at(k));
+                << p_raw_sent->at(k) << "_" << dc_m.postag_dict.convert(predict_seq.at(k));
         }
         os << "\n";
     }

@@ -273,9 +273,9 @@ void CWSInput1WithFeatureModelHandler<RNNDerived, I1Model>::train(const std::vec
                 IndexSeq replaced_sent;
                 CWSFeatureDataSeq replaced_feature_data;
                 i1m->replace_word_with_unk(sent, cws_feature_seq, replaced_sent, replaced_feature_data);
-                i1m->build_loss(cg, replaced_sent, replaced_feature_data, tag_seq);
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                dynet::expr::Expression loss_expr = i1m->build_loss(cg, replaced_sent, replaced_feature_data, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;

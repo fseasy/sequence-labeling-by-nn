@@ -159,8 +159,8 @@ struct NerStat : public BasicStat
             for (size_t token_idx = 0; token_idx < predict_seq.size(); ++token_idx)
             {
                 tmp_of << "W" << " "
-                    << ner_dict.Convert(ner_seq.at(token_idx)) << " "
-                    << ner_dict.Convert(predict_seq.at(token_idx)) << "\n";
+                    << ner_dict.convert(ner_seq.at(token_idx)) << " "
+                    << ner_dict.convert(predict_seq.at(token_idx)) << "\n";
             }
             tmp_of << "\n"; // split of one sequence
         }

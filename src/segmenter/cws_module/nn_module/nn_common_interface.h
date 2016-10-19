@@ -5,29 +5,38 @@
 namespace slnn{
 namespace segmenter{
 namespace nn_module{
+
+namespace nn_framework{
+    // using namespace instead of Enum for extend by user(Although no other users , 2333);
+    using NnFrameworkTagT = int;
+    constexpr NnFrameworkTagT NN_DyNet = 0; 
+
+} // end of namespace nn-framework
+
 /**
- * neural network common interface for training and predict. 
- * not for polymorphism but for build interface for common NN operation and different NN framework.
- */
+* neural network common interface for training and predict. 
+* not for polymorphism but for build interface for common NN operation and different NN framework.
+*/
+template <nn_framework::NnFrameworkTagT nn_tag, typename NnExprType, typename NnValueType>
 class NeuralNetworkCommonInterface
 {
 public:
+    // Type
+    using NnExprT = NnExprType;
+    using NnValueT = NnValueType;
     // training
-    virtual void set_update_method(const std::string &optmization_name) = 0;
-    virtual void update(slnn::type::real scale) = 0;
-    virtual void update_epoch() = 0;
-    virtual void forward() = 0;
-    virtual slnn::type::real forward_as_scalar() = 0;
-    virtual std::vector<slnn::type::real> forward_as_vector() = 0;
-    virtual void backward() = 0;
+    void set_update_method(const std::string &optmization_name);
+    void update(slnn::type::real scale);
+    void update_epoch();
+    const NnValueT& forward(const NnExprType&);
+    slnn::type::real as_scalar(const NnValueT&);
+    std::vector<slnn::type::real> as_vector(const NnValueT&);
+    void backward(const NnExprT&);
     // stash model
-    virtual void stash_model() = 0;
-    virtual bool stash_model_when_best(slnn::type::real current_score) = 0;
-    virtual bool reset2stashed_model() = 0;
-    virtual ~NeuralNetworkCommonInterface() {};
+    void stash_model();
+    bool stash_model_when_best(slnn::type::real current_score);
+    bool reset2stashed_model();
 };
-
-
 
 } // end of namespace nn-module
 } // end of namespace segmenter

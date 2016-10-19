@@ -95,9 +95,9 @@ void Input2BigramModelHandler<I2Model>::do_read_annotated_dataset(std::istream &
         tmp_word_cont[tmp_word_cont.size() - 1] += "_$";
         for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
         {
-            Index dword_id = dynamic_dict_wrapper.Convert(tmp_word_cont[i]) ;
-            Index fword_id = fixed_dict.Convert(tmp_word_cont[i]);
-            Index tag_id = tag_dict.Convert(tmp_tag_cont[i]) ;
+            Index dword_id = dynamic_dict_wrapper.convert(tmp_word_cont[i]) ;
+            Index fword_id = fixed_dict.convert(tmp_word_cont[i]);
+            Index tag_id = tag_dict.convert(tmp_tag_cont[i]) ;
             dsent.push_back(dword_id);
             fsent.push_back(fword_id);
             tag_seq.push_back(tag_id);
@@ -143,8 +143,8 @@ void Input2BigramModelHandler<I2Model>::read_test_data(std::istream &is,
         fsent.clear();
         for( size_t i = 0 ; i < raw_sent_bigram.size() ; ++i )
         {
-            dsent.push_back(dword_dict.Convert(raw_sent_bigram[i]));
-            fsent.push_back(fword_dict.Convert(raw_sent_bigram[i]));
+            dsent.push_back(dword_dict.convert(raw_sent_bigram[i]));
+            fsent.push_back(fword_dict.convert(raw_sent_bigram[i]));
         }
         tmp_raw_sents.push_back(raw_sent) ;
         tmp_dsents.push_back(dsent);

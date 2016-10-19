@@ -51,9 +51,9 @@ struct BILSTMModel4Tagging
     Merge3Layer *merge_bilstm_and_pretag_layer;
     DenseLayer *tag_output_linear_layer;
     // paramerters
-    LookupParameters *words_lookup_param;
-    LookupParameters *tags_lookup_param;
-    Parameters *TAG_SOS_param;
+    LookupParameter words_lookup_param;
+    LookupParameter tags_lookup_param;
+    Parameter TAG_SOS_param;
     // model structure param
 
     unsigned INPUT_DIM; // word embedding dimension
@@ -149,8 +149,8 @@ struct BILSTMModel4Tagging
                 std::string word = strpair.substr(0, delim_pos);
                 // Parse Number to specific string
                 word = replace_number(word);
-                Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-                Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
+                Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+                Index tag_id = tag_dict.convert(strpair.substr(delim_pos + 1));
                 sent.push_back(word_id);
                 tag_seq.push_back(tag_id);
             }
@@ -204,7 +204,7 @@ struct BILSTMModel4Tagging
             for (unsigned i = 0; i < seq_len; ++i)
             {
                 string number_transed_word = replace_number(words_seq[i]);
-                words_index_seq[i] = word_dict.Convert(number_transed_word);
+                words_index_seq[i] = word_dict.convert(number_transed_word);
             }
                 
         }
@@ -221,13 +221,13 @@ struct BILSTMModel4Tagging
     {
         if (word_dict.is_frozen() && tag_dict.is_frozen()) return; // has been frozen
         // First , add flag for start , end of word sequence and start of tag sequence  
-        // Freeze
-        tag_dict.Freeze();
-        word_dict_wrapper.Freeze();
+        // freeze
+        tag_dict.freeze();
+        word_dict_wrapper.freeze();
         // set unk
-        word_dict_wrapper.SetUnk(UNK_STR);
+        word_dict_wrapper.set_unk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
-        UNK = word_dict_wrapper.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+        UNK = word_dict_wrapper.convert(UNK_STR); // get unk id at model (may be usefull for debugging)
     }
 
     void finish_read_training_data() { add_special_flag_and_freeze_dict(); }
@@ -275,7 +275,7 @@ struct BILSTMModel4Tagging
     void load_wordembedding_from_word2vec_txt_format(istream &is)
     {
         // set lookup parameters from outer word embedding
-        // using words_loopup_param.Initialize( word_id , value_vector )
+        // using words_loopup_param.initialize( word_id , value_vector )
         string line;
         vector<string> split_cont;
         split_cont.reserve(INPUT_DIM + 1); // word + numbers 
@@ -296,16 +296,16 @@ struct BILSTMModel4Tagging
                 continue;
             }
             string &word = split_cont.at(0);
-            Index word_id = word_dict.Convert(word);
+            Index word_id = word_dict.convert(word);
             if (word_id != UNK)
             { 
                 ++words_cnt_hit;
                 transform(split_cont.cbegin() + 1, split_cont.cend(), embedding_vec.begin(),
                     [](const string &f_str) { return stof(f_str);});
-                words_lookup_param->Initialize(word_id, embedding_vec);
+                words_lookup_param->initialize(word_id, embedding_vec);
             }
         }
-        BOOST_LOG_TRIVIAL(info) << "Initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE
+        BOOST_LOG_TRIVIAL(info) << "initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE
             << " words emebdding has been loading .";
     }
 
@@ -350,7 +350,7 @@ struct BILSTMModel4Tagging
         assert(WORD_DICT_SIZE == word_dict.size() && TAG_DICT_SIZE == tag_dict.size());
        
         // SET VALUE for special flag
-        UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+        UNK = word_dict.convert(UNK_STR); // get unk id at model (may be usefull for debugging)
 
         // 2. build model structure 
         po::variables_map var;
@@ -535,11 +535,11 @@ struct BILSTMModel4Tagging
                 sent_after_replace_unk.resize(p_sent->size());
                 for (size_t word_idx = 0; word_idx < p_sent->size(); ++word_idx)
                 {
-                    sent_after_replace_unk[word_idx] = word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
+                    sent_after_replace_unk[word_idx] = word_dict_wrapper.unk_replace_probability(p_sent->at(word_idx));
                 }
-                negative_loglikelihood(&sent_after_replace_unk, p_tag_seq, cg, &training_stat_per_report);
-                training_stat_per_report.loss += as_scalar(cg->forward());
-                cg->backward();
+                auto loss_expr = negative_loglikelihood(&sent_after_replace_unk, p_tag_seq, cg, &training_stat_per_report);
+                training_stat_per_report.loss += as_scalar(cg->forward(loss_expr));
+                cg->backward(loss_expr);
                 sgd.update(1.0);
                 delete cg;
 
@@ -635,8 +635,8 @@ struct BILSTMModel4Tagging
                 if (tag_seq[i] == predict_tag_seq[i]) ++acc_stat.correct_tags;
                 else if (p_error_output_os)
                 {
-                    *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << word_dict.Convert(sent[i])
-                        << "\t" << tag_dict.Convert(predict_tag_seq[i]) << "\t" << tag_dict.Convert(tag_seq[i]) << "\n" ;
+                    *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << word_dict.convert(sent[i])
+                        << "\t" << tag_dict.convert(predict_tag_seq[i]) << "\t" << tag_dict.convert(tag_seq[i]) << "\n" ;
                 }
             }
         }
@@ -669,11 +669,11 @@ struct BILSTMModel4Tagging
             ComputationGraph cg;
             do_predict(p_sent, &cg, &predict_seq);
             // output the result directly
-            os << p_raw_sent->at(0) << "_" << tag_dict.Convert(predict_seq.at(0));
+            os << p_raw_sent->at(0) << "_" << tag_dict.convert(predict_seq.at(0));
             for (unsigned k = 1; k < p_raw_sent->size(); ++k)
             {
                 os << SPLIT_DELIMITER
-                    << p_raw_sent->at(k) << "_" << tag_dict.Convert(predict_seq.at(k));
+                    << p_raw_sent->at(k) << "_" << tag_dict.convert(predict_seq.at(k));
             }
             os << "\n";
         }

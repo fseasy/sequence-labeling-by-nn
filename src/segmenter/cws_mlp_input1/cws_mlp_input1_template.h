@@ -5,6 +5,7 @@
 #include <boost/archive/text_oarchive.hpp>
 #include <boost/archive/text_iarchive.hpp>
 #include "segmenter/cws_module/token_module/cws_tag_definition.h"
+#include "dynet/expr.h"
 namespace slnn{
 namespace segmenter{
 namespace mlp_input1{
@@ -18,6 +19,8 @@ public:
     using AnnotatedDataRawT = typename TokenModuleT::AnnotatedDataRawT;
     using UnannotatedDataProcessedT = typename TokenModuleT::UnannotatedDataProcessedT;
     using UnannotatedDataRawT = typename TokenModuleT::UnannotatedDataRawT;
+    using NnExprT = typename NnModuleT::NnExprT;
+    using NnValueT = typename NnModuleT::NnValueT;
 public:
     const TokenModuleT* get_token_module() const { return &token_module; }
     TokenModuleT* get_token_module() { return &token_module; }
@@ -42,7 +45,7 @@ public:
     void set_model_structure_param_from_outer(const boost::program_options::variables_map &args);
     void finish_read_training_data();
     void build_model_structure();
-    void build_training_graph(const AnnotatedDataProcessedT& ann_processed_data);
+    dynet::expr::Expression build_training_graph(const AnnotatedDataProcessedT& ann_processed_data);
     std::vector<Index> predict(const UnannotatedDataProcessedT& unann_processed_data);
 private:
     TokenModuleT token_module;
@@ -147,12 +150,13 @@ build_model_structure()
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-void SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+dynet::expr::Expression
+SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 {
     AnnotatedDataProcessedT data_after_unk_replace = 
         token_module.replace_low_freq_token2unk(ann_processed_data);
-    nn.build_training_graph(data_after_unk_replace);
+    return nn.build_training_graph(data_after_unk_replace);
 }
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>

@@ -83,8 +83,8 @@ void SingleInputBigramModelHandler<SIModel>::do_read_annotated_dataset(std::istr
         tmp_word_cont[tmp_word_cont.size() - 1] += "_$";
         for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
         {
-            Index word_id = word_dict_wrapper.Convert(tmp_word_cont[i]) ;
-            Index tag_id = tag_dict.Convert(tmp_tag_cont[i]) ;
+            Index word_id = word_dict_wrapper.convert(tmp_word_cont[i]) ;
+            Index tag_id = tag_dict.convert(tmp_tag_cont[i]) ;
             sent.push_back(word_id) ;
             tag_seq.push_back(tag_id) ;
         }
@@ -123,7 +123,7 @@ void SingleInputBigramModelHandler<SIModel>::read_test_data(std::istream &is,
         sent.clear() ;
         for( size_t i = 0 ; i < raw_sent_bigram.size() ; ++i )
         {
-            sent.push_back(word_dict.Convert(raw_sent_bigram[i])) ;
+            sent.push_back(word_dict.convert(raw_sent_bigram[i])) ;
         }
         tmp_raw_sents.push_back(raw_sent) ; // still using raw sent for output 
         tmp_sents.push_back(sent) ;

@@ -37,9 +37,9 @@ void print_instance_pair(const vector<InstancePair> &cont, const dynet::Dict &wo
     {
         const IndexSeq &sent_indices = instance_pair.first,
             &tag_indices = instance_pair.second;
-        for (auto sent_id : sent_indices) cout << word_dict.Convert(sent_id) << " ";
+        for (auto sent_id : sent_indices) cout << word_dict.convert(sent_id) << " ";
         cout << "\n";
-        for (auto tag_id : tag_indices) cout << tag_dict.Convert(tag_id) << " ";
+        for (auto tag_id : tag_indices) cout << tag_dict.convert(tag_id) << " ";
         cout << "\n" << endl;
     }
 }
@@ -115,7 +115,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    dynet::Initialize(argc , argv , 1234); // 
+    dynet::initialize(argc , argv , 1234); // 
     BILSTMModel4NER ner_model;
 
     // reading traing data , get word dict size and output tag number
@@ -245,7 +245,7 @@ int devel_process(int argc, char *argv[] , const string &program_name)
     tmpis_for_check.close();
 
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMModel4NER ner_model;
 
     // Load model 
@@ -324,7 +324,7 @@ int predict_process(int argc, char *argv[] , const string &program_name)
     else model_path = var_map["model"].as<string>();
 
     // Init 
-    dynet::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMModel4NER ner_model;
 
     // load model 

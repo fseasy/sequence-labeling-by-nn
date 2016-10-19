@@ -40,14 +40,14 @@ struct Word2vecEmbeddingHelper
     *      dict to map word 2 index
     * fixed_word_dim : [in], unsigned
            for check when loading word embedding
-    * fixed_lookup_param : [in], dynet::LookupParameters*
+    * fixed_lookup_param : [in], dynet::LookupParameter 
     *      to store the word embedding
     * RETURN
     * ------
     * void
     */
     static
-        void load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameters *fixed_lookup_param);
+        void load_fixed_embedding(std::ifstream &is, dynet::Dict &fixed_dict, unsigned fixed_word_dim, dynet::LookupParameter fixed_lookup_param);
 
     static float calc_hit_rate(dynet::Dict &fixed_dict, dynet::Dict &dynamic_dict, const std::string &fixed_dict_unk_str);
 };

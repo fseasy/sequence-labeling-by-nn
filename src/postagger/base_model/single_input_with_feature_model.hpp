@@ -111,9 +111,9 @@ bool SingleInputWithFeatureModel<RNNDerived>::is_dict_frozen()
 template <typename RNNDerived>
 void SingleInputWithFeatureModel<RNNDerived>::freeze_dict()
 {
-    word_dict_wrapper.Freeze();
-    postag_dict.Freeze();
-    word_dict_wrapper.SetUnk(UNK_STR);
+    word_dict_wrapper.freeze();
+    postag_dict.freeze();
+    word_dict_wrapper.set_unk(UNK_STR);
     pos_feature.freeze_dict();
 }
 
@@ -131,10 +131,10 @@ void SingleInputWithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sen
         tmp_postag_index_seq(seq_len);
     for( size_t i = 0 ; i < seq_len; ++i )
     {
-        tmp_sent_index_seq[i] = word_dict_wrapper.Convert(
+        tmp_sent_index_seq[i] = word_dict_wrapper.convert(
             UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber)
         );
-        tmp_postag_index_seq[i] = postag_dict.Convert(postag_seq[i]);
+        tmp_postag_index_seq[i] = postag_dict.convert(postag_seq[i]);
     }
     POSFeature::POSFeatureGroupSeq feature_gp_str_seq;
     POSFeatureExtractor::extract(sent, feature_gp_str_seq);
@@ -154,7 +154,7 @@ void SingleInputWithFeatureModel<RNNDerived>::input_seq2index_seq(const Seq &sen
     IndexSeq tmp_sent_index_seq(seq_len);
     for( size_t i = 0 ; i < seq_len; ++i )
     {
-        tmp_sent_index_seq[i] = word_dict_wrapper.Convert(
+        tmp_sent_index_seq[i] = word_dict_wrapper.convert(
             UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber)
         );
     }
@@ -177,7 +177,7 @@ void SingleInputWithFeatureModel<RNNDerived>::replace_word_with_unk(const IndexS
     IndexSeq tmp_rep_sent(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_rep_sent[i] = word_dict_wrapper.ConvertProbability(sent[i]);
+        tmp_rep_sent[i] = word_dict_wrapper.unk_replace_probability(sent[i]);
     }
     swap(replaced_sent, tmp_rep_sent);
     pos_feature.do_repalce_feature_with_unk_in_copy(feature_gp_seq, replaced_feature_gp_seq);
@@ -190,7 +190,7 @@ void SingleInputWithFeatureModel<RNNDerived>::postag_index_seq2postag_str_seq(co
     Seq tmp_str_seq(seq_len);
     for( size_t i = 0; i < seq_len; ++i )
     {
-        tmp_str_seq[i] = postag_dict.Convert(postag_index_seq[i]);
+        tmp_str_seq[i] = postag_dict.convert(postag_index_seq[i]);
     }
     swap(postag_str_seq, tmp_str_seq);
 }

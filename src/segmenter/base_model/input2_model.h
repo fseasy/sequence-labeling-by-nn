@@ -41,7 +41,7 @@ public :
                          const IndexSeq &dynamic_sent, const IndexSeq &fixed_sent,
                          IndexSeq &pred_tag_seq) ;
 
-    dynet::LookupParameters* get_fixed_lookup_param(){ return input_layer->fixed_lookup_param ; }
+    dynet::LookupParameter  get_fixed_lookup_param(){ return input_layer->fixed_lookup_param ; }
     dynet::Dict& get_dynamic_dict(){ return dynamic_dict ;  } 
     dynet::Dict& get_fixed_dict(){ return fixed_dict ; }
     dynet::Dict& get_tag_dict(){ return tag_dict ; } 

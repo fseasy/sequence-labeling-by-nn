@@ -172,8 +172,8 @@ void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &i
             std::string word = strpair.substr(0, delim_pos);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
+            Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index tag_id = tag_dict.convert(strpair.substr(delim_pos + 1));
             sent.push_back(word_id);
             tag_seq.push_back(tag_id);
         }
@@ -197,9 +197,9 @@ void SingleInputModelHandler<SIModel>::read_training_data_and_build_dicts(std::i
     assert(!word_dict.is_frozen() && !tag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents, tag_seqs);
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(sim->UNK_STR);
-    tag_dict.Freeze();
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(sim->UNK_STR);
+    tag_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
@@ -235,7 +235,7 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
         sent.resize(raw_sent.size()) ;
         for( size_t i = 0 ; i < raw_sent.size() ; ++i )
         {
-            Index word_id = word_dict.Convert(raw_sent.at(i)) ;
+            Index word_id = word_dict.convert(raw_sent.at(i)) ;
             sent.at(i) = word_id ;
         }
         tmp_raw_sents.push_back(raw_sent) ;
@@ -303,11 +303,11 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
                 for( size_t word_idx = 0; word_idx < sent.size(); ++word_idx )
                 {
                     dynamic_sent_after_replace_unk[word_idx] =
-                        word_dict_wrapper.ConvertProbability(sent.at(word_idx));
+                        word_dict_wrapper.unk_replace_probability(sent.at(word_idx));
                 }
-                sim->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = sim->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
@@ -417,11 +417,11 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         IndexSeq pred_tag_seq;
         dynet::ComputationGraph cg;
         sim->predict(cg, sent, pred_tag_seq);
-        os << raw_sent[0] << "_" << tag_dict.Convert(pred_tag_seq[0]) ;
+        os << raw_sent[0] << "_" << tag_dict.convert(pred_tag_seq[0]) ;
         for( size_t i = 1 ; i < raw_sent.size() ; ++i )
         { 
             os << OUT_SPLIT_DELIMITER 
-                << raw_sent[i] << "_" << tag_dict.Convert(pred_tag_seq[i]) ; 
+                << raw_sent[i] << "_" << tag_dict.convert(pred_tag_seq[i]) ; 
         }
         os << "\n";
         stat.total_tags += pred_tag_seq.size() ;

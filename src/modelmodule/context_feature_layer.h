@@ -8,7 +8,7 @@ namespace slnn{
 
 struct ContextFeatureLayer
 {
-    ContextFeatureLayer(dynet::Model *m, dynet::LookupParameters *word_lookup_param);
+    ContextFeatureLayer(dynet::Model *m, const dynet::LookupParameter &word_lookup_param);
     void new_graph(dynet::ComputationGraph &cg);
     dynet::expr::Expression build_feature_expr(const ContextFeatureData &context_feature_data);
     
@@ -16,10 +16,10 @@ struct ContextFeatureLayer
         std::vector<dynet::expr::Expression> &context_feature_exprs);
 private:
     dynet::expr::Expression build_word_expr(Index word_id);
-    dynet::LookupParameters *word_lookup_param;
+    dynet::LookupParameter word_lookup_param;
     dynet::ComputationGraph *pcg;
-    dynet::Parameters *word_sos_param;
-    dynet::Parameters *word_eos_param;
+    dynet::Parameter word_sos_param;
+    dynet::Parameter word_eos_param;
     dynet::expr::Expression word_sos_expr;
     dynet::expr::Expression word_eos_expr;
 };

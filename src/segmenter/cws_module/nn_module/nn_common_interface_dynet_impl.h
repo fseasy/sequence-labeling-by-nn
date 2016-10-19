@@ -12,26 +12,30 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
-class NeuralNetworkCommonInterfaceCnnImpl : public NeuralNetworkCommonInterface
+template <>
+class NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>
 {
     friend class boost::serialization::access;
 public:
-    NeuralNetworkCommonInterfaceCnnImpl(int argc, char**argv, unsigned seed);
-    ~NeuralNetworkCommonInterfaceCnnImpl();
-    NeuralNetworkCommonInterfaceCnnImpl(const NeuralNetworkCommonInterfaceCnnImpl &) = delete;
-    NeuralNetworkCommonInterfaceCnnImpl& operator=(const NeuralNetworkCommonInterfaceCnnImpl &) = delete;
+    using NnExprT = dynet::expr::Expression;
+    using NnValueT = dynet::Tensor;
+public:
+    NeuralNetworkCommonInterface(int argc, char**argv, unsigned seed);
+    ~NeuralNetworkCommonInterface();
+    NeuralNetworkCommonInterface(const NeuralNetworkCommonInterface &) = delete; // here param is the tempalte instance, not template
+    NeuralNetworkCommonInterface& operator=(const NeuralNetworkCommonInterface &) = delete;
     // training
-    virtual void set_update_method(const std::string &optmization_name) override;
-    virtual void update(slnn::type::real scale) override;
-    virtual void update_epoch() override;
-    virtual void forward() override;
-    virtual slnn::type::real forward_as_scalar() override;
-    virtual std::vector<slnn::type::real> forward_as_vector() override;
-    virtual void backward() override;
+    void set_update_method(const std::string &optmization_name);
+    void update(slnn::type::real scale);
+    void update_epoch();
+    const NnValueT& forward(const NnExprT&);
+    slnn::type::real as_scalar(const NnValueT&);
+    std::vector<slnn::type::real> as_vector(const NnValueT&);
+    void backward(const NnExprT&);
     // stash model
-    virtual void stash_model() override;
-    virtual bool stash_model_when_best(slnn::type::real current_score) override;
-    virtual bool reset2stashed_model() override;
+    void stash_model();
+    bool stash_model_when_best(slnn::type::real current_score);
+    bool reset2stashed_model();
 public:
     void clear_cg(){ pcg->clear(); }; // ! BUG: using clear() will cause Error -> CNN get dim error!(BUG for it.)
     void reset_cg(){ delete pcg; pcg = new dynet::ComputationGraph(); }
@@ -50,23 +54,28 @@ private:
     unsigned dynet_rng_seed;
 };
 
+using NeuralNetworkCommonInterfaceCnnImpl = NeuralNetworkCommonInterface<nn_framework::NN_DyNet, 
+    dynet::expr::Expression, dynet::Tensor>;
+
 /*********************************************
  * Inline Implementation
  *********************************************/
 
 inline 
-NeuralNetworkCommonInterfaceCnnImpl::NeuralNetworkCommonInterfaceCnnImpl(int argc, char **argv, unsigned seed)
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+NeuralNetworkCommonInterface(int argc, char **argv, unsigned seed)
     :best_score(0.f),
     best_model_tmp_ss(""),
     trainer(nullptr),
     pcg(new dynet::ComputationGraph()),
     dynet_model(new dynet::Model())
 {
-    dynet::Initialize(argc, argv, seed); 
+    dynet::initialize(argc, argv, seed); 
 }
 
 inline
-NeuralNetworkCommonInterfaceCnnImpl::~NeuralNetworkCommonInterfaceCnnImpl()
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+~NeuralNetworkCommonInterface()
 {
     delete trainer;
     delete pcg;
@@ -74,43 +83,57 @@ NeuralNetworkCommonInterfaceCnnImpl::~NeuralNetworkCommonInterfaceCnnImpl()
 }
 
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::update(slnn::type::real scale)
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+update(slnn::type::real scale)
 {
     trainer->update(scale);
 }
 
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::update_epoch()
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+update_epoch()
 {
     trainer->update_epoch();
 }
 
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::forward()
+const NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::NnValueT&
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+forward(const NnExprT& expr)
 {
-    pcg->forward();
+    return pcg->incremental_forward(expr);
 }
 
 inline
-slnn::type::real NeuralNetworkCommonInterfaceCnnImpl::forward_as_scalar()
+slnn::type::real 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+as_scalar(const NnValueT& tensor_val)
 {
-    return dynet::as_scalar(pcg->forward());
+    return dynet::as_scalar(tensor_val);
 }
 
 inline
-std::vector<slnn::type::real> NeuralNetworkCommonInterfaceCnnImpl::forward_as_vector()
+std::vector<slnn::type::real> 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+as_vector(const NnValueT& tensor_val)
 {
-    return dynet::as_vector(pcg->forward());
+    return dynet::as_vector(tensor_val);
 }
 
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::backward()
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+backward(const NnExprT& expr)
 {
-    pcg->backward();
+    pcg->backward(expr);
 }
 
 inline 
-void NeuralNetworkCommonInterfaceCnnImpl::stash_model()
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+stash_model()
 {
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss); // to construct a text_oarchive using stringstream
@@ -118,7 +141,9 @@ void NeuralNetworkCommonInterfaceCnnImpl::stash_model()
 }
 
 inline 
-bool NeuralNetworkCommonInterfaceCnnImpl::stash_model_when_best(slnn::type::real current_score)
+bool 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+stash_model_when_best(slnn::type::real current_score)
 {
     if( current_score > best_score )
     {
@@ -131,7 +156,9 @@ bool NeuralNetworkCommonInterfaceCnnImpl::stash_model_when_best(slnn::type::real
 }
 
 inline 
-bool NeuralNetworkCommonInterfaceCnnImpl::reset2stashed_model()
+bool 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+reset2stashed_model()
 {
     if( best_model_tmp_ss.rdbuf()->in_avail() != 0 )
     {
@@ -144,7 +171,9 @@ bool NeuralNetworkCommonInterfaceCnnImpl::reset2stashed_model()
 
 template <typename Archive>
 inline
-void NeuralNetworkCommonInterfaceCnnImpl::serialize(Archive &ar, const unsigned version)
+void
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+serialize(Archive &ar, const unsigned version)
 {
     ar & *dynet_model;
 }

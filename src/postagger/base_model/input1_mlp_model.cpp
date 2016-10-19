@@ -82,10 +82,10 @@ void Input1MLPModel::input_seq2index_seq(const Seq &sent,
         tmp_postag_index_seq(seq_len);
     for( size_t i = 0 ; i < seq_len; ++i )
     {
-        tmp_sent_index_seq[i] = word_dict_wrapper.Convert(
+        tmp_sent_index_seq[i] = word_dict_wrapper.convert(
             UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber)
         );
-        tmp_postag_index_seq[i] = postag_dict.Convert(postag_seq[i]);
+        tmp_postag_index_seq[i] = postag_dict.convert(postag_seq[i]);
     }
     context_feature.extract(tmp_sent_index_seq, context_feature_gp_seq);
 
@@ -107,7 +107,7 @@ void Input1MLPModel::input_seq2index_seq(const Seq &sent,
     IndexSeq tmp_sent_index_seq(seq_len);
     for( size_t i = 0 ; i < seq_len; ++i )
     {
-        tmp_sent_index_seq[i] = word_dict_wrapper.Convert(
+        tmp_sent_index_seq[i] = word_dict_wrapper.convert(
             UTF8Processing::replace_number(sent[i], StrOfReplaceNumber, LenStrOfRepalceNumber)
         );
     }

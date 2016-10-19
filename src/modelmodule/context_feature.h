@@ -48,7 +48,7 @@ private:
 inline
 void ContextFeature::replace_wordid_with_unk(Index &wordid)
 {
-    if( WordSOSId != wordid && WordEOSId != wordid ){ wordid = rwrapper.ConvertProbability(wordid); }
+    if( WordSOSId != wordid && WordEOSId != wordid ){ wordid = rwrapper.unk_replace_probability(wordid); }
 }
 
 inline 

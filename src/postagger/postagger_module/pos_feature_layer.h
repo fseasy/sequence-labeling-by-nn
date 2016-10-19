@@ -22,13 +22,13 @@ public:
                                               std::vector<dynet::expr::Expression> &pos_featrues_exprs);
 
 private:
-    dynet::LookupParameters *prefix_suffix_len1_lookup_param;
-    dynet::LookupParameters *prefix_suffix_len2_lookup_param;
-    dynet::LookupParameters *prefix_suffix_len3_lookup_param;
-    dynet::LookupParameters *char_length_lookup_param;
+    dynet::LookupParameter prefix_suffix_len1_lookup_param;
+    dynet::LookupParameter prefix_suffix_len2_lookup_param;
+    dynet::LookupParameter prefix_suffix_len3_lookup_param;
+    dynet::LookupParameter char_length_lookup_param;
     dynet::ComputationGraph *pcg ;
 
-    dynet::expr::Expression build_prefix_suffix_feature_expr(dynet::LookupParameters* lookup_param, Index idx);
+    dynet::expr::Expression build_prefix_suffix_feature_expr(dynet::LookupParameter  lookup_param, Index idx);
     dynet::expr::Expression build_char_length_feature_expr(Index idx);
 };
 
@@ -40,7 +40,7 @@ void POSFeatureLayer::new_graph(dynet::ComputationGraph &cg)
 }
 
 inline
-dynet::expr::Expression POSFeatureLayer::build_prefix_suffix_feature_expr(dynet::LookupParameters* lookup_param, Index idx)
+dynet::expr::Expression POSFeatureLayer::build_prefix_suffix_feature_expr(dynet::LookupParameter  lookup_param, Index idx)
 {
     if( idx == POSFeature::FeatureEmptyIndexPlaceholder )
     {

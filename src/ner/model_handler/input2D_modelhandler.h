@@ -189,9 +189,9 @@ void Input2DModelHandler<SIModel>::do_read_annotated_dataset(std::istream &is,
             std::string nertag = part.substr(nertag_pos + 1);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index postag_id = postag_dict.Convert(postag);
-            Index nertag_id = ner_dict.Convert(nertag);
+            Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index postag_id = postag_dict.convert(postag);
+            Index nertag_id = ner_dict.convert(nertag);
             sent.push_back(word_id);
             postag_seq.push_back(postag_id);
             ner_seq.push_back(nertag_id);
@@ -220,10 +220,10 @@ void Input2DModelHandler<SIModel>::read_training_data_and_build_dicts(std::istre
     assert(!word_dict_wrapper.is_frozen() && !postag_dict.is_frozen() && !ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents, postag_seqs , ner_seqs);
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(sim->UNK_STR);
-    postag_dict.Freeze();
-    ner_dict.Freeze() ;
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(sim->UNK_STR);
+    postag_dict.freeze();
+    ner_dict.freeze() ;
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
@@ -276,8 +276,8 @@ void Input2DModelHandler<SIModel>::read_test_data(std::istream &is,
             std::string postag = part.substr(delim_pos + 1);
             std::string number_transed_word = replace_number(raw_word);
             raw_sent[i] = raw_word ;
-            words_index_seq[i] = word_dict.Convert(number_transed_word);
-            postag_index_seq[i] = postag_dict.Convert(postag);
+            words_index_seq[i] = word_dict.convert(number_transed_word);
+            postag_index_seq[i] = postag_dict.convert(postag);
         }
 
     }
@@ -348,11 +348,11 @@ void Input2DModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sents,
                 for( size_t word_idx = 0; word_idx < sent.size(); ++word_idx )
                 {
                     sent_after_replace_unk[word_idx] =
-                        word_dict_wrapper.ConvertProbability(sent.at(word_idx));
+                        word_dict_wrapper.unk_replace_probability(sent.at(word_idx));
                 }
-                sim->build_loss(cg, sent_after_replace_unk, postag_seq , ner_seq );
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = sim->build_loss(cg, sent_after_replace_unk, postag_seq , ner_seq );
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
@@ -470,14 +470,14 @@ void Input2DModelHandler<SIModel>::predict(std::istream &is, std::ostream &os)
         dynet::ComputationGraph cg;
         sim->predict(cg, sent, postag_seq, pred_ner_seq);
         os << raw_sent[0] 
-            << "/" << postag_dict.Convert(postag_seq[0]) 
-            << "#" << ner_dict.Convert(pred_ner_seq[0]);
+            << "/" << postag_dict.convert(postag_seq[0]) 
+            << "#" << ner_dict.convert(pred_ner_seq[0]);
         for( size_t i = 1 ; i < raw_sent.size() ; ++i )
         { 
             os << OUT_SPLIT_DELIMITER 
                 << raw_sent[i] 
-                << "/" << postag_dict.Convert(postag_seq[i]) 
-                << "#" << ner_dict.Convert(pred_ner_seq[i]); 
+                << "/" << postag_dict.convert(postag_seq[i]) 
+                << "#" << ner_dict.convert(pred_ner_seq[i]); 
         }
         os << "\n";
         stat.total_tags += pred_ner_seq.size() ;

@@ -15,9 +15,9 @@ struct Index2ExprLayer
     void new_graph(dynet::ComputationGraph &cg);
     void index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<dynet::expr::Expression> &exprs);
     dynet::expr::Expression index2expr(Index index);
-    dynet::LookupParameters* get_lookup_param(){ return lookup_param; }
+    dynet::LookupParameter  get_lookup_param(){ return lookup_param; }
 protected:
-    dynet::LookupParameters *lookup_param;
+    dynet::LookupParameter lookup_param;
     dynet::ComputationGraph *pcg;
 };
 
@@ -36,7 +36,7 @@ struct ShiftedIndex2ExprLayer : public Index2ExprLayer
 private:
     ShiftDirection shift_direction;
     unsigned shift_distance;
-    std::vector<dynet::Parameters *> padding_parameters;
+    std::vector<dynet::Parameter> padding_parameters;
 };
 
 
@@ -52,8 +52,8 @@ struct WindowExprGenerateLayer
     void new_graph(dynet::ComputationGraph &cg);
     std::vector<dynet::expr::Expression> generate_window_expr_by_concatenating(const std::vector<dynet::expr::Expression> &unit_exprs);
     // data
-    dynet::Parameters *sos_param;
-    dynet::Parameters *eos_param;
+    dynet::Parameter sos_param;
+    dynet::Parameter eos_param;
     dynet::expr::Expression sos_expr;
     dynet::expr::Expression eos_expr;
     unsigned window_sz;

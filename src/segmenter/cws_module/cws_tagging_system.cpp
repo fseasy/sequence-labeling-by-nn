@@ -169,10 +169,10 @@ void CWSTaggingSystem::parse_word_tag2words(const Seq &raw_words, const IndexSeq
 
 void CWSTaggingSystem::build(dynet::Dict &tag_dict)
 {
-    B_ID = tag_dict.Convert(B_TAG) ;
-    M_ID = tag_dict.Convert(M_TAG) ;
-    E_ID = tag_dict.Convert(E_TAG) ;
-    S_ID = tag_dict.Convert(S_TAG) ;
+    B_ID = tag_dict.convert(B_TAG) ;
+    M_ID = tag_dict.convert(M_TAG) ;
+    E_ID = tag_dict.convert(E_TAG) ;
+    S_ID = tag_dict.convert(S_TAG) ;
 }
 
 bool CWSTaggingSystem::can_emit(size_t cur_pos, Index cur_tag_id )

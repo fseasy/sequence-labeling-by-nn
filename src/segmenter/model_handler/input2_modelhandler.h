@@ -161,11 +161,11 @@ void Input2ModelHandler<I2Model>::build_fixed_dict_from_word2vec_file(std::ifstr
         std::string::size_type delim_pos = line.find(" ");
         assert(delim_pos != std::string::npos);
         std::string word = line.substr(0, delim_pos);
-        fixed_dict.Convert(word);  // add to dict
+        fixed_dict.convert(word);  // add to dict
     }
     //  freeze & add unk to fixed_dict
-    fixed_dict.Freeze();
-    fixed_dict.SetUnk(i2m->UNK_STR);
+    fixed_dict.freeze();
+    fixed_dict.set_unk(i2m->UNK_STR);
     if(!is_standard_word2vec_format)
     {
         // the unstandard word2vec embedding
@@ -183,7 +183,7 @@ template <typename I2Model>
 void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
 {
     // set lookup parameters from outer word embedding
-    // using words_loopup_param.Initialize( word_id , value_vector )
+    // using words_loopup_param.initialize( word_id , value_vector )
     BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     std::string line;
     std::vector<std::string> split_cont;
@@ -194,8 +194,8 @@ void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
     std::vector<dynet::real> embedding_vec(i2m->fixed_word_dim , 0.f);
     dynet::Dict &fixed_dict = i2m->get_fixed_dict() ;
     dynet::Dict &dynamic_dict = i2m->get_fixed_dict() ;
-    dynet::LookupParameters *fixed_lookup_param = i2m->get_fixed_lookup_param() ;
-    Index dynamic_unk = dynamic_dict.Convert(i2m->UNK_STR); // for calc hit rate
+    dynet::LookupParameter fixed_lookup_param = i2m->get_fixed_lookup_param() ;
+    Index dynamic_unk = dynamic_dict.convert(i2m->UNK_STR); // for calc hit rate
     while (getline(is, line))
     {
         ++line_cnt;
@@ -207,13 +207,13 @@ void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
             continue;
         }
         std::string &word = split_cont.at(0);
-        Index word_id = fixed_dict.Convert(word);
+        Index word_id = fixed_dict.convert(word);
         for (size_t idx = 1; idx < split_cont.size(); ++idx)
         {
             embedding_vec[idx - 1] = std::stof(split_cont[idx]);
         }
-        fixed_lookup_param->Initialize(word_id, embedding_vec);
-        if(dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
+        fixed_lookup_param->initialize(word_id, embedding_vec);
+        if(dynamic_dict.convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     size_t fixed_dict_word_num = i2m->fixed_dict_size - 1 ; // another UNK is not word
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
@@ -262,9 +262,9 @@ void Input2ModelHandler<I2Model>::do_read_annotated_dataset(std::istream &is,
             CWSTaggingSystem::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
             for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
             {
-                Index dword_id = dynamic_dict_wrapper.Convert(tmp_word_cont[i]) ;
-                Index fword_id = fixed_dict.Convert(tmp_word_cont[i]);
-                Index tag_id = tag_dict.Convert(tmp_tag_cont[i]) ;
+                Index dword_id = dynamic_dict_wrapper.convert(tmp_word_cont[i]) ;
+                Index fword_id = fixed_dict.convert(tmp_word_cont[i]);
+                Index tag_id = tag_dict.convert(tmp_tag_cont[i]) ;
                 dsent.push_back(dword_id);
                 fsent.push_back(fword_id);
                 tag_seq.push_back(tag_id);
@@ -294,9 +294,9 @@ void Input2ModelHandler<I2Model>::read_training_data_and_build_dicts(std::istrea
     assert(!dword_dict.is_frozen() && !tag_dict.is_frozen() && fword_dict.is_frozen()); // fixed dict should be frozen already
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, dsents, fsents, tag_seqs);
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(i2m->UNK_STR);
-    tag_dict.Freeze();
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(i2m->UNK_STR);
+    tag_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
@@ -339,8 +339,8 @@ void Input2ModelHandler<I2Model>::read_test_data(std::istream &is,
         fsent.clear();
         for( size_t i = 0 ; i < raw_sent.size() ; ++i )
         {
-            dsent.push_back(dword_dict.Convert(raw_sent[i]));
-            fsent.push_back(fword_dict.Convert(raw_sent[i]));
+            dsent.push_back(dword_dict.convert(raw_sent[i]));
+            fsent.push_back(fword_dict.convert(raw_sent[i]));
         }
         tmp_raw_sents.push_back(raw_sent) ;
         tmp_dsents.push_back(dsent);
@@ -414,11 +414,11 @@ void Input2ModelHandler<I2Model>::train(const std::vector<IndexSeq> *p_dsents,
                 for( size_t word_idx = 0; word_idx < dsent.size(); ++word_idx )
                 {
                     dynamic_sent_after_replace_unk[word_idx] =
-                        dynamic_dict_wrapper.ConvertProbability(dsent.at(word_idx));
+                        dynamic_dict_wrapper.unk_replace_probability(dsent.at(word_idx));
                 }
-                i2m->build_loss(cg, dynamic_sent_after_replace_unk, fsent, tag_seq);
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = i2m->build_loss(cg, dynamic_sent_after_replace_unk, fsent, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += dsent.size() ;

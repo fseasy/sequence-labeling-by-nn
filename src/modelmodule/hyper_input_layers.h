@@ -9,25 +9,25 @@ namespace slnn{
 
 struct Input1
 {
-    dynet::LookupParameters *word_lookup_param;
+    dynet::LookupParameter word_lookup_param;
     dynet::ComputationGraph *pcg;
     Input1(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim);
     ~Input1();
-    dynet::LookupParameters *get_lookup_param(){ return word_lookup_param; };
+    dynet::LookupParameter get_lookup_param(){ return word_lookup_param; };
     void new_graph(dynet::ComputationGraph &cg);
     void build_inputs(const IndexSeq &sent , std::vector<dynet::expr::Expression> &input_exprs);
 };
 
 struct Input1WithFeature
 {
-    dynet::LookupParameters *word_lookup_param;
+    dynet::LookupParameter word_lookup_param;
     Merge2Layer m2_layer;
     dynet::ComputationGraph *pcg;
     NonLinearFunc *nonlinear_func;
     Input1WithFeature(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim,
         unsigned feature_embedding_dim, unsigned merge_out_dim,
         NonLinearFunc *nonlinear_func=&dynet::expr::rectify);
-    dynet::LookupParameters *get_lookup_param(){ return word_lookup_param; }
+    dynet::LookupParameter get_lookup_param(){ return word_lookup_param; }
     void new_graph(dynet::ComputationGraph &cg);
     void build_inputs(const IndexSeq &sent , const std::vector<dynet::expr::Expression> &feature_exprs,
         std::vector<dynet::expr::Expression> &input_exprs);
@@ -35,8 +35,8 @@ struct Input1WithFeature
 
 struct Input2D
 {
-    dynet::LookupParameters *dynamic_lookup_param1,
-        *dynamic_lookup_param2;
+    dynet::LookupParameter dynamic_lookup_param1,
+        dynamic_lookup_param2;
     Merge2Layer m2_layer;
     dynet::ComputationGraph *pcg;
     NonLinearFunc *nonlinear_func;
@@ -51,8 +51,8 @@ struct Input2D
 
 struct Input2
 {
-    dynet::LookupParameters *dynamic_lookup_param,
-        *fixed_lookup_param;
+    dynet::LookupParameter dynamic_lookup_param,
+        fixed_lookup_param;
     Merge2Layer m2_layer;
     dynet::ComputationGraph *pcg;
     NonLinearFunc *nonlinear_func;
@@ -68,8 +68,8 @@ struct Input2
 
 struct Input2WithFeature
 {
-    dynet::LookupParameters *dynamic_lookup_param,
-        *fixed_lookup_param;
+    dynet::LookupParameter dynamic_lookup_param,
+        fixed_lookup_param;
     Merge3Layer m3_layer;
     dynet::ComputationGraph *pcg;
     NonLinearFunc *nonlinear_func;
@@ -87,9 +87,9 @@ struct Input2WithFeature
 
 struct Input3
 {
-    dynet::LookupParameters *dynamic_lookup_param1,
-        *dynamic_lookup_param2 ,
-        *fixed_lookup_param;
+    dynet::LookupParameter dynamic_lookup_param1,
+        dynamic_lookup_param2 ,
+        fixed_lookup_param;
     Merge3Layer m3_layer;
     dynet::ComputationGraph *pcg;
     NonLinearFunc *nonlinear_func;
@@ -106,12 +106,12 @@ struct Input3
 
 struct BareInput1
 {
-    dynet::LookupParameters *word_lookup_param;
+    dynet::LookupParameter word_lookup_param;
     dynet::ComputationGraph *pcg;
     unsigned nr_exprs;
     std::vector<dynet::expr::Expression> exprs;
     BareInput1(dynet::Model *m, unsigned vocabulary_size, unsigned word_embedding_dim, unsigned nr_extra_feature_exprs);
-    dynet::LookupParameters *get_lookup_param(){ return word_lookup_param; }
+    dynet::LookupParameter get_lookup_param(){ return word_lookup_param; }
     void new_graph(dynet::ComputationGraph &cg);
     dynet::expr::Expression
         build_input(Index word_idx, const std::vector<dynet::expr::Expression> &extra_feature_exprs);
@@ -121,7 +121,7 @@ struct BareInput1
 
 struct AnotherBareInput1
 {
-    dynet::LookupParameters *word_lookup_param;
+    dynet::LookupParameter word_lookup_param;
     dynet::ComputationGraph *pcg;
     AnotherBareInput1(dynet::Model *m, unsigned vocabulary_size, unsigned word_embedding_dim);
     void new_graph(dynet::ComputationGraph &cg);

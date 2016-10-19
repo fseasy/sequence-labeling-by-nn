@@ -37,7 +37,7 @@ void read_annotated_dataset(ifstream &is , dynet::Dict &tag_dict , vector<slnn::
             slnn::CWSTaggingSystem::parse_words2word_tag(words_line, tmp_word_cont, tmp_tag_cont) ;
             for( size_t i = 0 ; i < tmp_word_cont.size() ; ++i )
             {
-                slnn::Index tag_id = tag_dict.Convert(tmp_tag_cont[i]) ;
+                slnn::Index tag_id = tag_dict.convert(tmp_tag_cont[i]) ;
                 tag_seq.push_back(tag_id) ;
             }
         }

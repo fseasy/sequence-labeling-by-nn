@@ -49,11 +49,11 @@ struct DoubleChannelModel4POSTAG
     Merge3Layer *merge_bilstm_and_pretag_layer;
     DenseLayer *tag_output_linear_layer;
 
-    dynet::LookupParameters *dynamic_words_lookup_param;
-    dynet::LookupParameters *fixed_words_lookup_param;
-    dynet::LookupParameters *postags_lookup_param;
+    dynet::LookupParameter dynamic_words_lookup_param;
+    dynet::LookupParameter fixed_words_lookup_param;
+    dynet::LookupParameter postags_lookup_param;
     
-    dynet::Parameters *TAG_SOS_param;
+    dynet::Parameter TAG_SOS_param;
 
 
     // Dict

@@ -284,9 +284,9 @@ void Input2WithFeatureModelHandler<RNNDerived, I2Model>::train(const std::vector
                 IndexSeq sent_after_replace ;
                 POSFeature::POSFeatureIndexGroupSeq feature_gp_seq_after_replace;
                 i2m->replace_word_with_unk(dynamic_sent, feature_gp_seq, sent_after_replace, feature_gp_seq_after_replace);
-                i2m->build_loss(cg, sent_after_replace, fixed_sent, feature_gp_seq_after_replace, tag_seq);
-                dynet::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = i2m->build_loss(cg, sent_after_replace, fixed_sent, feature_gp_seq_after_replace, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += dynamic_sent.size() ;

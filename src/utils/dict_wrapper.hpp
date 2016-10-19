@@ -20,9 +20,9 @@ namespace slnn {
             freq_records.reserve(0xFFFF); // 60K space
         }
 
-        inline int Convert(const std::string& word)
+        inline int convert(const std::string& word)
         {
-            Index word_idx = rd.Convert(word);
+            Index word_idx = rd.convert(word);
             if (!rd.is_frozen())
             {
                 if (static_cast<unsigned>(word_idx) + 1U > freq_records.size())
@@ -34,14 +34,14 @@ namespace slnn {
             }
             return word_idx;
         }
-        void SetUnk(const std::string& word)
+        void set_unk(const std::string& word)
         {
-            rd.SetUnk(word);
-            UNK = rd.Convert(word);
+            rd.set_unk(word);
+            UNK = rd.convert(word);
         }
-        void Freeze() { rd.Freeze(); }
+        void freeze() { rd.freeze(); }
         bool is_frozen() { return rd.is_frozen(); }
-        int ConvertProbability(Index word_idx)
+        int unk_replace_probability(Index word_idx)
         {
             if (word_idx == UNK) return UNK; // UNK is not in freq_records
             assert(static_cast<unsigned>(word_idx) < freq_records.size());

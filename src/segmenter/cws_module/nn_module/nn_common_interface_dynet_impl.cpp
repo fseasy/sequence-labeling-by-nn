@@ -5,7 +5,9 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
-void NeuralNetworkCommonInterfaceCnnImpl::set_update_method(const std::string &optmization_name)
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+set_update_method(const std::string &optmization_name)
 {
     std::string opt_norm_name(optmization_name);
     for( char &c : opt_norm_name ){ c = ::tolower(c); }

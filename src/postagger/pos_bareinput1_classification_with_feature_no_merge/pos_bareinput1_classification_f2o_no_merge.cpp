@@ -107,7 +107,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     char **dynet_argv_ptr = dynet_argv.get();
-    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler;
 
     // pre-open model file, avoid fail after a long time training
@@ -187,7 +187,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     char **dynet_argv_ptr = dynet_argv.get();
-    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -254,7 +254,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     char **dynet_argv_ptr = dynet_argv.get();
-    dynet::Initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     SingleInputWithFeatureModelHandler<RNNDerived, POSBareInput1ClassificationF2OModel<RNNDerived>> model_handler ;
 
     // load model 

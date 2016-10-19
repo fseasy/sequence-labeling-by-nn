@@ -273,9 +273,9 @@ void train(SLModel &slm,
             unsigned access_idx = access_order[i];
             const  typename SLModel::AnnotatedDataProcessedT &instance = training_data[access_idx];
             // GO
-            slm.build_training_graph(instance);
-            slnn::type::real loss = slm.get_nn()->forward_as_scalar();
-            slm.get_nn()->backward();
+            SLModel::NnExprT loss_expr = slm.build_training_graph(instance);
+            slnn::type::real loss = slm.get_nn()->as_scalar(slm.get_nn()->forward(loss_expr));
+            slm.get_nn()->backward(loss_expr);
             slm.get_nn()->update(opts.training_update_scale);
             // record loss
             training_stat_per_epoch.loss += loss;

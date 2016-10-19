@@ -45,11 +45,11 @@ struct BILSTMCRFModel4POSTAG
     Merge3Layer *merge_hidden_layer;
     DenseLayer *emit_layer;
 
-    dynet::LookupParameters *words_lookup_param;
-    dynet::LookupParameters *postags_lookup_param;
+    dynet::LookupParameter words_lookup_param;
+    dynet::LookupParameter postags_lookup_param;
     
-    dynet::LookupParameters *trans_score_lookup_param; // trans score , that is , TAG_A -> TAG_B 's score
-    dynet::LookupParameters *init_score_lookup_param; // init score , that is , the init TAG score
+    dynet::LookupParameter trans_score_lookup_param; // trans score , that is , TAG_A -> TAG_B 's score
+    dynet::LookupParameter init_score_lookup_param; // init score , that is , the init TAG score
 
 
     // Dict

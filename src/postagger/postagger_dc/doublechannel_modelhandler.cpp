@@ -37,11 +37,11 @@ void DoubleChannelModelHandler::build_fixed_dict_from_word2vec_file(std::ifstrea
         string::size_type delim_pos = line.find(" ");
         assert(delim_pos != string::npos);
         string word = line.substr(0, delim_pos);
-        dc_m.fixed_dict.Convert(word);  // add to dict
+        dc_m.fixed_dict.convert(word);  // add to dict
     }
     //  freeze & add unk to fixed_dict
-    dc_m.fixed_dict.Freeze();
-    dc_m.fixed_dict.SetUnk(dc_m.UNK_STR);
+    dc_m.fixed_dict.freeze();
+    dc_m.fixed_dict.set_unk(dc_m.UNK_STR);
     BOOST_LOG_TRIVIAL(info) << "initialize fixed dict done .";
 }
 
@@ -83,9 +83,9 @@ void DoubleChannelModelHandler::do_read_annotated_dataset(istream &is, vector<In
             std::string word = strpair.substr(0, delim_pos);
             // Parse Number to specific string
             word = replace_number(word);
-            Index dynamic_word_id = dc_m.dynamic_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index fixed_word_id = dc_m.fixed_dict.Convert(word);
-            Index postag_id = dc_m.postag_dict.Convert(strpair.substr(delim_pos + 1));
+            Index dynamic_word_id = dc_m.dynamic_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index fixed_word_id = dc_m.fixed_dict.convert(word);
+            Index postag_id = dc_m.postag_dict.convert(strpair.substr(delim_pos + 1));
             dynamic_sent.push_back(dynamic_word_id);
             fixed_sent.push_back(fixed_word_id);
             postag_seq.push_back(postag_id);
@@ -108,9 +108,9 @@ void DoubleChannelModelHandler::read_training_data_and_build_dynamic_and_postag_
     assert(!dc_m.dynamic_dict.is_frozen() && !dc_m.postag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs);
-    dc_m.dynamic_dict_wrapper.Freeze();
-    dc_m.dynamic_dict_wrapper.SetUnk(dc_m.UNK_STR);
-    dc_m.postag_dict.Freeze();
+    dc_m.dynamic_dict_wrapper.freeze();
+    dc_m.dynamic_dict_wrapper.set_unk(dc_m.UNK_STR);
+    dc_m.postag_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic dict done . ";
 }
 
@@ -146,8 +146,8 @@ void DoubleChannelModelHandler::read_test_data(istream &is, vector<Seq> &raw_tes
         for (unsigned i = 0; i < seq_len; ++i)
         {
             string number_transed_word = replace_number(words_seq[i]);
-            dynamic_words_index_seq[i] = dc_m.dynamic_dict.Convert(number_transed_word);
-            fixed_words_index_seq[i] = dc_m.fixed_dict.Convert(number_transed_word);
+            dynamic_words_index_seq[i] = dc_m.dynamic_dict.convert(number_transed_word);
+            fixed_words_index_seq[i] = dc_m.fixed_dict.convert(number_transed_word);
         }
 
     }
@@ -180,7 +180,7 @@ void DoubleChannelModelHandler::build_model()
 void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
 {
     // set lookup parameters from outer word embedding
-    // using words_loopup_param.Initialize( word_id , value_vector )
+    // using words_loopup_param.initialize( word_id , value_vector )
     BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     string line;
     vector<string> split_cont;
@@ -189,7 +189,7 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
     unsigned long line_cnt = 0; // for warning when read embedding error
     unsigned long words_cnt_hit = 0;
     vector<float> embedding_vec(dc_m.fixed_embedding_dim , 0.f);
-    Index dynamic_unk = dc_m.dynamic_dict.Convert(dc_m.UNK_STR); // for calc hit rate
+    Index dynamic_unk = dc_m.dynamic_dict.convert(dc_m.UNK_STR); // for calc hit rate
     while (getline(is, line))
     {
         ++line_cnt;
@@ -201,13 +201,13 @@ void DoubleChannelModelHandler::load_fixed_embedding(std::istream &is)
             continue;
         }
         string &word = split_cont.at(0);
-        Index word_id = dc_m.fixed_dict.Convert(word);
+        Index word_id = dc_m.fixed_dict.convert(word);
         for (size_t idx = 1; idx < split_cont.size(); ++idx)
         {
             embedding_vec[idx - 1] = stof(split_cont[idx]);
         }
-        dc_m.fixed_words_lookup_param->Initialize(word_id, embedding_vec);
-        if(dc_m.dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
+        dc_m.fixed_words_lookup_param->initialize(word_id, embedding_vec);
+        if(dc_m.dynamic_dict.convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
         << words_cnt_hit << "/" << dc_m.fixed_embedding_dict_size  << " ("
@@ -260,11 +260,11 @@ void DoubleChannelModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, c
             dynamic_sent_after_replace_unk.resize(p_dynamic_sent->size());
             for (size_t word_idx = 0; word_idx < p_dynamic_sent->size(); ++word_idx)
             {
-                dynamic_sent_after_replace_unk[word_idx] = dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
+                dynamic_sent_after_replace_unk[word_idx] = dc_m.dynamic_dict_wrapper.unk_replace_probability(p_dynamic_sent->at(word_idx));
             }
-            dc_m.negative_loglikelihood(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
-            training_stat_per_report.loss += as_scalar(cg->forward());
-            cg->backward();
+            auto loss_expr = dc_m.negative_loglikelihood(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, p_tag_seq,&training_stat_per_report);
+            training_stat_per_report.loss += as_scalar(cg->forward(loss_expr));
+            cg->backward(loss_expr);
             sgd.update(1.0);
             delete cg;
 
@@ -349,8 +349,8 @@ float DoubleChannelModelHandler::devel(const std::vector<IndexSeq> *p_dynamic_se
             if (p_tag_seq->at(i) == predict_tag_seq[i]) ++acc_stat.correct_tags;
             else if (p_error_output_os)
             {
-                *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << dc_m.dynamic_dict.Convert(p_dynamic_sent->at(i))
-                    << "\t" << dc_m.postag_dict.Convert(predict_tag_seq[i]) << "\t" << dc_m.postag_dict.Convert(p_tag_seq->at(i)) << "\n";
+                *p_error_output_os << line_cnt4error_output << "\t" << i << "\t" << dc_m.dynamic_dict.convert(p_dynamic_sent->at(i))
+                    << "\t" << dc_m.postag_dict.convert(predict_tag_seq[i]) << "\t" << dc_m.postag_dict.convert(p_tag_seq->at(i)) << "\n";
             }
         }
     }
@@ -384,11 +384,11 @@ void DoubleChannelModelHandler::predict(std::istream &is, std::ostream &os)
         ComputationGraph cg;
         dc_m.do_predict(&cg, p_dynamic_sent, p_fixed_sent , &predict_seq);
         // output the result directly
-        os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.Convert(predict_seq.at(0));
+        os << p_raw_sent->at(0) << "_" << dc_m.postag_dict.convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
         {
             os << SPLIT_DELIMITER
-                << p_raw_sent->at(k) << "_" << dc_m.postag_dict.Convert(predict_seq.at(k));
+                << p_raw_sent->at(k) << "_" << dc_m.postag_dict.convert(predict_seq.at(k));
         }
         os << "\n";
     }

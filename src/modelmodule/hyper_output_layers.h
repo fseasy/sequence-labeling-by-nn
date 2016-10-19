@@ -46,8 +46,8 @@ struct PretagOutput : public OutputBase
 {
     Merge3Layer hidden_layer;
     DenseLayer output_layer;
-    dynet::LookupParameters *tag_lookup_param ;
-    dynet::Parameters *TAG_SOS ;
+    dynet::LookupParameter tag_lookup_param ;
+    dynet::Parameter TAG_SOS ;
     dynet::ComputationGraph *pcg;
 
     PretagOutput(dynet::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
@@ -68,9 +68,9 @@ struct CRFOutput : public OutputBase
 {
     Merge3Layer hidden_layer ;
     DenseLayer emit_layer ;
-    dynet::LookupParameters *tag_lookup_param ;
-    dynet::LookupParameters *trans_score_lookup_param ;
-    dynet::LookupParameters *init_score_lookup_param ;
+    dynet::LookupParameter tag_lookup_param ;
+    dynet::LookupParameter trans_score_lookup_param ;
+    dynet::LookupParameter init_score_lookup_param ;
     dynet::ComputationGraph *pcg ;
     size_t tag_num ;
     CRFOutput(dynet::Model *m,
@@ -188,8 +188,8 @@ struct PretagOutputWithFeature : public OutputBaseWithFeature
 {
     Merge4Layer hidden_layer;
     DenseLayer output_layer;
-    dynet::LookupParameters *tag_lookup_param ;
-    dynet::Parameters *TAG_SOS ;
+    dynet::LookupParameter tag_lookup_param ;
+    dynet::Parameter TAG_SOS ;
     dynet::ComputationGraph *pcg;
 
     PretagOutputWithFeature(dynet::Model *m, unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2, 
@@ -213,9 +213,9 @@ struct CRFOutputWithFeature : public  OutputBaseWithFeature
 {
     Merge4Layer hidden_layer ;
     DenseLayer emit_layer ;
-    dynet::LookupParameters *tag_lookup_param ;
-    dynet::LookupParameters *trans_score_lookup_param ;
-    dynet::LookupParameters *init_score_lookup_param ;
+    dynet::LookupParameter tag_lookup_param ;
+    dynet::LookupParameter trans_score_lookup_param ;
+    dynet::LookupParameter init_score_lookup_param ;
     dynet::ComputationGraph *pcg ;
     size_t tag_num ;
     CRFOutputWithFeature(dynet::Model *m,
