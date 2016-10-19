@@ -384,7 +384,7 @@ struct BILSTMModel4NER
                 ++words_cnt_hit;
                 transform(split_cont.cbegin() + 1, split_cont.cend(), embedding_vec.begin(),
                     [](const string &f_str) { return stof(f_str);});
-                words_lookup_param->initialize(word_id, embedding_vec);
+                words_lookup_param.initialize(word_id, embedding_vec);
             }
         }
         BOOST_LOG_TRIVIAL(info) << "initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE

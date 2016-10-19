@@ -81,7 +81,7 @@ void Word2vecEmbeddingHelper::load_fixed_embedding(std::ifstream &is, dynet::Dic
         {
             embedding_vec[idx - 1] = std::stof(split_cont[idx]);
         }
-        fixed_lookup_param->initialize(word_id, embedding_vec);
+        fixed_lookup_param.initialize(word_id, embedding_vec);
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done ." ;
 }

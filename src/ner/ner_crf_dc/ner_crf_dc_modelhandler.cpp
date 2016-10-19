@@ -238,7 +238,7 @@ void NERCRFDCModelHandler::load_fixed_embedding(std::istream &is)
         {
             embedding_vec[idx - 1] = stof(split_cont[idx]);
         }
-        dc_m.fixed_words_lookup_param->initialize(word_id, embedding_vec);
+        dc_m.fixed_words_lookup_param.initialize(word_id, embedding_vec);
         if(dc_m.dynamic_dict.convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 

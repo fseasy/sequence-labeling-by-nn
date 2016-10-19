@@ -212,7 +212,7 @@ void Input2ModelHandler<I2Model>::load_fixed_embedding(std::istream &is)
         {
             embedding_vec[idx - 1] = std::stof(split_cont[idx]);
         }
-        fixed_lookup_param->initialize(word_id, embedding_vec);
+        fixed_lookup_param.initialize(word_id, embedding_vec);
         if(dynamic_dict.convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     size_t fixed_dict_word_num = i2m->fixed_dict_size - 1 ; // another UNK is not word
