@@ -238,7 +238,11 @@ void train(SLModel &slm,
 {
     unsigned nr_samples = training_data.size();
     std::cerr << "+ Train at " << nr_samples << " instances .\n";
-    
+    std::cerr << "++ Training info: \n"
+        << "|  training update method(" << opts.training_update_method <<"),\n"
+        << "|  training update scale(" << opts.training_update_scale << "),\n"
+        << "|  max epoch(" << opts.max_epoch << "), devel frequence(" << opts.do_devel_freq << ")\n"
+        << "== - - - - -\n";
     slm.get_nn()->set_update_method(opts.training_update_method);
 
     modelhandler_inner::TrainingUpdateRecorder update_recorder;

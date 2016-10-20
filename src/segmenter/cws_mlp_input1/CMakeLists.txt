@@ -47,12 +47,16 @@ add_executable(${exe_name}
                ${dep_modelhandler}
 )
 
-target_link_libraries(${exe_name} 
-                      ${Boost_LIBRARIES}
-                      trivial
-                      layers
-                      cl_model
-                      dynet)
+
+if (WITH_CUDA_BACKEND)
+    target_link_libraries(${exe_name} gdynet ${Boost_LIBRARIES} trivial layers cl_model)
+    add_dependencies(${exe_name} dynetcuda)
+    target_link_libraries(${exe_name} dynetcuda)
+    CUDA_ADD_CUBLAS_TO_TARGET(${exe_name})
+  else()
+    target_link_libraries(${exe_name} dynet ${Boost_LIBRARIES} trivial layers cl_model)
+endif (WITH_CUDA_BACKEND)
+
                       
 SET_PROPERTY(TARGET cl_model PROPERTY FOLDER "segmenter/mlp_input1/lib")
 SET_PROPERTY(TARGET ${exe_name}  PROPERTY FOLDER "segmenter/mlp_input1")

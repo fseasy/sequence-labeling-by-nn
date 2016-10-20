@@ -76,6 +76,10 @@ void build_dynet_parameters(const std::string &program_name, unsigned dynet_mem,
     {
         for( int i = 0 ; i < dynet_argc ; ++i ) { delete[] ptr[i]; }
     } ;
+    std::string dynet_gpus_key = "--dynet-gpus";
+    char *dynet_gpus_cstr = new char[dynet_gpus_key.size()+1]();
+    strncpy(dynet_gpus_cstr, dynet_gpus_key.c_str(), dynet_gpus_key.size() + 1);
+    char *dynet_gpus_value = new char[2]{'1', '\0'};
     if( dynet_mem != 0 )
     {
         std::string dynet_mem_key = "--dynet-mem";
@@ -89,15 +93,15 @@ void build_dynet_parameters(const std::string &program_name, unsigned dynet_mem,
         //std::copy(std::begin(dynet_mem_value), std::end(dynet_mem_value), dynet_mem_value_cstr);
         strncpy(dynet_mem_value_cstr, dynet_mem_value.c_str(), dynet_mem_value.length() + 1);
 
-        const int const_dynet_argc = 3 ; // program_name --dynet-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
-        char **dynet_argv_cstr = new char*[const_dynet_argc+1]{ program_name_cstr, dynet_mem_key_cstr, dynet_mem_value_cstr, nullptr };
+        const int const_dynet_argc = 5 ; // program_name --dynet-mem [mem_vlaue] NULL (Attention : argv should has anothre nullptr !)
+        char **dynet_argv_cstr = new char*[const_dynet_argc+1]{ program_name_cstr, dynet_mem_key_cstr, dynet_mem_value_cstr, dynet_gpus_cstr, dynet_gpus_value, nullptr };
         dynet_argc = const_dynet_argc;
         dynet_argv_sp = std::shared_ptr<char *>(dynet_argv_cstr, deleter);
     }
     else
     {
-        const int const_dynet_argc = 1 ;
-        char **dynet_argv_cstr = new char*[const_dynet_argc + 1]{ program_name_cstr, nullptr };
+        const int const_dynet_argc = 3 ;
+        char **dynet_argv_cstr = new char*[const_dynet_argc + 1]{ program_name_cstr, dynet_gpus_cstr, dynet_gpus_value, nullptr };
         dynet_argc = const_dynet_argc;
         dynet_argv_sp = std::shared_ptr<char *>(dynet_argv_cstr, deleter);
     }

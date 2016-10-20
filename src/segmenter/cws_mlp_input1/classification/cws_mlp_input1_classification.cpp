@@ -103,13 +103,13 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
 
     // Init 
-    int dynet_argc;
-    shared_ptr<char *> dynet_argv;
-    unsigned dynet_mem = 0 ;
-    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
-    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
-    char **dynet_argv_ptr = dynet_argv.get();
-    std::shared_ptr<MlpInput1Cl>  mi1 = MlpInput1Cl::create_new_model(dynet_argc, dynet_argv_ptr, rng_seed);
+    //int dynet_argc;
+    //shared_ptr<char *> dynet_argv;
+    //unsigned dynet_mem = 0 ;
+    //if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    //build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    //char **dynet_argv_ptr = dynet_argv.get();
+    std::shared_ptr<MlpInput1Cl>  mi1 = MlpInput1Cl::create_new_model(argc, argv, rng_seed);
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);

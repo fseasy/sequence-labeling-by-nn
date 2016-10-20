@@ -19,10 +19,15 @@ add_executable(${exe_name}
                ${cws_common_headers}                # common header
                ${cws_common_libs}
                )
-               
-target_link_libraries(${exe_name}
-                      dynet
-                      ${Boost_LIBRARIES})
+
+if (WITH_CUDA_BACKEND)
+    target_link_libraries(${exe_name} gdynet ${Boost_LIBRARIES})
+    add_dependencies(${exe_name} dynetcuda)
+    target_link_libraries(${exe_name} dynetcuda)
+    CUDA_ADD_CUBLAS_TO_TARGET(${exe_name})
+  else()
+    target_link_libraries(${exe_name} dynet ${Boost_LIBRARIES})
+endif (WITH_CUDA_BACKEND)
 
 
 # F2O                
@@ -47,6 +52,11 @@ add_executable(${exe_name}
                ${cws_common_libs}
                )
                
-target_link_libraries(${exe_name}
-                      dynet
-                      ${Boost_LIBRARIES})
+if (WITH_CUDA_BACKEND)
+    target_link_libraries(${exe_name} gdynet ${Boost_LIBRARIES})
+    add_dependencies(${exe_name} dynetcuda)
+    target_link_libraries(${exe_name} dynetcuda)
+    CUDA_ADD_CUBLAS_TO_TARGET(${exe_name})
+  else()
+    target_link_libraries(${exe_name} dynet ${Boost_LIBRARIES})
+endif (WITH_CUDA_BACKEND)
