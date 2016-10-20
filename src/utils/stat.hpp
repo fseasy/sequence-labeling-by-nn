@@ -5,6 +5,7 @@
 #include <string>
 #include <fstream>
 #include <sstream>
+#include <iostream>
 #include <array>
 #include <stdlib.h>
 #include <chrono>
@@ -20,8 +21,8 @@
 #include <boost/log/core.hpp>
 #include <boost/log/expressions.hpp>
 
-#include "cnn/dict.h"
-#include "segmentor/cws_module/cws_tagging_system.h"
+#include "dynet/dict.h"
+#include "segmenter/cws_module/cws_tagging_system.h"
 
 /*************************************
  * Stat 
@@ -73,9 +74,10 @@ struct BasicStat
     {
         std::ostringstream str_os;
         str_os << info_header << "\n" ;
-        if( !is_predict ){ str_os << "Total E = " << get_sum_E() << "\n" ; }
-        str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
-            << "Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s";
+        if( !is_predict ){ str_os << "| Total E = " << get_sum_E() << "\n" ; }
+        str_os << "| Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "| Speed = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
+            << "= - - - - -";
         return str_os.str();
     }
 protected :
@@ -133,7 +135,7 @@ struct NerStat : public BasicStat
     std::array<float , 4>
     conlleval(const std::vector<IndexSeq> &gold_ner_seqs ,
         const std::vector<IndexSeq> &predict_ner_seqs , 
-        const cnn::Dict &ner_dict) 
+        const dynet::Dict &ner_dict) 
     {
         std::array<float , 4> fake_ret = {100.f , 100.f , 100.f , 100.f } ;
 #ifndef _MSC_VER
@@ -157,8 +159,8 @@ struct NerStat : public BasicStat
             for (size_t token_idx = 0; token_idx < predict_seq.size(); ++token_idx)
             {
                 tmp_of << "W" << " "
-                    << ner_dict.Convert(ner_seq.at(token_idx)) << " "
-                    << ner_dict.Convert(predict_seq.at(token_idx)) << "\n";
+                    << ner_dict.convert(ner_seq.at(token_idx)) << " "
+                    << ner_dict.convert(predict_seq.at(token_idx)) << "\n";
             }
             tmp_of << "\n"; // split of one sequence
         }
@@ -202,7 +204,8 @@ struct NerStat : public BasicStat
 
 struct CWSStat : public BasicStat
 {
-    CWSTaggingSystem &tag_sys ;
+    CWSTaggingSystem 
+        &tag_sys ;
     unsigned total_tokens; // token is word , which is different from "tag" 
     CWSStat(CWSTaggingSystem &tag_sys , bool is_predict=false)
       :BasicStat(is_predict) ,
@@ -306,6 +309,115 @@ struct CWSStat : public BasicStat
         std::swap(word_ranges, tmp_word_ranges) ;
     }
 };
+
+/* After 2016-06-28 , we'll never use CSWTaggingSystem as instance , 
+*  for compatibility , we create another new cws stat class
+*/
+struct CWSStatNew : public BasicStat
+{
+    unsigned total_tokens; // token is word , which is different from "tag" 
+    CWSStatNew(bool is_predict=false)
+        :BasicStat(is_predict) ,
+        total_tokens(0)
+    {}
+
+    std::string get_stat_str(const std::string &info_header)
+    {
+        std::ostringstream str_os;
+        str_os << info_header << "\n" ;
+        if( !is_predict ){ str_os << "Sum E = " << get_sum_E() << "\n" ; }
+        str_os << "Time cost = " << get_time_cost_in_seconds() << " s\n"
+            << "Speed(tag) = " << get_speed_as_kilo_tokens_per_sencond() << " K tags/s\n"
+            << "Speed(token) = " << total_tokens / 1000.f / get_time_cost_in_seconds() << " K Tokens/s" ;
+        return str_os.str();
+    }
+
+    // return : {Acc , P , R , F1} ( percent ! )
+    std::array<float , 4>
+        eval(const std::vector<IndexSeq> &gold_seqs, const std::vector<IndexSeq> &pred_seqs)
+    {
+        size_t seq_num = gold_seqs.size() ;
+        unsigned gold_tokens = 0,
+            found_tokens = 0,
+            correct_tokens = 0 ; // P , R , F1
+        unsigned total_tags = 0,
+            correct_tags = 0 ; // ACC
+        for( size_t i = 0 ; i < seq_num ; ++i )
+        {
+            std::array<unsigned, 3> result = eval_one_seq(gold_seqs[i], pred_seqs[i]) ;
+            correct_tokens += result[0] ;
+            gold_tokens += result[1] ;
+            found_tokens += result[2] ;
+            total_tags += gold_seqs[i].size() ;
+            for( size_t pos = 0 ; pos < gold_seqs[i].size() ; ++pos )
+            {
+                if( gold_seqs[i][pos] == pred_seqs[i][pos] ) ++correct_tags ;
+            }
+        }
+        float Acc = (total_tags == 0) ? 0.f : static_cast<float>(correct_tags) / total_tags * 100.f ;
+        float P = (found_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / found_tokens *100.f ;
+        float R = (gold_tokens == 0) ? 0.f : static_cast<float>(correct_tokens) / gold_tokens *100.f ;
+        float F1 = (std::abs(R + P - 0.f) < 1e-6) ? 0.f : 2 * P * R / (P + R)  ;
+        total_tokens = found_tokens; // use found tokens(predicted tokens) as total tokens
+        return std::array<float, 4>{Acc, P, R, F1} ;
+    }
+
+    std::array<unsigned , 3>
+        eval_one_seq(const IndexSeq &gold_seq, const IndexSeq &pred_seq)
+    {
+        assert(gold_seq.size() == pred_seq.size()) ;
+        std::vector<std::array<unsigned, 2>> gold_words,
+            pred_words ;
+        parse_tag_seq2word_range(gold_seq, gold_words) ;
+        parse_tag_seq2word_range(pred_seq, pred_words) ;
+        unsigned gold_word_size = gold_words.size(),
+            pred_word_size = pred_words.size() ;
+        size_t gold_pos = 0 ,
+            pred_pos = 0 ;
+        unsigned correct_cnt = 0 ;
+        while( gold_pos < gold_word_size && pred_pos < pred_word_size )
+        {
+            std::array<unsigned, 2> &gold_word = gold_words[gold_pos],
+                &pred_word = pred_words[pred_pos] ;
+            if( gold_word[0] == pred_word[0] )
+            {
+                // word is aligned
+                if( gold_word[1] == pred_word[1] )
+                {
+                    ++correct_cnt ;
+                }
+            }
+            ++gold_pos ;
+            if( gold_pos >= gold_word_size ) break ;
+            // try to align
+            unsigned gold_char_pos = gold_words[gold_pos][0] ;
+            while( pred_pos < pred_word_size && pred_words[pred_pos][0] < gold_char_pos ) 
+                ++pred_pos ;
+        }
+        return std::array<unsigned, 3>{correct_cnt, gold_word_size, pred_word_size} ;
+    }
+    void parse_tag_seq2word_range(const IndexSeq &seq, std::vector<std::array<unsigned, 2>> &word_ranges)
+    {
+        std::vector<std::array<unsigned, 2>> tmp_word_ranges ;
+        unsigned range_s = 0 ;
+        for( unsigned i = 0 ; i < seq.size() ; ++i )
+        {
+            Index tag_id = seq.at(i) ;
+            if( tag_id == CWSTaggingSystem::STATIC_S_ID )
+            {
+                tmp_word_ranges.push_back({ i , i }) ;
+                range_s = i + 1 ;
+            }
+            else if( tag_id == CWSTaggingSystem::STATIC_E_ID )
+            {
+                tmp_word_ranges.push_back({ range_s , i }) ;
+                range_s = i + 1 ;
+            }
+        }
+        std::swap(word_ranges, tmp_word_ranges) ;
+    }
+};
+
 
 } // End of namespace slnn
 

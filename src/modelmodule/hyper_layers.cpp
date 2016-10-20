@@ -1,322 +1,92 @@
+#include <deque>
 #include "hyper_layers.h"
 
-#include <exception>
+namespace slnn{
 
-namespace slnn
+Index2ExprLayer::Index2ExprLayer(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim)
+    :lookup_param(m->add_lookup_parameters(vocab_size, { embedding_dim }))
+{}
+
+ShiftedIndex2ExprLayer::ShiftedIndex2ExprLayer(dynet::Model *m, unsigned vocab_size, unsigned embedding_dim, ShiftDirection direction,
+    unsigned shift_distance)
+    : Index2ExprLayer(m, vocab_size, embedding_dim),
+    shift_direction(direction),
+    shift_distance(shift_distance),
+    padding_parameters(shift_distance)
 {
-
-/********** Input1 *********/
-
-Input1::Input1(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim)
-    :word_lookup_param(m->add_lookup_parameters(vocab_size, {embedding_dim}))
-{}
-
-Input1::~Input1()
-{}
-
-/**********  Input1WithFeature  *********/
-
-Input1WithFeature::Input1WithFeature(cnn::Model *m, unsigned vocab_size, unsigned embedding_dim,
-                                     unsigned feature_embedding_dim, unsigned merge_out_dim,
-                                     NonLinearFunc *nonlinear_func)
-    :word_lookup_param(m->add_lookup_parameters(vocab_size, { embedding_dim })),
-    m2_layer(m,embedding_dim, feature_embedding_dim, merge_out_dim),
-    nonlinear_func(nonlinear_func)
-{}
-
-/********** Input2D ***********/
-
-Input2D::Input2D(cnn::Model *m, unsigned vocab_size1, unsigned embedding_dim1,
-    unsigned vocab_size2, unsigned embedding_dim2,
-    unsigned mergeout_dim ,
-    NonLinearFunc *nonlinear_func)
-    : dynamic_lookup_param1(m->add_lookup_parameters(vocab_size1, {embedding_dim1})) ,
-    dynamic_lookup_param2(m->add_lookup_parameters(vocab_size2 , {embedding_dim2})) ,
-    m2_layer(m , embedding_dim1 , embedding_dim2 , mergeout_dim) ,
-    nonlinear_func(nonlinear_func)
-{}
-
-Input2D::~Input2D() {}
-
-/************* Input2 ***************/
-
-Input2::Input2(cnn::Model *m, unsigned dynamic_vocab_size, unsigned dynamic_embedding_dim,
-unsigned fixed_vocab_size, unsigned fixed_embedding_dim,
-unsigned mergeout_dim ,
-NonLinearFunc *nonlinear_func) 
-    :dynamic_lookup_param(m->add_lookup_parameters(dynamic_vocab_size, {dynamic_embedding_dim})) ,
-    fixed_lookup_param(m->add_lookup_parameters(fixed_vocab_size , {fixed_embedding_dim})) ,
-    m2_layer(m , dynamic_embedding_dim , fixed_embedding_dim , mergeout_dim) ,
-    nonlinear_func(nonlinear_func)
-{}
-
-Input2::~Input2() {};
-
-/*********** Input3 *********/
-
-Input3::Input3(cnn::Model *m, unsigned dynamic_vocab_size1, unsigned dynamic_embedding_dim1,
-    unsigned dynamic_vocab_size2, unsigned dynamic_embedding_dim2,
-    unsigned fixed_vocab_size, unsigned fixed_embedding_dim,
-    unsigned mergeout_dim,
-    NonLinearFunc *nonlinear_func)
-    : dynamic_lookup_param1(m->add_lookup_parameters(dynamic_vocab_size1 , {dynamic_embedding_dim1})) ,
-    dynamic_lookup_param2(m->add_lookup_parameters(dynamic_vocab_size2 , {dynamic_embedding_dim2})) ,
-    fixed_lookup_param(m->add_lookup_parameters(fixed_vocab_size , {fixed_embedding_dim})) ,
-    m3_layer(m , dynamic_embedding_dim1 , dynamic_embedding_dim2 , fixed_embedding_dim , mergeout_dim) ,
-    nonlinear_func(nonlinear_func)
-{}
-
-Input3::~Input3(){}
-
-/************ Bare Input1 *********/
-
-BareInput1::BareInput1(cnn::Model *m, unsigned vocabulary_size, unsigned word_embedding_dim, unsigned nr_extra_feature_expr)
-    :word_lookup_param(m->add_lookup_parameters(vocabulary_size, {word_embedding_dim})),
-    nr_exprs(nr_extra_feature_expr+1),    exprs(nr_exprs) // pre-allocate memory
-{}
-
-/************ OutputBase ***************/
-
-OutputBase::OutputBase(cnn::real dropout_rate, NonLinearFunc *nonlinear_func) : 
-    dropout_rate(dropout_rate),
-    nonlinear_func(nonlinear_func)
-{}
-
-OutputBase::~OutputBase(){} // base class should implement deconstructor , even for pure virtual function
-
-/************ SimpleOutput *************/
-
-SimpleOutput::SimpleOutput(cnn::Model *m, unsigned input_dim1, unsigned input_dim2 ,
-    unsigned hidden_dim, unsigned output_dim , 
-    cnn::real dropout_rate,
-    NonLinearFunc *nonlinear_func)
-    : OutputBase(dropout_rate, nonlinear_func),
-    hidden_layer(m , input_dim1 , input_dim2 , hidden_dim) ,
-    output_layer(m , hidden_dim , output_dim) 
-{}
-
-SimpleOutput::~SimpleOutput() {};
-
-/*************** PretagOutput **************/
-
-PretagOutput::PretagOutput(cnn::Model *m,
-                           unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
-                           unsigned hidden_dim, unsigned output_dim , 
-    cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
-    :OutputBase(dropout_rate, nonlinear_func),
-    hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
-    output_layer(m , hidden_dim , output_dim) ,
-    tag_lookup_param(m->add_lookup_parameters(output_dim , {tag_embedding_dim})) ,
-    TAG_SOS(m->add_parameters({tag_embedding_dim})) 
-{}
-
-PretagOutput::~PretagOutput(){} 
-
-/****************** CRFOutput ****************/
-CRFOutput::CRFOutput(cnn::Model *m,
-          unsigned tag_embedding_dim, unsigned input_dim1, unsigned input_dim2,
-          unsigned hidden_dim,
-          unsigned tag_num,
-          cnn::real dropout_rate ,
-          NonLinearFunc *nonlinear_func)
-    :OutputBase(dropout_rate, nonlinear_func),
-    hidden_layer(m , input_dim1 , input_dim2 , tag_embedding_dim , hidden_dim) ,
-    emit_layer(m , hidden_dim , 1) ,
-    tag_lookup_param(m->add_lookup_parameters(tag_num , {tag_embedding_dim})) ,
-    trans_score_lookup_param(m->add_lookup_parameters(tag_num * tag_num , {1})) ,
-    init_score_lookup_param(m->add_lookup_parameters(tag_num , {1})) ,
-    tag_num(tag_num) 
-{}
-
-CRFOutput::~CRFOutput(){} 
-
-cnn::expr::Expression
-CRFOutput::build_output_loss(const std::vector<cnn::expr::Expression> &expr_cont1,
-                             const std::vector<cnn::expr::Expression> &expr_cont2,
-                             const IndexSeq &gold_seq)
-{
-    size_t len = expr_cont1.size() ;
-    // viterbi data preparation
-    std::vector<cnn::expr::Expression> all_tag_expr_cont(tag_num);
-    std::vector<cnn::expr::Expression> init_score(tag_num);
-    std::vector<cnn::expr::Expression> trans_score(tag_num * tag_num);
-    std::vector<std::vector<cnn::expr::Expression>> emit_score(len,
-                           std::vector<cnn::expr::Expression>(tag_num));
-    std::vector<cnn::expr::Expression> cur_score_expr_cont(tag_num),
-                                       pre_score_expr_cont(tag_num);
-    std::vector<cnn::expr::Expression> gold_score_expr_cont(len) ;
-    // init tag expr , init score
-    for( size_t i = 0; i < tag_num ; ++i )
+    for( unsigned i = 0 ; i < shift_distance; ++i )
     {
-        all_tag_expr_cont[i] = cnn::expr::lookup(*pcg, tag_lookup_param, i);
-        init_score[i] = cnn::expr::lookup(*pcg, init_score_lookup_param, i);
+        padding_parameters[i] = m->add_parameters({ embedding_dim });
     }
-    // init translation score
-    for( size_t flat_idx = 0; flat_idx < tag_num * tag_num ; ++flat_idx )
-    {
-        trans_score[flat_idx] = lookup(*pcg, trans_score_lookup_param, flat_idx);
-    }
-    // init emit score
-    for( size_t time_step = 0; time_step < len; ++time_step )
-    {
-        for( size_t i = 0; i < tag_num; ++i )
-        {
-            cnn::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
-                                                        expr_cont2[time_step], all_tag_expr_cont[i]);
-            cnn::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
-            cnn::expr::Expression dropout_expr = dropout(non_linear_expr, dropout_rate) ;
-            emit_score[time_step][i] = emit_layer.build_graph(dropout_expr);
-        }
-    }
-    // viterbi docoding
-    // 1. the time 0
-    for( size_t i = 0; i < tag_num ; ++i )
-    {
-        // init_score + emit_score
-        cur_score_expr_cont[i] = init_score[i] + emit_score[0][i];
-    }
-    gold_score_expr_cont[0] = cur_score_expr_cont[gold_seq.at(0)];
-    // 2. the continues time
-    for( size_t time_step = 1; time_step < len; ++time_step )
-    {
-        std::swap(cur_score_expr_cont, pre_score_expr_cont);
-        for( size_t cur_idx = 0; cur_idx < tag_num ; ++cur_idx )
-        {
-            // for every possible trans
-            std::vector<cnn::expr::Expression> partial_score_expr_cont(tag_num);
-            for( size_t pre_idx = 0; pre_idx < tag_num; ++pre_idx )
-            {
-                size_t flatten_idx = pre_idx * tag_num + cur_idx;
-                // from-tag score + trans_score
-                partial_score_expr_cont[pre_idx] = pre_score_expr_cont[pre_idx] +
-                    trans_score[flatten_idx];
-            }
-            cur_score_expr_cont[cur_idx] = cnn::expr::logsumexp(partial_score_expr_cont) +
-                emit_score[time_step][cur_idx];
-        }
-        // calc gold 
-        size_t gold_trans_flatten_idx = gold_seq.at(time_step - 1) * tag_num + gold_seq.at(time_step);
-        gold_score_expr_cont[time_step] = trans_score[gold_trans_flatten_idx] +
-            emit_score[time_step][gold_seq.at(time_step)];
-    }
-    cnn::expr::Expression predict_score_expr = cnn::expr::logsumexp(cur_score_expr_cont);
-
-    // if totally correct , loss = 0 (predict_score = gold_score , that is , predict sequence equal to gold sequence)
-    // else , loss = predict_score - gold_score
-    cnn::expr::Expression loss = predict_score_expr - cnn::expr::sum(gold_score_expr_cont);
-    return loss;
 }
 
-void CRFOutput::build_output(const std::vector<cnn::expr::Expression> &expr_cont1,
-                             const std::vector<cnn::expr::Expression> &expr_cont2,
-                             IndexSeq &pred_seq)
+void ShiftedIndex2ExprLayer::index_seq2expr_seq(const IndexSeq &indexSeq, std::vector<dynet::expr::Expression> &exprs)
 {
-    size_t len = expr_cont1.size() ;
-    // viterbi data preparation
-    std::vector<cnn::expr::Expression> all_tag_expr_cont(tag_num);
-    std::vector<cnn::real> init_score(tag_num);
-    std::vector < cnn::real> trans_score(tag_num * tag_num);
-    std::vector<std::vector<cnn::real>> emit_score(len, std::vector<cnn::real>(tag_num));
-    // get initial score
-    for( size_t i = 0 ; i < tag_num ; ++i )
+    using std::swap;
+    unsigned sz = indexSeq.size();
+    std::vector<dynet::expr::Expression> tmp_exprs(sz);
+    if( shift_direction == LeftShift )
     {
-        cnn::expr::Expression init_score_expr = cnn::expr::lookup(*pcg, init_score_lookup_param, i);
-        init_score[i] = cnn::as_scalar(pcg->get_value(init_score_expr)) ;
-    }
-    // get translation score
-    for( size_t flat_idx = 0; flat_idx < tag_num * tag_num ; ++flat_idx )
-    {
-        cnn::expr::Expression trans_score_expr = lookup(*pcg, trans_score_lookup_param, flat_idx);
-        trans_score[flat_idx] = cnn::as_scalar(pcg->get_value(trans_score_expr)) ;
-    }
-    // get emit score
-    for( size_t i = 0; i < tag_num ; ++i )
-    {
-        all_tag_expr_cont[i] = cnn::expr::lookup(*pcg, tag_lookup_param, i);
-    }
-    for( size_t time_step = 0; time_step < len; ++time_step )
-    {
-        for( size_t i = 0; i < tag_num; ++i )
+        for( unsigned i = shift_distance ; i < sz; ++i )
         {
-            cnn::expr::Expression hidden_out_expr = hidden_layer.build_graph(expr_cont1[time_step],
-                                                                             expr_cont2[time_step], all_tag_expr_cont[i]);
-            cnn::expr::Expression non_linear_expr = (*nonlinear_func)(hidden_out_expr) ;
-            cnn::expr::Expression emit_expr = emit_layer.build_graph(non_linear_expr);
-            emit_score[time_step][i] = cnn::as_scalar( pcg->get_value(emit_expr) );
+            tmp_exprs[i - shift_distance] = lookup(*pcg, lookup_param, indexSeq[i]);
+        }
+        unsigned padding_pos = shift_distance > sz ? 0 : sz - shift_distance ;
+        for( unsigned i = padding_pos; i < sz; ++i )
+        {
+            tmp_exprs[i] = parameter(*pcg, padding_parameters[i - padding_pos]);
         }
     }
-    // viterbi - process
-    std::vector<std::vector<size_t>> path_matrix(len, std::vector<size_t>(tag_num));
-    std::vector<cnn::real> current_scores(tag_num); 
-    // time 0
-    for (size_t i = 0; i < tag_num ; ++i)
+    else
     {
-        current_scores[i] = init_score[i] + emit_score[0][i];
-    }
-    // continues time
-    std::vector<cnn::real>  pre_timestep_scores(tag_num);
-    for (size_t time_step = 1; time_step < len ; ++time_step)
-    {
-        std::swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
-        for (size_t i = 0; i < tag_num ; ++i )
+        unsigned padding_end_pos = std::min(shift_distance, sz);
+        for( unsigned i = 0; i < padding_end_pos; ++i )
         {
-            size_t pre_tag_with_max_score = 0;
-            cnn::real max_score = pre_timestep_scores[pre_tag_with_max_score] + 
-                trans_score[pre_tag_with_max_score * tag_num + i];
-            for (size_t pre_i = 1 ; pre_i < tag_num ; ++pre_i)
-            {
-                size_t flat_idx = pre_i * tag_num + pre_i ;
-                cnn::real score = pre_timestep_scores[pre_i] + trans_score[flat_idx];
-                if (score > max_score)
-                {
-                    pre_tag_with_max_score = pre_i;
-                    max_score = score;
-                }
-            }
-            path_matrix[time_step][i] = pre_tag_with_max_score;
-            current_scores[i] = max_score + emit_score[time_step][i];
+            tmp_exprs[i] = parameter(*pcg, padding_parameters[i]);
+        }
+        for( unsigned i = padding_end_pos; i < sz; ++i )
+        {
+            tmp_exprs[i] = lookup(*pcg, lookup_param, indexSeq[i - padding_end_pos]);
         }
     }
-    // get result 
-    IndexSeq tmp_predict_ner_seq(len);
-    Index end_predicted_idx = std::distance(current_scores.cbegin(),
-                                            max_element(current_scores.cbegin(), current_scores.cend()));
-    tmp_predict_ner_seq[len - 1] = end_predicted_idx;
-    Index pre_predicted_idx = end_predicted_idx;
-    for (size_t reverse_idx = len - 1; reverse_idx >= 1; --reverse_idx)
-    {
-        pre_predicted_idx = path_matrix[reverse_idx][pre_predicted_idx]; // backtrace
-        tmp_predict_ner_seq[reverse_idx - 1] = pre_predicted_idx;
-    }
-    std::swap(tmp_predict_ner_seq, pred_seq);
+    swap(exprs, tmp_exprs);
 }
 
-/************* SoftmaxLayer ***********/
 
-SoftmaxLayer::SoftmaxLayer(cnn::Model *model, unsigned input_dim, unsigned output_dim)
-    :output_layer(model, input_dim, output_dim)
+/***********************************************
+ * WindowExprGenerateLayer
+ ***********************************************/
+
+WindowExprGenerateLayer::WindowExprGenerateLayer(dynet::Model *dynet_model, unsigned window_sz, unsigned embedding_dim)
+    :sos_param(dynet_model->add_parameters({ embedding_dim })),
+    eos_param(dynet_model->add_parameters({embedding_dim})),
+    window_sz(window_sz)
 {}
 
-/************* OutputBaseWithFeature ***************/
-
-OutputBaseWithFeature::OutputBaseWithFeature(cnn::real dropout_rate, NonLinearFunc *nonlinear_func)
-    :dropout_rate(dropout_rate),
-    nonlinear_func(nonlinear_func)
-{}
-
-OutputBaseWithFeature::~OutputBaseWithFeature(){}
-
-/************ SimpleOutputWithFeature *************/
-
-SimpleOutputWithFeature::SimpleOutputWithFeature(cnn::Model *m, unsigned input_dim1, unsigned input_dim2,
-    unsigned feature_dim, unsigned hidden_dim, unsigned output_dim,
-    cnn::real dropout_rate,
-    NonLinearFunc *nonlinear_func)
-    :OutputBaseWithFeature(dropout_rate, nonlinear_func),
-    hidden_layer(m, input_dim1, input_dim2, feature_dim, hidden_dim),
-    output_layer(m, hidden_dim, output_dim)
-{}
-
-SimpleOutputWithFeature::~SimpleOutputWithFeature() {};
+std::vector<dynet::expr::Expression>
+WindowExprGenerateLayer::generate_window_expr_by_concatenating(const std::vector<dynet::expr::Expression> &unit_exprs)
+{
+    std::deque<dynet::expr::Expression> window_expr_list(window_sz);
+    unsigned len = unit_exprs.size();
+    // init
+    unsigned half_sz = window_sz / 2;
+    for( unsigned i = 0; i < half_sz; ++i ){ window_expr_list[i] = sos_expr; }
+    for( unsigned i = half_sz; i < window_sz; ++i )
+    {
+        window_expr_list[i] = i < len ? unit_exprs[i] : eos_expr;
+    }
+    // generate window concatenated expr 
+    std::vector<dynet::expr::Expression> concat_expr_list(len);
+    concat_expr_list[0] = dynet::expr::concatenate(window_expr_list);
+    for( unsigned i = 1; i < len; ++i )
+    {
+        // scroll
+        window_expr_list.pop_front();
+        window_expr_list.push_back(i + half_sz < len ? unit_exprs[i + half_sz] : eos_expr);
+        concat_expr_list[i] = dynet::expr::concatenate(window_expr_list);
+    }
+    return concat_expr_list;
+}
 
 } // end of namespace slnn
+

@@ -16,18 +16,18 @@ public :
     Input1MLPWithoutTagModel(const Input1MLPWithoutTagModel &) = delete ;
     Input1MLPWithoutTagModel &operator=(const Input1MLPWithoutTagModel &) = delete ;
 
-    void set_model_param(const boost::program_options::variables_map &var_map) override;
+    void set_model_param_from_outer(const boost::program_options::variables_map &var_map) override;
     void build_model_structure() override;
     void print_model_info() override;
 
-    cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         const IndexSeq &gold_seq)  override ;
-    void predict(cnn::ComputationGraph &cg ,
+    void predict(dynet::ComputationGraph &cg ,
         const IndexSeq &input_seq, 
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq,
+        const ContextFeatureDataSeq &context_feature_gp_seq,
         const POSFeature::POSFeatureIndexGroupSeq &features_gp_seq,
         IndexSeq &pred_seq) override ;
 
@@ -39,7 +39,7 @@ private :
     MLPHiddenLayer *mlp_hidden_layer;
     SoftmaxLayer *output_layer;
     POSFeatureLayer *pos_feature_layer;
-    ContextFeatureLayer<POSContextFeature::ContextSize> *pos_context_feature_layer;
+    ContextFeatureLayer *pos_context_feature_layer;
 };
 
 template <typename Archive>

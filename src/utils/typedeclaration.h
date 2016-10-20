@@ -3,11 +3,12 @@
 
 #include <vector>
 #include <array>
-#include <utility> 
-#include "cnn/cnn.h"
+#include <utility>
+#include <functional>
+#include "dynet/dynet.h"
 
 namespace slnn{
-    using Index = int; // cnn::Dict return `int` as index 
+    using Index = int; // dynet::Dict return `int` as index 
     using IndexSeq = std::vector<Index>;
     using InstancePair = std::pair<IndexSeq, IndexSeq>;
     using Seq = std::vector<std::string>;
@@ -25,6 +26,12 @@ namespace slnn{
     template <int sz>
     using FeaturesIndexSeq = std::vector<std::array<Index,sz>>;
 
-    using NonLinearFunc = cnn::expr::Expression(const cnn::expr::Expression &); // an function : [input] -> expression , [output]-> expression 
-}
+    using NonLinearFunc = dynet::expr::Expression(const dynet::expr::Expression &); // an function : [input] -> expression , [output]-> expression 
+
+namespace type{
+
+using real = float;
+
+} // end of namespace type
+} // end of namespace slnn
 #endif

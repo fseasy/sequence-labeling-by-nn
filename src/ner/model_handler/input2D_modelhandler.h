@@ -103,7 +103,7 @@ void Input2DModelHandler<SIModel>::save_current_best_model(float F1)
     best_F1 = F1 ;
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
-    to << *sim->get_cnn_model();
+    to << *sim->get_dynet_model();
 }
 
 template<typename SIModel>
@@ -153,8 +153,8 @@ void Input2DModelHandler<SIModel>::do_read_annotated_dataset(std::istream &is,
                                                              std::vector<IndexSeq> &ner_seqs)
 {
     DictWrapper &word_dict_wrapper = sim->get_word_dict_wrapper() ;
-    cnn::Dict &postag_dict = sim->get_postag_dict() ;
-    cnn::Dict &ner_dict = sim->get_ner_dict() ;
+    dynet::Dict &postag_dict = sim->get_postag_dict() ;
+    dynet::Dict &ner_dict = sim->get_ner_dict() ;
     unsigned line_cnt = 0;
     std::string line;
     std::vector<IndexSeq> tmp_sents,
@@ -189,9 +189,9 @@ void Input2DModelHandler<SIModel>::do_read_annotated_dataset(std::istream &is,
             std::string nertag = part.substr(nertag_pos + 1);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index postag_id = postag_dict.Convert(postag);
-            Index nertag_id = ner_dict.Convert(nertag);
+            Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index postag_id = postag_dict.convert(postag);
+            Index nertag_id = ner_dict.convert(nertag);
             sent.push_back(word_id);
             postag_seq.push_back(postag_id);
             ner_seq.push_back(nertag_id);
@@ -215,15 +215,15 @@ void Input2DModelHandler<SIModel>::read_training_data_and_build_dicts(std::istre
                                                                       std::vector<IndexSeq> &ner_seqs)
 {
     DictWrapper &word_dict_wrapper = sim->get_word_dict_wrapper() ;
-    cnn::Dict &postag_dict = sim->get_postag_dict() ;
-    cnn::Dict &ner_dict = sim->get_ner_dict() ;
+    dynet::Dict &postag_dict = sim->get_postag_dict() ;
+    dynet::Dict &ner_dict = sim->get_ner_dict() ;
     assert(!word_dict_wrapper.is_frozen() && !postag_dict.is_frozen() && !ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents, postag_seqs , ner_seqs);
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(sim->UNK_STR);
-    postag_dict.Freeze();
-    ner_dict.Freeze() ;
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(sim->UNK_STR);
+    postag_dict.freeze();
+    ner_dict.freeze() ;
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
@@ -233,9 +233,9 @@ void Input2DModelHandler<SIModel>::read_devel_data(std::istream &is,
                                                    std::vector<IndexSeq> &postag_seqs,
                                                    std::vector<IndexSeq> &ner_seqs)
 {
-    cnn::Dict &word_dict = sim->get_word_dict() ;
-    cnn::Dict &postag_dict = sim->get_postag_dict() ;
-    cnn::Dict &ner_dict = sim->get_ner_dict() ;
+    dynet::Dict &word_dict = sim->get_word_dict() ;
+    dynet::Dict &postag_dict = sim->get_postag_dict() ;
+    dynet::Dict &ner_dict = sim->get_ner_dict() ;
     assert(word_dict.is_frozen() && postag_dict.is_frozen() && ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, sents, postag_seqs , ner_seqs);
@@ -248,8 +248,8 @@ void Input2DModelHandler<SIModel>::read_test_data(std::istream &is,
                                                   std::vector<IndexSeq> &sents ,
                                                   std::vector<IndexSeq> &postag_seqs)
 {
-    cnn::Dict &word_dict = sim->get_word_dict() ;
-    cnn::Dict &postag_dict = sim->get_postag_dict() ;
+    dynet::Dict &word_dict = sim->get_word_dict() ;
+    dynet::Dict &postag_dict = sim->get_postag_dict() ;
     assert(word_dict.is_frozen() && postag_dict.is_frozen()) ;
     BOOST_LOG_TRIVIAL(info) << "read test data .";
     std::vector<Seq> tmp_raw_sents;
@@ -276,8 +276,8 @@ void Input2DModelHandler<SIModel>::read_test_data(std::istream &is,
             std::string postag = part.substr(delim_pos + 1);
             std::string number_transed_word = replace_number(raw_word);
             raw_sent[i] = raw_word ;
-            words_index_seq[i] = word_dict.Convert(number_transed_word);
-            postag_index_seq[i] = postag_dict.Convert(postag);
+            words_index_seq[i] = word_dict.convert(number_transed_word);
+            postag_index_seq[i] = postag_dict.convert(postag);
         }
 
     }
@@ -319,7 +319,7 @@ void Input2DModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sents,
     for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
 
     bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(sim->get_dynet_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq sent_after_replace_unk(SentMaxLen , 0);
@@ -327,7 +327,7 @@ void Input2DModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sents,
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -343,16 +343,16 @@ void Input2DModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sents,
                 &ner_seq = p_ner_seqs->at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 sent_after_replace_unk.resize(sent.size());
                 for( size_t word_idx = 0; word_idx < sent.size(); ++word_idx )
                 {
                     sent_after_replace_unk[word_idx] =
-                        word_dict_wrapper.ConvertProbability(sent.at(word_idx));
+                        word_dict_wrapper.unk_replace_probability(sent.at(word_idx));
                 }
-                sim->build_loss(cg, sent_after_replace_unk, postag_seq , ner_seq );
-                cnn::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = sim->build_loss(cg, sent_after_replace_unk, postag_seq , ner_seq );
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
@@ -421,7 +421,7 @@ float Input2DModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sents,
     stat.start_time_stat();
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_ner_seq;
         const IndexSeq &sent = p_sents->at(access_idx) ,
             &postag_seq = p_postag_seqs->at(access_idx);
@@ -453,8 +453,8 @@ void Input2DModelHandler<SIModel>::predict(std::istream &is, std::ostream &os)
     read_test_data(is,raw_instances, sents , postag_seqs);
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     BasicStat stat(true);
-    cnn::Dict &postag_dict = sim->get_postag_dict() ;
-    cnn::Dict &ner_dict = sim->get_ner_dict() ;
+    dynet::Dict &postag_dict = sim->get_postag_dict() ;
+    dynet::Dict &ner_dict = sim->get_ner_dict() ;
     stat.start_time_stat();
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
@@ -467,17 +467,17 @@ void Input2DModelHandler<SIModel>::predict(std::istream &is, std::ostream &os)
         IndexSeq &sent = sents.at(i) ,
             postag_seq = postag_seqs.at(i);
         IndexSeq pred_ner_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         sim->predict(cg, sent, postag_seq, pred_ner_seq);
         os << raw_sent[0] 
-            << "/" << postag_dict.Convert(postag_seq[0]) 
-            << "#" << ner_dict.Convert(pred_ner_seq[0]);
+            << "/" << postag_dict.convert(postag_seq[0]) 
+            << "#" << ner_dict.convert(pred_ner_seq[0]);
         for( size_t i = 1 ; i < raw_sent.size() ; ++i )
         { 
             os << OUT_SPLIT_DELIMITER 
                 << raw_sent[i] 
-                << "/" << postag_dict.Convert(postag_seq[i]) 
-                << "#" << ner_dict.Convert(pred_ner_seq[i]); 
+                << "/" << postag_dict.convert(postag_seq[i]) 
+                << "#" << ner_dict.convert(pred_ner_seq[i]); 
         }
         os << "\n";
         stat.total_tags += pred_ner_seq.size() ;
@@ -491,7 +491,7 @@ void Input2DModelHandler<SIModel>::save_model(std::ostream &os)
 {
     if( best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail() )
     {
-        sim->set_cnn_model(best_model_tmp_ss) ;
+        sim->set_dynet_model(best_model_tmp_ss) ;
     }
     sim->save_model(os) ;
 }

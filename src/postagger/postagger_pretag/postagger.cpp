@@ -11,13 +11,13 @@
 #include "bilstmmodel4tagging.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 using namespace slnn;
 namespace po = boost::program_options;
 
 
 
-const string PROGRAM_DESCRIPTION = "Postagger based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Postagger based on DyNet Library";
 
 /********************************DEBUG OUPTUT FUNCTION***********************************/
 
@@ -31,15 +31,15 @@ void print(Iterator begin, Iterator end)
     cout << endl;
 }
 
-void print_instance_pair(const vector<InstancePair> &cont, const cnn::Dict &word_dict, const cnn::Dict &tag_dict)
+void print_instance_pair(const vector<InstancePair> &cont, const dynet::Dict &word_dict, const dynet::Dict &tag_dict)
 {
     for (const InstancePair & instance_pair : cont)
     {
         const IndexSeq &sent_indices = instance_pair.first,
             &tag_indices = instance_pair.second;
-        for (auto sent_id : sent_indices) cout << word_dict.Convert(sent_id) << " ";
+        for (auto sent_id : sent_indices) cout << word_dict.convert(sent_id) << " ";
         cout << "\n";
-        for (auto tag_id : tag_indices) cout << tag_dict.Convert(tag_id) << " ";
+        for (auto tag_id : tag_indices) cout << tag_dict.convert(tag_id) << " ";
         cout << "\n" << endl;
     }
 }
@@ -124,7 +124,7 @@ int train_process(int argc, char *argv[] , const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    cnn::Initialize(argc , argv , 1234); // 
+    dynet::initialize(argc , argv , 1234); // 
     BILSTMModel4Tagging tagging_model;
 
     // reading traing data , get word dict size and output tag number
@@ -223,7 +223,7 @@ int devel_process(int argc, char *argv[] , const string &program_name)
     }
   
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMModel4Tagging tagging_model;
 
     // Load model 
@@ -317,7 +317,7 @@ int predict_process(int argc, char *argv[] , const string &program_name)
     else model_path = var_map["model"].as<string>();
 
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     BILSTMModel4Tagging tagging_model;
 
     // load model 

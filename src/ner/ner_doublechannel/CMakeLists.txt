@@ -17,4 +17,4 @@ add_executable(ner_dc ner_doublechannel.cpp
                       ${ner_dc_libs} ${common_libs}
 )
 
-target_link_libraries(ner_dc cnn ${Boost_LIBRARIES})
+target_link_libraries(ner_dc dynet ${Boost_LIBRARIES})

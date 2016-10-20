@@ -4,13 +4,13 @@
 #include <string>
 #include <sstream>
 
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <boost/program_options.hpp>
 
@@ -39,22 +39,22 @@ struct BILSTMCRFModel4POSTAG
         postag_dict_size;
 
     // Model param
-    cnn::Model *m;
+    dynet::Model *m;
 
     BILSTMLayer *bilstm_layer;
     Merge3Layer *merge_hidden_layer;
     DenseLayer *emit_layer;
 
-    cnn::LookupParameters *words_lookup_param;
-    cnn::LookupParameters *postags_lookup_param;
+    dynet::LookupParameter words_lookup_param;
+    dynet::LookupParameter postags_lookup_param;
     
-    cnn::LookupParameters *trans_score_lookup_param; // trans score , that is , TAG_A -> TAG_B 's score
-    cnn::LookupParameters *init_score_lookup_param; // init score , that is , the init TAG score
+    dynet::LookupParameter trans_score_lookup_param; // trans score , that is , TAG_A -> TAG_B 's score
+    dynet::LookupParameter init_score_lookup_param; // init score , that is , the init TAG score
 
 
     // Dict
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
     DictWrapper word_dict_wrapper;
     static const std::string UNK_STR ; 
 
@@ -65,10 +65,10 @@ struct BILSTMCRFModel4POSTAG
     void print_model_info();
 
 
-    cnn::expr::Expression viterbi_train(cnn::ComputationGraph *p_cg, 
+    dynet::expr::Expression viterbi_train(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_sent, const IndexSeq *p_tag_seq,
         Stat *p_stat = nullptr);
-    void viterbi_predict(cnn::ComputationGraph *p_cg, 
+    void viterbi_predict(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_sent, IndexSeq *p_predict_tag_seq);
 
 };

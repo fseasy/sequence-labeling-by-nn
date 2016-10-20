@@ -4,13 +4,13 @@
 #include <string>
 #include <sstream>
 
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <boost/program_options.hpp>
 
@@ -42,26 +42,26 @@ struct NERDCModel
         tag_layer_hidden_dim;
 
     // Model param
-    cnn::Model *m;
+    dynet::Model *m;
 
     Merge3Layer *merge_doublechannel_layer;
     BILSTMLayer *bilstm_layer;
     Merge3Layer *merge_bilstm_and_pretag_layer;
     DenseLayer *tag_output_linear_layer;
 
-    cnn::LookupParameters *dynamic_words_lookup_param;
-    cnn::LookupParameters *fixed_words_lookup_param;
-    cnn::LookupParameters *postag_lookup_param;
-    cnn::LookupParameters *ner_lookup_param;
+    dynet::LookupParameter dynamic_words_lookup_param;
+    dynet::LookupParameter fixed_words_lookup_param;
+    dynet::LookupParameter postag_lookup_param;
+    dynet::LookupParameter ner_lookup_param;
     
-    cnn::Parameters *TAG_SOS_param; // for tag_hidden_layer , pre-tag
+    dynet::Parameter TAG_SOS_param; // for tag_hidden_layer , pre-tag
 
 
     // Dict
-    cnn::Dict dynamic_dict;
-    cnn::Dict fixed_dict;
-    cnn::Dict postag_dict;
-    cnn::Dict ner_dict;
+    dynet::Dict dynamic_dict;
+    dynet::Dict fixed_dict;
+    dynet::Dict postag_dict;
+    dynet::Dict ner_dict;
     DictWrapper dynamic_dict_wrapper;
     
     static const std::string UNK_STR ; 
@@ -75,11 +75,11 @@ struct NERDCModel
     void print_model_info();
 
 
-    cnn::expr::Expression negative_loglikelihood(cnn::ComputationGraph *p_cg, 
+    dynet::expr::Expression negative_loglikelihood(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_postag_seq,
         const IndexSeq *p_ner_seq ,
         Stat *p_stat = nullptr);
-    void do_predict(cnn::ComputationGraph *p_cg, 
+    void do_predict(dynet::ComputationGraph *p_cg, 
         const IndexSeq *p_dynamic_sent, const IndexSeq *p_fixed_sent, const IndexSeq *p_postag_seq ,
         IndexSeq *p_predict_ner_seq);
 

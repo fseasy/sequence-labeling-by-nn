@@ -3,7 +3,7 @@
 #include <string>
 #include <sstream>
 #include <boost/serialization/serialization.hpp>
-#include "cnn/cnn.h"
+#include "dynet/dynet.h"
 #include "utils/dict_wrapper.hpp"
 #include "utils/typedeclaration.h"
 
@@ -26,9 +26,9 @@ struct POSFeature
     unsigned char_length_embedding_dim;
     unsigned concatenated_feature_embedding_dim;
 
-    cnn::Dict prefix_suffix_len1_dict;
-    cnn::Dict prefix_suffix_len2_dict;
-    cnn::Dict prefix_suffix_len3_dict;
+    dynet::Dict prefix_suffix_len1_dict;
+    dynet::Dict prefix_suffix_len2_dict;
+    dynet::Dict prefix_suffix_len3_dict;
 
     DictWrapper prefix_suffix_len1_dict_wrapper;
     DictWrapper prefix_suffix_len2_dict_wrapper;
@@ -95,9 +95,9 @@ bool POSFeature::is_dict_frozen()
 inline
 void POSFeature::freeze_dict()
 {
-    prefix_suffix_len1_dict_wrapper.Freeze(); prefix_suffix_len1_dict_wrapper.SetUnk(FeatureUnkStr);
-    prefix_suffix_len2_dict_wrapper.Freeze(); prefix_suffix_len2_dict_wrapper.SetUnk(FeatureUnkStr);
-    prefix_suffix_len3_dict_wrapper.Freeze(); prefix_suffix_len3_dict_wrapper.SetUnk(FeatureUnkStr);
+    prefix_suffix_len1_dict_wrapper.freeze(); prefix_suffix_len1_dict_wrapper.set_unk(FeatureUnkStr);
+    prefix_suffix_len2_dict_wrapper.freeze(); prefix_suffix_len2_dict_wrapper.set_unk(FeatureUnkStr);
+    prefix_suffix_len3_dict_wrapper.freeze(); prefix_suffix_len3_dict_wrapper.set_unk(FeatureUnkStr);
 }
 
 inline
@@ -115,7 +115,7 @@ void POSFeature::do_repalce_feature_with_unk_in_copy(const POSFeatureIndexGroupS
     using std::swap;
     static auto word_replace_with_unk = [](DictWrapper &dw, Index idx)->Index
     {
-        if( idx != FeatureEmptyIndexPlaceholder ) { return dw.ConvertProbability(idx); }
+        if( idx != FeatureEmptyIndexPlaceholder ) { return dw.unk_replace_probability(idx); }
         else { return idx ; }
     } ;
     size_t seq_len = gp_seq.size();
@@ -139,7 +139,7 @@ inline
 Index POSFeature::prefix_suffix_feature_str2feature_idx_and_adding2dict_in_training(DictWrapper &dw, const std::string &feature_str)
 {
     if( feature_str == FeatureEmptyStrPlaceholder ){ return FeatureEmptyIndexPlaceholder; }
-    else { return dw.Convert(feature_str); }
+    else { return dw.convert(feature_str); }
 }
 
 inline

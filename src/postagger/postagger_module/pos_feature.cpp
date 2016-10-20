@@ -25,7 +25,8 @@ std::string POSFeature::get_feature_info()
         << prefix_suffix_len3_dict.size() << " ]\n"
         << "prefix and suffix embedding dim : [ " << prefix_suffix_len1_embedding_dim << ", " << prefix_suffix_len2_embedding_dim << ", "
         << prefix_suffix_len3_embedding_dim << " ]\n"
-        << "character length feature dict size : " << get_char_length_dict_size() << " , dimension : " << char_length_embedding_dim ;
+        << "character length feature dict size : " << get_char_length_dict_size() << " , dimension : " << char_length_embedding_dim << "\n"
+        << "total pos feature dimension : " << get_pos_feature_dim() ;
     return oss.str();
 }
 }

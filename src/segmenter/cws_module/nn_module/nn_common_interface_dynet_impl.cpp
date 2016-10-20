@@ -1,0 +1,30 @@
+#include <iostream>
+#include "nn_common_interface_dynet_impl.h"
+
+namespace slnn{
+namespace segmenter{
+namespace nn_module{
+
+void 
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+set_update_method(const std::string &optmization_name)
+{
+    std::string opt_norm_name(optmization_name);
+    for( char &c : opt_norm_name ){ c = ::tolower(c); }
+    if( opt_norm_name == "sgd" )
+    {
+        trainer = new dynet::SimpleSGDTrainer(dynet_model);
+    }
+    else if( opt_norm_name == "adagrad" )
+    {
+        trainer = new dynet::AdagradTrainer(dynet_model);
+    }
+    else
+    {
+        throw std::invalid_argument(std::string("un-supported optimization method : '") + optmization_name + std::string("'"));
+    }
+}
+
+} // end of namespace nn-module
+} // end of namespace segmenter
+} // end of namespace slnn

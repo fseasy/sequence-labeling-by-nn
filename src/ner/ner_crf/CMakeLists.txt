@@ -18,4 +18,4 @@ add_executable(ner_crf ner_crf.cpp
                       ${ner_crf_libs} ${common_libs}
 )
 
-target_link_libraries(ner_crf cnn ${Boost_LIBRARIES})
+target_link_libraries(ner_crf dynet ${Boost_LIBRARIES})

@@ -2,7 +2,7 @@
 #define DICT_WRAPPER_HPP_INCLUDED_
 
 #include "typedeclaration.h"
-#include "cnn/dict.h"
+#include "dynet/dict.h"
 
 #include <functional>
 #include <algorithm>
@@ -15,14 +15,14 @@
 namespace slnn {
     struct DictWrapper
     {
-        DictWrapper(cnn::Dict &d) : rd(d), freq_threshold(1), prob_threshold(0.2f), prob_rand(std::bind(std::uniform_real_distribution<float>(0, 1), *(cnn::rndeng) ))
+        DictWrapper(dynet::Dict &d) : rd(d), freq_threshold(1), prob_threshold(0.2f), prob_rand(std::bind(std::uniform_real_distribution<float>(0, 1), *(dynet::rndeng) ))
         {
             freq_records.reserve(0xFFFF); // 60K space
         }
 
-        inline int Convert(const std::string& word)
+        inline int convert(const std::string& word)
         {
-            Index word_idx = rd.Convert(word);
+            Index word_idx = rd.convert(word);
             if (!rd.is_frozen())
             {
                 if (static_cast<unsigned>(word_idx) + 1U > freq_records.size())
@@ -34,14 +34,14 @@ namespace slnn {
             }
             return word_idx;
         }
-        void SetUnk(const std::string& word)
+        void set_unk(const std::string& word)
         {
-            rd.SetUnk(word);
-            UNK = rd.Convert(word);
+            rd.set_unk(word);
+            UNK = rd.convert(word);
         }
-        void Freeze() { rd.Freeze(); }
+        void freeze() { rd.freeze(); }
         bool is_frozen() { return rd.is_frozen(); }
-        int ConvertProbability(Index word_idx)
+        int unk_replace_probability(Index word_idx)
         {
             if (word_idx == UNK) return UNK; // UNK is not in freq_records
             assert(static_cast<unsigned>(word_idx) < freq_records.size());
@@ -53,7 +53,7 @@ namespace slnn {
             this->freq_threshold = freq_threshold;
             this->prob_threshold = prob_threshold;
         }
-        cnn::Dict &rd;
+        dynet::Dict &rd;
         std::vector<int> freq_records;
         Index UNK;
         int freq_threshold;

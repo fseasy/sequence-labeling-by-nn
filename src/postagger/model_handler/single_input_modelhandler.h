@@ -98,7 +98,7 @@ void SingleInputModelHandler<SIModel>::save_current_best_model(float acc)
     best_acc = acc;
     best_model_tmp_ss.str(""); // first , clear it's content !
     boost::archive::text_oarchive to(best_model_tmp_ss);
-    to << *sim->get_cnn_model();
+    to << *sim->get_dynet_model();
 }
 
 template<typename SIModel>
@@ -159,7 +159,7 @@ void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &i
     tag_seq.reserve(SentMaxLen);
 
     DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    dynet::Dict &tag_dict = sim->get_output_dict() ;
     while (getline(is, line)) {
         if (0 == line.size()) continue;
         sent.clear() ;
@@ -172,8 +172,8 @@ void SingleInputModelHandler<SIModel>::do_read_annotated_dataset(std::istream &i
             std::string word = strpair.substr(0, delim_pos);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index tag_id = tag_dict.Convert(strpair.substr(delim_pos + 1));
+            Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index tag_id = tag_dict.convert(strpair.substr(delim_pos + 1));
             sent.push_back(word_id);
             tag_seq.push_back(tag_id);
         }
@@ -191,15 +191,15 @@ template <typename SIModel>
 void SingleInputModelHandler<SIModel>::read_training_data_and_build_dicts(std::istream &is,
                                         std::vector<IndexSeq> &sents, std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    dynet::Dict &word_dict = sim->get_input_dict() ;
+    dynet::Dict &tag_dict = sim->get_output_dict() ;
     DictWrapper &word_dict_wrapper = sim->get_input_dict_wrapper() ;
     assert(!word_dict.is_frozen() && !tag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents, tag_seqs);
-    word_dict_wrapper.Freeze();
-    word_dict_wrapper.SetUnk(sim->UNK_STR);
-    tag_dict.Freeze();
+    word_dict_wrapper.freeze();
+    word_dict_wrapper.set_unk(sim->UNK_STR);
+    tag_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set word , tag dict done . ";
 }
 
@@ -208,8 +208,8 @@ void SingleInputModelHandler<SIModel>::read_devel_data(std::istream &is,
                                                        std::vector<IndexSeq> &sents, 
                                                        std::vector<IndexSeq> &tag_seqs)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    dynet::Dict &word_dict = sim->get_input_dict() ;
+    dynet::Dict &tag_dict = sim->get_output_dict() ;
     assert(word_dict.is_frozen() && tag_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read developing data .";
     do_read_annotated_dataset(is, sents, tag_seqs);
@@ -221,7 +221,7 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
                                                       std::vector<Seq> &raw_test_sents, 
                                                       std::vector<IndexSeq> &sents)
 {
-    cnn::Dict &word_dict = sim->get_input_dict() ;
+    dynet::Dict &word_dict = sim->get_input_dict() ;
     std::string line ;
     std::vector<Seq> tmp_raw_sents ;
     std::vector<IndexSeq> tmp_sents ;
@@ -235,7 +235,7 @@ void SingleInputModelHandler<SIModel>::read_test_data(std::istream &is,
         sent.resize(raw_sent.size()) ;
         for( size_t i = 0 ; i < raw_sent.size() ; ++i )
         {
-            Index word_id = word_dict.Convert(raw_sent.at(i)) ;
+            Index word_id = word_dict.convert(raw_sent.at(i)) ;
             sent.at(i) = word_id ;
         }
         tmp_raw_sents.push_back(raw_sent) ;
@@ -275,7 +275,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
     for (unsigned i = 0; i < nr_samples; ++i) access_order[i] = i;
     
     bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(sim->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(sim->get_dynet_model());
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
     IndexSeq dynamic_sent_after_replace_unk(SentMaxLen , 0);
@@ -283,7 +283,7 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -298,16 +298,16 @@ void SingleInputModelHandler<SIModel>::train(const std::vector<IndexSeq> *p_sent
                 &tag_seq = p_tag_seqs->at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 dynamic_sent_after_replace_unk.resize(sent.size());
                 for( size_t word_idx = 0; word_idx < sent.size(); ++word_idx )
                 {
                     dynamic_sent_after_replace_unk[word_idx] =
-                        word_dict_wrapper.ConvertProbability(sent.at(word_idx));
+                        word_dict_wrapper.unk_replace_probability(sent.at(word_idx));
                 }
-                sim->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = sim->build_loss(cg, dynamic_sent_after_replace_unk, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
@@ -374,7 +374,7 @@ float SingleInputModelHandler<SIModel>::devel(const std::vector<IndexSeq> *p_sen
     stat.start_time_stat();
     for (unsigned access_idx = 0; access_idx < nr_samples; ++access_idx)
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
         const IndexSeq &sent = p_sents->at(access_idx) ,
             &gold_tag = p_tag_seqs->at(access_idx);
@@ -403,7 +403,7 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
     read_test_data(is,raw_instances, sents );
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     BasicStat stat(true);
-    cnn::Dict &tag_dict = sim->get_output_dict() ;
+    dynet::Dict &tag_dict = sim->get_output_dict() ;
     stat.start_time_stat();
     for (unsigned int i = 0; i < raw_instances.size(); ++i)
     {
@@ -415,13 +415,13 @@ void SingleInputModelHandler<SIModel>::predict(std::istream &is, std::ostream &o
         }
         IndexSeq &sent = sents.at(i) ;
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         sim->predict(cg, sent, pred_tag_seq);
-        os << raw_sent[0] << "_" << tag_dict.Convert(pred_tag_seq[0]) ;
+        os << raw_sent[0] << "_" << tag_dict.convert(pred_tag_seq[0]) ;
         for( size_t i = 1 ; i < raw_sent.size() ; ++i )
         { 
             os << OUT_SPLIT_DELIMITER 
-                << raw_sent[i] << "_" << tag_dict.Convert(pred_tag_seq[i]) ; 
+                << raw_sent[i] << "_" << tag_dict.convert(pred_tag_seq[i]) ; 
         }
         os << "\n";
         stat.total_tags += pred_tag_seq.size() ;
@@ -435,7 +435,7 @@ void SingleInputModelHandler<SIModel>::save_model(std::ostream &os)
 {
     if( best_model_tmp_ss && 0 != best_model_tmp_ss.rdbuf()->in_avail() )
     {
-        sim->set_cnn_model(best_model_tmp_ss) ;
+        sim->set_dynet_model(best_model_tmp_ss) ;
     }
     sim->save_model(os) ;
 }

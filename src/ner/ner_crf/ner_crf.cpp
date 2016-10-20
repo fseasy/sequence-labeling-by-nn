@@ -5,7 +5,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Ner-CRF based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Ner-CRF based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -110,7 +110,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    cnn::Initialize(argc, argv, 1234); 
+    dynet::initialize(argc, argv, 1234); 
     NERCRFModelHandler model_handler;
 
     // reading traing data , get word dict size and output tag number
@@ -200,7 +200,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if (!FileUtils::exists(eval_script_path)) fatal_error("Error : eval script is not exists at `" + eval_script_path + "`");
     
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     NERCRFModelHandler model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -264,7 +264,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
     
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     NERCRFModelHandler model_handler ;
 
     // load model 

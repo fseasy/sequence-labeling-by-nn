@@ -13,7 +13,7 @@
 #include "bilstmcrf_dc.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn{
 
 const std::string BILSTMCRFDCModel4POSTAG::UNK_STR = "<UNK_REPR>";
@@ -157,10 +157,10 @@ Expression BILSTMCRFDCModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
             if (p_stat)
             {
                 size_t pre_tag_value = 0;
-                cnn::real max_score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_value]));
+                dynet::real max_score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_value]));
                 for (size_t pre_tag_idx = 1; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
                 {
-                    cnn::real score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_idx]));
+                    dynet::real score_value = as_scalar(cg.get_value(partial_score_exp_cont[pre_tag_idx]));
                     if (score_value > max_score_value)
                     {
                         max_score_value = score_value;
@@ -184,10 +184,10 @@ Expression BILSTMCRFDCModel4POSTAG::viterbi_train(ComputationGraph *p_cg,
     if (p_stat)
     {
         Index end_predicted_idx = 0;
-        cnn::real max_score_value = as_scalar(cg.get_value(cur_score_exp_cont[end_predicted_idx]));
+        dynet::real max_score_value = as_scalar(cg.get_value(cur_score_exp_cont[end_predicted_idx]));
         for (size_t postag_idx = 1; postag_idx < postag_dict_size; ++postag_idx)
         {
-            cnn::real score_value = as_scalar(cg.get_value(cur_score_exp_cont[postag_idx]));
+            dynet::real score_value = as_scalar(cg.get_value(cur_score_exp_cont[postag_idx]));
             if (score_value > max_score_value)
             {
                max_score_value = score_value;
@@ -242,9 +242,9 @@ void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
     
     //viterbi - preparing score
     vector<Expression> all_postag_exp_cont(postag_dict_size);
-    vector<cnn::real> init_score(postag_dict_size);
-    vector<cnn::real> trans_score(postag_dict_size * postag_dict_size);
-    vector<vector<cnn::real>> emit_score(sent_len, vector<cnn::real>(postag_dict_size));
+    vector<dynet::real> init_score(postag_dict_size);
+    vector<dynet::real> trans_score(postag_dict_size * postag_dict_size);
+    vector<vector<dynet::real>> emit_score(sent_len, vector<dynet::real>(postag_dict_size));
 
     // get init score
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
@@ -276,25 +276,25 @@ void BILSTMCRFDCModel4POSTAG::viterbi_predict(ComputationGraph *p_cg,
     }
     // viterbi - process
     vector<vector<size_t>> path_matrix(sent_len, vector<size_t>(postag_dict_size));
-    vector<cnn::real> current_scores(postag_dict_size);
+    vector<dynet::real> current_scores(postag_dict_size);
     // time 0
     for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
     {
         current_scores[postag_idx] = init_score[postag_idx] + emit_score[0][postag_idx];
     }
     // continues time
-    vector<cnn::real>  pre_timestep_scores(current_scores);
+    vector<dynet::real>  pre_timestep_scores(current_scores);
     for (size_t time_step = 1; time_step < sent_len; ++time_step)
     {
         swap(pre_timestep_scores, current_scores); // move current_score -> pre_timestep_score
         for (size_t postag_idx = 0; postag_idx < postag_dict_size; ++postag_idx)
         {
             size_t pre_tag_with_max_score = 0;
-            cnn::real max_score = pre_timestep_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
+            dynet::real max_score = pre_timestep_scores[0] + trans_score[postag_idx]; // 0*postag_dict_size + postag_idx
             for (size_t pre_tag_idx = 1; pre_tag_idx < postag_dict_size; ++pre_tag_idx)
             {
                 size_t flat_idx = pre_tag_idx * postag_dict_size + postag_idx;
-                cnn::real score = pre_timestep_scores[pre_tag_idx] + trans_score[flat_idx];
+                dynet::real score = pre_timestep_scores[pre_tag_idx] + trans_score[flat_idx];
                 if (score > max_score)
                 {
                     pre_tag_with_max_score = pre_tag_idx;

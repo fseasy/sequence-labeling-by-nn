@@ -4,19 +4,19 @@
 #include <boost/log/trivial.hpp>
 #include <boost/log/expressions.hpp>
 
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/gru.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/gru.h"
 
 #include "pos_input1_mlp_without_tag_no_feature_model.h"
 #include "postagger/model_handler/input1_mlp_modelhandler_no_feature.h"
 #include "utils/general.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 using namespace slnn;
 namespace po = boost::program_options;
-static const string ProgramHeader = "Postagger Input1-MLP based on CNN Library";
+static const string ProgramHeader = "Postagger Input1-MLP based on DyNet Library";
 static const int CNNRandomSeed = 1234;
 
 
@@ -27,7 +27,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
     po::options_description op_des = po::options_description(description);
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
@@ -41,6 +41,8 @@ int train_process(int argc, char *argv[], const string &program_name)
                 " if words frequency <= replace_freq_threshold , the word will"
                 " be replace in this probability")
         ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("context_left_size", po::value<unsigned>()->default_value(2), "The left size for context feature")
+        ("context_right_size", po::value<unsigned>()->default_value(2), "The right size for context feature")
         ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
             "separated by comma , like : 512,256,334 ")
         ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
@@ -98,18 +100,20 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
 
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input1MLPModelNoFeatureHandler<Input1MLPWithoutTagNoFeatureModel> model_handler;
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
     if( !model_os ) fatal_error("failed to open model path at '" + model_path + "'") ;
+    
+    model_handler.set_model_param_before_read_training_data(var_map);
     // reading traing data , get word dict size and output tag number
 
     ifstream train_is(training_data_path);
@@ -118,18 +122,18 @@ int train_process(int argc, char *argv[], const string &program_name)
     }
     vector<IndexSeq> sents ,
         tag_seqs;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> context_feature_gp_seqs;
     model_handler.read_training_data(train_is, sents ,context_feature_gp_seqs, tag_seqs);
     train_is.close();
     // set model structure param 
-    model_handler.set_model_param_after_reading_training_data(var_map);
+    model_handler.set_model_param_after_read_training_data();
 
     // build model structure
     model_handler.build_model(); // passing the var_map to specify the model structure
 
                                  // reading developing data
     vector<IndexSeq> dev_sents, dev_tag_seqs ;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> dev_context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> dev_context_feature_gp_seqs;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
@@ -138,9 +142,9 @@ int train_process(int argc, char *argv[], const string &program_name)
     devel_is.close();
 
     // Train 
-    model_handler.train(&sents, &context_feature_gp_seqs,  &tag_seqs , 
+    model_handler.train(sents, context_feature_gp_seqs,  tag_seqs , 
         max_epoch, 
-        &dev_sents , &dev_context_feature_gp_seqs, &dev_tag_seqs , 
+        dev_sents , dev_context_feature_gp_seqs, dev_tag_seqs , 
         devel_freq , 
         trivial_report_freq);
 
@@ -159,7 +163,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     // set params to receive the arguments 
     string devel_data_path, model_path ;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
         ("help,h", "Show help information.");
@@ -177,13 +181,13 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
 
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input1MLPModelNoFeatureHandler<Input1MLPWithoutTagNoFeatureModel> model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -199,12 +203,12 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
     vector<IndexSeq> sents,
         tag_seqs ;
-    vector<POSContextFeature::ContextFeatureIndexGroupSeq> context_feature_gp_seqs;
+    vector<ContextFeatureDataSeq> context_feature_gp_seqs;
     model_handler.read_devel_data(devel_is, sents, context_feature_gp_seqs, tag_seqs);
     devel_is.close();
 
     // devel
-    model_handler.devel(&sents , &context_feature_gp_seqs, &tag_seqs); 
+    model_handler.devel(sents , context_feature_gp_seqs, tag_seqs); 
 
     return 0;
 }
@@ -217,7 +221,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     po::options_description op_des = po::options_description(description);
     string raw_data_path, output_path, model_path;
     op_des.add_options()
-        ("cnn-mem", po::value<unsigned>(), "pre-allocated memory pool for CNN library (MB) .")
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
         ("raw_data", po::value<string>(&raw_data_path), "The path to raw data(It should be segmented) .")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
@@ -243,13 +247,13 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
 
     // Init 
-    int cnn_argc;
-    shared_ptr<char *> cnn_argv;
-    unsigned cnn_mem = 0 ;
-    if( var_map.count("cnn-mem") != 0 ){ cnn_mem = var_map["cnn-mem"].as<unsigned>();}
-    build_cnn_parameters(program_name, cnn_mem, cnn_argc, cnn_argv);
-    char **cnn_argv_ptr = cnn_argv.get();
-    cnn::Initialize(cnn_argc, cnn_argv_ptr, CNNRandomSeed); 
+    int dynet_argc;
+    shared_ptr<char *> dynet_argv;
+    unsigned dynet_mem = 0 ;
+    if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
+    build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
+    char **dynet_argv_ptr = dynet_argv.get();
+    dynet::initialize(dynet_argc, dynet_argv_ptr, CNNRandomSeed); 
     Input1MLPModelNoFeatureHandler<Input1MLPWithoutTagNoFeatureModel> model_handler ;
 
     // load model 

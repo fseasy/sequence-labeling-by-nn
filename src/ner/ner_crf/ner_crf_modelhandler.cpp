@@ -8,7 +8,7 @@
 #include "ner_crf_modelhandler.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn
 {
 
@@ -62,9 +62,9 @@ void NERCRFModelHandler::do_read_annotated_dataset(istream &is, vector<IndexSeq>
             string nertag = part.substr(nertag_pos + 1);
             // Parse Number to specific string
             word = replace_number(word);
-            Index word_id = dc_m.word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index postag_id = dc_m.postag_dict.Convert(postag);
-            Index nertag_id = dc_m.ner_dict.Convert(nertag);
+            Index word_id = dc_m.word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index postag_id = dc_m.postag_dict.convert(postag);
+            Index nertag_id = dc_m.ner_dict.convert(nertag);
             sent.push_back(word_id);
             postag_seq.push_back(postag_id);
             ner_seq.push_back(nertag_id);
@@ -87,10 +87,10 @@ void NERCRFModelHandler::read_training_data_and_build_dicts(istream &is, vector<
     assert(!dc_m.word_dict.is_frozen() && !dc_m.postag_dict.is_frozen() && !dc_m.ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, sents,  postag_seqs , ner_seqs);
-    dc_m.word_dict_wrapper.Freeze();
-    dc_m.word_dict_wrapper.SetUnk(dc_m.UNK_STR);
-    dc_m.postag_dict.Freeze();
-    dc_m.ner_dict.Freeze();
+    dc_m.word_dict_wrapper.freeze();
+    dc_m.word_dict_wrapper.set_unk(dc_m.UNK_STR);
+    dc_m.postag_dict.freeze();
+    dc_m.ner_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic , postag and ner dict done . ";
 }
 
@@ -134,8 +134,8 @@ void NERCRFModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sents
             string postag = part.substr(delim_pos + 1);
             string number_transed_word = replace_number(raw_word);
             raw_sent[i] = raw_word ;
-            words_index_seq[i] = dc_m.word_dict.Convert(number_transed_word);
-            postag_index_seq[i] = dc_m.postag_dict.Convert(postag);
+            words_index_seq[i] = dc_m.word_dict.convert(number_transed_word);
+            postag_index_seq[i] = dc_m.postag_dict.convert(postag);
         }
 
     }
@@ -219,12 +219,12 @@ void NERCRFModelHandler::train(const vector<IndexSeq> *p_sents,
             for (size_t word_idx = 0; word_idx < p_sent->size(); ++word_idx)
             {
                 dynamic_sent_after_replace_unk[word_idx] = 
-                    dc_m.word_dict_wrapper.ConvertProbability(p_sent->at(word_idx));
+                    dc_m.word_dict_wrapper.unk_replace_probability(p_sent->at(word_idx));
             }
-            dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk,
+            auto loss_expr = dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk,
                                         p_postag_seq, p_ner_seq , dropout_rate ,  training_stat4trivial.get());
-            cnn::real loss =  as_scalar(cg->forward());
-            cg->backward();
+            dynet::real loss =  as_scalar(cg->forward(loss_expr));
+            cg->backward(loss_expr);
             sgd.update(1.f);
             delete cg;
             if (training_stat4trivial) training_stat4trivial->loss += loss;
@@ -354,14 +354,14 @@ void NERCRFModelHandler::predict(std::istream &is, std::ostream &os)
         dc_m.viterbi_predict(&cg, p_sent, p_postag_seq , &predict_seq);
         // output the result directly
         os << p_raw_sent->at(0)
-            << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(0))
-            << "#" << dc_m.ner_dict.Convert(predict_seq.at(0));
+            << "/" << dc_m.postag_dict.convert(p_postag_seq->at(0))
+            << "#" << dc_m.ner_dict.convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
         {
             os << SPLIT_DELIMITER
                 << p_raw_sent->at(k)
-                << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(k))
-                << "#" << dc_m.ner_dict.Convert(predict_seq.at(k));
+                << "/" << dc_m.postag_dict.convert(p_postag_seq->at(k))
+                << "#" << dc_m.ner_dict.convert(predict_seq.at(k));
         }
         os << "\n";
         stat.total_tags += predict_seq.size() ;

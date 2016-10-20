@@ -1,13 +1,13 @@
 #ifndef BILSTMMODEL4NER_HPP_INCLUDED_
 #define BILSTMMODEL4NER_HPP_INCLUDED_
 
-#include "cnn/nodes.h"
-#include "cnn/cnn.h"
-#include "cnn/training.h"
-#include "cnn/rnn.h"
-#include "cnn/lstm.h"
-#include "cnn/dict.h"
-#include "cnn/expr.h"
+#include "dynet/nodes.h"
+#include "dynet/dynet.h"
+#include "dynet/training.h"
+#include "dynet/rnn.h"
+#include "dynet/lstm.h"
+#include "dynet/dict.h"
+#include "dynet/expr.h"
 
 #include <iostream>
 #include <fstream>
@@ -33,7 +33,7 @@
 #include "utils/stat.hpp"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace po = boost::program_options;
 
 
@@ -49,15 +49,15 @@ struct BILSTMModel4NER
 
     // paramerters
     // - Lookup parameters
-    LookupParameters *words_lookup_param;
-    LookupParameters *postags_lookup_param;
-    LookupParameters *nertags_lookup_param;
+    LookupParameter words_lookup_param;
+    LookupParameter postags_lookup_param;
+    LookupParameter nertags_lookup_param;
 
     // - parameters
     // - affine transform at input for word embedding and postag embedding
 
     // - affline transform at LSTM-OUT & PRE-TAG  params / it is also the TAG HIDDEN layer
-    Parameters *pretag_SOS_param;
+    Parameter pretag_SOS_param;
     
 
     // model structure 
@@ -85,9 +85,9 @@ struct BILSTMModel4NER
     stringstream best_model_tmp_ss;
 
     // others 
-    cnn::Dict word_dict;
-    cnn::Dict postag_dict;
-    cnn::Dict ner_dict;
+    dynet::Dict word_dict;
+    dynet::Dict postag_dict;
+    dynet::Dict ner_dict;
     DictWrapper word_dict_wrapper;
     //const string SOS_STR = "<START_OF_SEQUENCE_REPR>";
     //const string EOS_STR = "<END_OF_SEQUENCE_REPR>";
@@ -184,9 +184,9 @@ struct BILSTMModel4NER
                 string nertag = part.substr(nertag_pos + 1);
                 // Parse Number to specific string
                 word = replace_number(word);
-                Index word_id = word_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-                Index postag_id = postag_dict.Convert(postag);
-                Index nertag_id = ner_dict.Convert(nertag);
+                Index word_id = word_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+                Index postag_id = postag_dict.convert(postag);
+                Index nertag_id = ner_dict.convert(nertag);
                 sent.push_back(word_id);
                 postag_seq.push_back(postag_id);
                 nertag_seq.push_back(nertag_id);
@@ -263,8 +263,8 @@ struct BILSTMModel4NER
                 string postag = part.substr(delim_pos + 1);
                 raw_sent.push_back(raw_word);
                 string word = replace_number(raw_word);
-                sent.push_back(word_dict.Convert(word));
-                postag_seq.push_back(postag_dict.Convert(postag));
+                sent.push_back(word_dict.convert(word));
+                postag_seq.push_back(postag_dict.convert(postag));
             }
             tmp_raw_sents.push_back(raw_sent);
             tmp_sents.push_back(sent);
@@ -285,17 +285,17 @@ struct BILSTMModel4NER
     {
         if (word_dict.is_frozen() && postag_dict.is_frozen() && ner_dict.is_frozen()) return; // has been frozen
         // First , add flag for start , end of word sequence and start of tag sequence  
-        //SOS = word_dict_wrapper.Convert(SOS_STR);
-        //EOS = word_dict_wrapper.Convert(EOS_STR);
-        //SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
-        // Freeze
-        word_dict_wrapper.Freeze();
-        postag_dict.Freeze();
-        ner_dict.Freeze();
+        //SOS = word_dict_wrapper.convert(SOS_STR);
+        //EOS = word_dict_wrapper.convert(EOS_STR);
+        //SOS_TAG = tag_dict.convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
+        // freeze
+        word_dict_wrapper.freeze();
+        postag_dict.freeze();
+        ner_dict.freeze();
         // set unk
-        word_dict_wrapper.SetUnk(UNK_STR);
+        word_dict_wrapper.set_unk(UNK_STR);
         // tag dict do not set unk . if has unkown tag , we think it is the dataset error and  should be fixed .
-        UNK = word_dict_wrapper.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+        UNK = word_dict_wrapper.convert(UNK_STR); // get unk id at model (may be usefull for debugging)
 
         WORD_DICT_SIZE = word_dict.size();
         POSTAG_DICT_SIZE = postag_dict.size();
@@ -357,7 +357,7 @@ struct BILSTMModel4NER
     void load_wordembedding_from_word2vec_txt_format(istream &is)
     {
         // set lookup parameters from outer word embedding
-        // using words_loopup_param.Initialize( word_id , value_vector )
+        // using words_loopup_param.initialize( word_id , value_vector )
         string line;
         vector<string> split_cont;
         split_cont.reserve(WORD_EMBEDDING_DIM + 1); // word + numbers 
@@ -378,16 +378,16 @@ struct BILSTMModel4NER
                 continue;
             }
             string &word = split_cont.at(0);
-            Index word_id = word_dict.Convert(word);
+            Index word_id = word_dict.convert(word);
             if (word_id != UNK)
             {
                 ++words_cnt_hit;
                 transform(split_cont.cbegin() + 1, split_cont.cend(), embedding_vec.begin(),
                     [](const string &f_str) { return stof(f_str);});
-                words_lookup_param->Initialize(word_id, embedding_vec);
+                words_lookup_param.initialize(word_id, embedding_vec);
             }
         }
-        BOOST_LOG_TRIVIAL(info) << "Initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE
+        BOOST_LOG_TRIVIAL(info) << "initialize word embedding done . " << words_cnt_hit << "/" << WORD_DICT_SIZE
             << " words emebdding has been loading .";
     }
 
@@ -397,7 +397,7 @@ struct BILSTMModel4NER
         // 1. model structure parameters : WORD_DICT_SIZE , INPUT_DIM , LSTM_LAYER , LSTM_HIDDEN_DIM , TAG_HIDDEN_DIM , TAG_OUTPUT_DIM
         //                                 TAG_EMBEDDING_DIM , TAG_DICT_SIZE
         // 2. Dict : word_dict , tag_dict 
-        // 3. Model of cnn
+        // 3. Model of dynet
         boost::archive::text_oarchive to(os);
         to << WORD_EMBEDDING_DIM << WORD_DICT_SIZE
             << POSTAG_EMBEDDING_DIM << POSTAG_DICT_SIZE
@@ -434,10 +434,10 @@ struct BILSTMModel4NER
                && NER_DICT_SIZE == ner_dict.size());
        
         // SET VALUE for special flag
-        //SOS = word_dict.Convert(SOS_STR);
-        //EOS = word_dict.Convert(EOS_STR);
-        //SOS_TAG = tag_dict.Convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
-        UNK = word_dict.Convert(UNK_STR); // get unk id at model (may be usefull for debugging)
+        //SOS = word_dict.convert(SOS_STR);
+        //EOS = word_dict.convert(EOS_STR);
+        //SOS_TAG = tag_dict.convert(SOS_TAG_STR); // The SOS_TAG should just using in tag hidden layer , and never in output ! 
+        UNK = word_dict.convert(UNK_STR); // get unk id at model (may be usefull for debugging)
 
         // 2. build model structure 
         build_model_structure();
@@ -501,7 +501,7 @@ struct BILSTMModel4NER
             // rectify is suggested as activation function
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp_cont[i]);
-            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp);
+            Expression tag_hidden_layer_output_at_timestep_t = dynet::expr::rectify(bilstm_pretag_merge_exp);
             Expression tag_output_layer_output_at_timestep_t = output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
             
             // if statistic , calc output at timestep t
@@ -573,7 +573,7 @@ struct BILSTMModel4NER
         {
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp);
-            Expression tag_hidden_layer_output_at_timestep_t = cnn::expr::rectify(bilstm_pretag_merge_exp);
+            Expression tag_hidden_layer_output_at_timestep_t = dynet::expr::rectify(bilstm_pretag_merge_exp);
             output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t); 
             vector<float> output_values = as_vector(cg.incremental_forward());
             float max_value = output_values[0];
@@ -634,15 +634,15 @@ struct BILSTMModel4NER
                 sent_unk_replace.resize(sent.size());
                 for (IndexSeq::const_iterator ite = sent.cbegin(); ite != sent.cend(); ++ite)
                 {
-                    sent_unk_replace[ite - sent.cbegin()] = word_dict_wrapper.ConvertProbability(*ite);
+                    sent_unk_replace[ite - sent.cbegin()] = word_dict_wrapper.unk_replace_probability(*ite);
                 }
                 // using negative_loglikelihood loss to build model
                 ComputationGraph *cg = new ComputationGraph(); // because at one scope , only one ComputationGraph is permited .
                                                                // so we have to declaring it as pointer and destroy it handly 
                                                                // before develing.
-                negative_loglikelihood(&sent_unk_replace, &postag_seq, &ner_seq, cg, &training_stat_per_report);
-                training_stat_per_report.loss += as_scalar(cg->forward());
-                cg->backward();
+                auto loss_expr = negative_loglikelihood(&sent_unk_replace, &postag_seq, &ner_seq, cg, &training_stat_per_report);
+                training_stat_per_report.loss += as_scalar(cg->forward(loss_expr));
+                cg->backward(loss_expr);
                 sgd.update(1.0);
                 delete cg;
 
@@ -777,14 +777,14 @@ struct BILSTMModel4NER
             do_predict(p_sent, p_postag_seq , &predict_ner_seq , &cg);
             // output the result directly
             os << p_raw_sent->at(0) 
-                << "/" << postag_dict.Convert(p_postag_seq->at(0)) 
-                << "#" << ner_dict.Convert(predict_ner_seq.at(0));
+                << "/" << postag_dict.convert(p_postag_seq->at(0)) 
+                << "#" << ner_dict.convert(predict_ner_seq.at(0));
             for (unsigned k = 1; k < p_raw_sent->size(); ++k)
             {
                 os << SPLIT_DELIMITER
                     << p_raw_sent->at(k) 
-                    << "/" << postag_dict.Convert(p_postag_seq->at(k)) 
-                    << "#" << ner_dict.Convert(predict_ner_seq.at(k));
+                    << "/" << postag_dict.convert(p_postag_seq->at(k)) 
+                    << "#" << ner_dict.convert(predict_ner_seq.at(k));
             }
             os << "\n";
             stat.total_tags += predict_ner_seq.size() ;

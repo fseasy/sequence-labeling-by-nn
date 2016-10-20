@@ -5,7 +5,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "Postagger-DoubleChannel based on CNN Library";
+const string PROGRAM_DESCRIPTION = "Postagger-DoubleChannel based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -92,7 +92,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
 
     // Init 
-    cnn::Initialize(argc, argv, 1234); // 
+    dynet::initialize(argc, argv, 1234); // 
     DoubleChannelModel4POSTAG dc_model;
     DoubleChannelModelHandler model_handler(dc_model);
     // reading traing data , get word dict size and output tag number
@@ -199,7 +199,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     }
 
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     DoubleChannelModel4POSTAG dc_model;
     DoubleChannelModelHandler model_handler(dc_model);
     // Load model 
@@ -297,7 +297,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     else model_path = var_map["model"].as<string>();
 
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     DoubleChannelModel4POSTAG dc_model;
     DoubleChannelModelHandler model_handler(dc_model);
 

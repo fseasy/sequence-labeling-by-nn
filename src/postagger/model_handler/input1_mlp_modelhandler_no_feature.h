@@ -22,41 +22,41 @@ public:
     Input1MLPModelNoFeatureHandler(const Input1MLPModelNoFeatureHandler&) = delete;
     Input1MLPModelNoFeatureHandler& operator()(const Input1MLPModelNoFeatureHandler&) = delete;
 
-
+    void set_model_param_before_read_training_data(const boost::program_options::variables_map &varmap);
     // Reading data 
     void read_annotated_data(std::istream &is,
         std::vector<IndexSeq> &sents,
-        std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+        std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
         std::vector<IndexSeq> &postags_seqs);
 
     void read_training_data(std::istream &is,
         std::vector<IndexSeq> &training_sents,
-        std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+        std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
         std::vector<IndexSeq> &postags_seqs);
 
     void read_devel_data(std::istream &is,
         std::vector<IndexSeq> &devel_sents,
-        std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+        std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
         std::vector<IndexSeq> &postag_seqs);
 
     void read_test_data(std::istream &is,
         std::vector<Seq> &raw_sents,
         std::vector<IndexSeq> &sents,
-        std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs);
+        std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs);
 
-    void train(const std::vector<IndexSeq> *p_sents,
-        const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_context_feature_gp_seqs,
-        const std::vector<IndexSeq> *p_tag_seqs,
+    void train(const std::vector<IndexSeq> &sents,
+        const std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
+        const std::vector<IndexSeq> &tag_seqs,
         unsigned max_epoch,
-        const std::vector<IndexSeq> *p_dev_sents,
-        const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_dev_context_feature_gp_seqs,
-        const std::vector<IndexSeq> *p_dev_tag_seqs,
+        const std::vector<IndexSeq> &dev_sents,
+        const std::vector<ContextFeatureDataSeq> &dev_context_feature_gp_seqs,
+        const std::vector<IndexSeq> &dev_tag_seqs,
         unsigned do_devel_freq,
         unsigned trivial_report_freq);
 
-    float devel(const std::vector<IndexSeq> *p_sents,
-        const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_context_feature_gp_seqs,
-        const std::vector<IndexSeq> *p_tag_seqs);
+    float devel(const std::vector<IndexSeq> &sents,
+        const std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
+        const std::vector<IndexSeq> &tag_seqs);
 
     void predict(std::istream &is, std::ostream &os);
 
@@ -64,7 +64,7 @@ public:
     void load_model(std::istream &is);
 
     // After read data
-    void set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap);
+    void set_model_param_after_read_training_data();
     void build_model();
 
 private:
@@ -88,14 +88,14 @@ Input1MLPModelNoFeatureHandler<MLPModel>::~Input1MLPModelNoFeatureHandler()
 template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::read_annotated_data(std::istream &is,
     std::vector<IndexSeq> &sents,
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+    std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
     std::vector<IndexSeq> &postag_seqs)
 {
     using std::swap;
     POSReader reader(is);
     std::vector<IndexSeq> tmp_sents,
         tmp_postag_seqs;
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> tmp_context_feature_gp_seqs;
+    std::vector<ContextFeatureDataSeq> tmp_context_feature_gp_seqs;
     size_t detected_line_cnt = reader.count_line();
     tmp_sents.reserve(detected_line_cnt);
     tmp_postag_seqs.reserve(detected_line_cnt);
@@ -108,7 +108,7 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::read_annotated_data(std::istream 
         if( str_sent.size() == 0 ) continue;
         IndexSeq sent,
             postag_seq;
-        POSContextFeature::ContextFeatureIndexGroupSeq context_feature_gp_seq;
+        ContextFeatureDataSeq context_feature_gp_seq;
         
         mlp_model->input_seq2index_seq(str_sent, str_postag_seq, sent, postag_seq, context_feature_gp_seq);
         tmp_sents.push_back(std::move(sent));
@@ -126,7 +126,7 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::read_annotated_data(std::istream 
 template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::read_training_data(std::istream &is,
     std::vector<IndexSeq> &training_sents,
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+    std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
     std::vector<IndexSeq> &postag_seqs)
 {
     assert(!mlp_model->is_dict_frozen());
@@ -139,7 +139,7 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::read_training_data(std::istream &
 template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::read_devel_data(std::istream &is,
     std::vector<IndexSeq> &devel_sents,
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs,
+    std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
     std::vector<IndexSeq> &postag_seqs)
 {
     assert(mlp_model->is_dict_frozen());
@@ -152,14 +152,14 @@ template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::read_test_data(std::istream &is,
     std::vector<Seq> &raw_sents,
     std::vector<IndexSeq> &sents,
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> &context_feature_gp_seqs)
+    std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs)
 {
     using std::swap;
     assert(mlp_model->is_dict_frozen());
     BOOST_LOG_TRIVIAL(info) << "read data." ;
     std::vector<Seq> tmp_raw_sents;
     std::vector<IndexSeq> tmp_sents;
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> tmp_context_feature_gp_seqs;
+    std::vector<ContextFeatureDataSeq> tmp_context_feature_gp_seqs;
     POSReader reader(is);
     size_t detected_line_cnt = reader.count_line();
     tmp_raw_sents.reserve(detected_line_cnt);
@@ -170,7 +170,7 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::read_test_data(std::istream &is,
     while( reader.readline(raw_sent) )
     {
         IndexSeq sent;
-        POSContextFeature::ContextFeatureIndexGroupSeq context_feature_gp_seq;
+        ContextFeatureDataSeq context_feature_gp_seq;
         mlp_model->input_seq2index_seq(raw_sent, sent, context_feature_gp_seq);
         tmp_raw_sents.push_back(std::move(raw_sent));
         tmp_sents.push_back(std::move(sent));
@@ -187,9 +187,16 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::read_test_data(std::istream &is,
 
 template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::
-set_model_param_after_reading_training_data(const boost::program_options::variables_map &varmap)
+set_model_param_before_read_training_data(const boost::program_options::variables_map &varmap)
 {
-    mlp_model->set_model_param(varmap);
+    mlp_model->set_model_param_from_outer(varmap);
+}
+
+template <typename MLPModel>
+void Input1MLPModelNoFeatureHandler<MLPModel>::
+set_model_param_after_read_training_data()
+{
+    mlp_model->set_model_param_from_inner();
 }
 
 template <typename MLPModel>
@@ -201,31 +208,40 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::build_model()
 
 
 template <typename MLPModel>
-void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq> *p_sents,
-    const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_context_feature_gp_seqs,
-    const std::vector<IndexSeq> *p_tag_seqs,
+void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq> &sents,
+    const std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
+    const std::vector<IndexSeq> &tag_seqs,
     unsigned max_epoch,
-    const std::vector<IndexSeq> *p_dev_sents,
-    const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_dev_context_feature_gp_seqs,
-    const std::vector<IndexSeq> *p_dev_tag_seqs,
+    const std::vector<IndexSeq> &dev_sents,
+    const std::vector<ContextFeatureDataSeq> &dev_context_feature_gp_seqs,
+    const std::vector<IndexSeq> &dev_tag_seqs,
     unsigned do_devel_freq,
     unsigned trivial_report_freq)
 {
-    unsigned nr_samples = p_sents->size();
+    unsigned nr_samples = sents.size();
     BOOST_LOG_TRIVIAL(info) << "train at " << nr_samples << " instances .\n";
 
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
 
-    bool is_train_ok = true;
-    cnn::SimpleSGDTrainer sgd(mlp_model->get_cnn_model());
+    dynet::SimpleSGDTrainer sgd(mlp_model->get_dynet_model());
+
+    auto do_devel_in_training = [this, &dev_sents, &dev_context_feature_gp_seqs, &dev_tag_seqs](CNNModelStash &model_stash) 
+    {
+        // CNNModelStash as param to remind we'll change it's state !
+        float acc = this->devel(dev_sents, dev_context_feature_gp_seqs, dev_tag_seqs);
+        model_stash.save_when_best(this->mlp_model->get_dynet_model(), acc);
+        model_stash.update_training_state(acc);
+    };
+
+
     unsigned line_cnt_for_devel = 0;
     unsigned long long total_time_cost_in_seconds = 0ULL;
-    for( unsigned nr_epoch = 0; nr_epoch < max_epoch && is_train_ok; ++nr_epoch )
+    for( unsigned nr_epoch = 0; nr_epoch < max_epoch; ++nr_epoch )
     {
         BOOST_LOG_TRIVIAL(info) << "epoch " << nr_epoch + 1 << "/" << max_epoch << " for train ";
         // shuffle samples by random access order
-        shuffle(access_order.begin(), access_order.end(), *cnn::rndeng);
+        shuffle(access_order.begin(), access_order.end(), *dynet::rndeng);
 
         // For loss , accuracy , time cost report
         BasicStat training_stat_per_epoch;
@@ -236,19 +252,19 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq>
         {
             unsigned access_idx = access_order[i];
             // using negative_loglikelihood loss to build model
-            const IndexSeq &sent = p_sents->at(access_idx),
-                &tag_seq = p_tag_seqs->at(access_idx);
-            const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq = p_context_feature_gp_seqs->at(access_idx);
+            const IndexSeq &sent = sents.at(access_idx),
+                &tag_seq = tag_seqs.at(access_idx);
+            const ContextFeatureDataSeq &context_feature_gp_seq = context_feature_gp_seqs.at(access_idx);
             { // new scope , for only one Computatoin Graph can be exists in one scope at the same time .
               // devel will creat another Computation Graph , so we need to create new scoce to release it before devel .
-                cnn::ComputationGraph cg ;
+                dynet::ComputationGraph cg ;
                 IndexSeq sent_after_replace ;
-                POSContextFeature::ContextFeatureIndexGroupSeq context_feature_gp_seq_after_replace;
+                ContextFeatureDataSeq context_feature_gp_seq_after_replace;
                 mlp_model->replace_word_with_unk(sent, context_feature_gp_seq, 
                     sent_after_replace, context_feature_gp_seq_after_replace);
-                mlp_model->build_loss(cg, sent_after_replace, context_feature_gp_seq_after_replace, tag_seq);
-                cnn::real loss = as_scalar(cg.forward());
-                cg.backward();
+                auto loss_expr = mlp_model->build_loss(cg, sent_after_replace, context_feature_gp_seq_after_replace, tag_seq);
+                dynet::real loss = as_scalar(cg.forward(loss_expr));
+                cg.backward(loss_expr);
                 sgd.update(1.f);
                 training_stat_per_epoch.loss += loss;
                 training_stat_per_epoch.total_tags += sent.size() ;
@@ -262,16 +278,10 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq>
             // Devel
             ++line_cnt_for_devel;
             // If developing samples is available , do `devel` to get model training effect . 
-            if( p_dev_sents != nullptr && 0 == line_cnt_for_devel % do_devel_freq )
+            if( 0 == line_cnt_for_devel % do_devel_freq )
             {
-                float acc = devel(p_dev_sents, p_dev_context_feature_gp_seqs, p_dev_tag_seqs);
-                model_stash.save_when_best(mlp_model->get_cnn_model(), acc);
-                line_cnt_for_devel = 0; // avoid overflow
-                if( model_stash.is_train_error_occurs(acc) )
-                {
-                    is_train_ok = false;
-                    break;
-                }
+                do_devel_in_training(model_stash);
+                if( model_stash.is_training_ok() ){ break; }
             }
         }
 
@@ -287,41 +297,36 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::train(const std::vector<IndexSeq>
         BOOST_LOG_TRIVIAL(info) << training_stat_per_epoch.get_stat_str(info_header);
         total_time_cost_in_seconds += training_stat_per_epoch.get_time_cost_in_seconds();
         // do validation at every ends of epoch
-        if( p_dev_sents != nullptr && is_train_ok )
+        if( model_stash.is_training_ok() )
         {
             BOOST_LOG_TRIVIAL(info) << "do validation at every ends of epoch .";
-            float acc = devel(p_dev_sents, p_dev_context_feature_gp_seqs, p_dev_tag_seqs);
-            model_stash.save_when_best(mlp_model->get_cnn_model(), acc);
-            if( model_stash.is_train_error_occurs(acc) )
-            {
-                is_train_ok = false;
-                break;
-            }
+            do_devel_in_training(model_stash);
         }
+        if( !model_stash.is_training_ok() ){ break; }
 
     }
-    if( !is_train_ok ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
+    if( !model_stash.is_training_ok() ){ BOOST_LOG_TRIVIAL(warning) << "Gradient may have been updated error ! Exit ahead of time." ; }
     BOOST_LOG_TRIVIAL(info) << "training finished with time cost " << total_time_cost_in_seconds << " s .";
 }
 
 
 template <typename MLPModel>
-float Input1MLPModelNoFeatureHandler<MLPModel>::devel(const std::vector<IndexSeq> *p_sents,
-    const std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> *p_context_feature_gp_seqs,
-    const std::vector<IndexSeq> *p_tag_seqs)
+float Input1MLPModelNoFeatureHandler<MLPModel>::devel(const std::vector<IndexSeq> &sents,
+    const std::vector<ContextFeatureDataSeq> &context_feature_gp_seqs,
+    const std::vector<IndexSeq> &tag_seqs)
 {
-    unsigned nr_samples = p_sents->size();
+    unsigned nr_samples = sents.size();
     BOOST_LOG_TRIVIAL(info) << "validation at " << nr_samples << " instances .";
 
     Stat stat(true);
     stat.start_time_stat();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         IndexSeq predict_tag_seq;
-        const IndexSeq &sent = p_sents->at(access_idx),
-            &gold_tag = p_tag_seqs->at(access_idx);
-        const POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq = p_context_feature_gp_seqs->at(access_idx);
+        const IndexSeq &sent = sents.at(access_idx),
+            &gold_tag = tag_seqs.at(access_idx);
+        const ContextFeatureDataSeq &context_feature_gp_seq = context_feature_gp_seqs.at(access_idx);
         mlp_model->predict(cg, sent, context_feature_gp_seq, predict_tag_seq);
 
         stat.total_tags += predict_tag_seq.size();
@@ -345,7 +350,7 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::predict(std::istream &is, std::os
 
     std::vector<Seq> raw_instances;
     std::vector<IndexSeq> sents ;
-    std::vector<POSContextFeature::ContextFeatureIndexGroupSeq> context_feature_gp_seqs;
+    std::vector<ContextFeatureDataSeq> context_feature_gp_seqs;
     read_test_data(is, raw_instances, sents, context_feature_gp_seqs);
     BOOST_LOG_TRIVIAL(info) << "do prediction on " << raw_instances.size() << " instances .";
     BasicStat stat(true);
@@ -359,9 +364,9 @@ void Input1MLPModelNoFeatureHandler<MLPModel>::predict(std::istream &is, std::os
             continue;
         }
         IndexSeq &sent = sents.at(i) ;
-        POSContextFeature::ContextFeatureIndexGroupSeq &context_feature_gp_seq = context_feature_gp_seqs.at(i);
+        ContextFeatureDataSeq &context_feature_gp_seq = context_feature_gp_seqs.at(i);
         IndexSeq pred_tag_seq;
-        cnn::ComputationGraph cg;
+        dynet::ComputationGraph cg;
         mlp_model->predict(cg, sent, context_feature_gp_seq, pred_tag_seq);
         Seq postag_seq;
         mlp_model->postag_index_seq2postag_str_seq(pred_tag_seq, postag_seq);
@@ -382,7 +387,7 @@ template <typename MLPModel>
 void Input1MLPModelNoFeatureHandler<MLPModel>::save_model(std::ostream &os)
 {
     BOOST_LOG_TRIVIAL(info) << "saving model ...";
-    model_stash.load_if_exists(mlp_model->get_cnn_model());
+    model_stash.load_if_exists(mlp_model->get_dynet_model());
     boost::archive::text_oarchive to(os);
     to << *(static_cast<MLPModel*>(mlp_model));
     BOOST_LOG_TRIVIAL(info) << "save model done .";

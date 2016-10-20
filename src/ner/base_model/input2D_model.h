@@ -6,8 +6,8 @@
 #include <boost/archive/text_iarchive.hpp>
 #include <boost/program_options.hpp>
 
-#include "cnn/cnn.h"
-#include "cnn/dict.h"
+#include "dynet/dynet.h"
+#include "dynet/dict.h"
 #include "utils/typedeclaration.h"
 #include "utils/dict_wrapper.hpp"
 #include "modelmodule/hyper_layers.h"
@@ -24,21 +24,21 @@ public :
     virtual void build_model_structure() = 0 ;
     virtual void print_model_info() = 0 ;
     
-    virtual cnn::expr::Expression  build_loss(cnn::ComputationGraph &cg,
+    virtual dynet::expr::Expression  build_loss(dynet::ComputationGraph &cg,
                                               const IndexSeq &words_seq, const IndexSeq &postag_seq,
                                               const IndexSeq &gold_ner_seq) ;
-    virtual void predict(cnn::ComputationGraph &cg ,
+    virtual void predict(dynet::ComputationGraph &cg ,
                          const IndexSeq &words_seq, const IndexSeq &postag_seq, 
                          IndexSeq &pred_ner_seq) ;
 
-    cnn::Dict& get_word_dict(){ return word_dict ;  } 
-    cnn::Dict& get_postag_dict() { return postag_dict ; }
-    cnn::Dict& get_ner_dict(){ return ner_dict ; } 
+    dynet::Dict& get_word_dict(){ return word_dict ;  } 
+    dynet::Dict& get_postag_dict() { return postag_dict ; }
+    dynet::Dict& get_ner_dict(){ return ner_dict ; } 
     DictWrapper& get_word_dict_wrapper(){ return word_dict_wrapper ; } 
-    cnn::Model *get_cnn_model(){ return m ; } ;
+    dynet::Model *get_dynet_model(){ return m ; } ;
 
 
-    void set_cnn_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
+    void set_dynet_model(std::istream &mis){ boost::archive::text_iarchive ti(mis) ; ti >> *m ; } 
 
     virtual void save_model(std::ostream &os) = 0 ;
     virtual void load_model(std::istream &is) = 0 ;
@@ -46,10 +46,10 @@ public :
 public :
     static const std::string UNK_STR;
 protected :
-    cnn::Model *m ;
-    cnn::Dict word_dict ;
-    cnn::Dict postag_dict ;
-    cnn::Dict ner_dict ;
+    dynet::Model *m ;
+    dynet::Dict word_dict ;
+    dynet::Dict postag_dict ;
+    dynet::Dict ner_dict ;
     DictWrapper word_dict_wrapper ;
 
     Input2D *input_layer ;

@@ -8,7 +8,7 @@
 #include "ner_crf_dc_modelhandler.h"
 
 using namespace std;
-using namespace cnn;
+using namespace dynet;
 namespace slnn
 {
 
@@ -37,11 +37,11 @@ void NERCRFDCModelHandler::build_fixed_dict_from_word2vec_file(std::ifstream &is
         string::size_type delim_pos = line.find(" ");
         assert(delim_pos != string::npos);
         string word = line.substr(0, delim_pos);
-        dc_m.fixed_dict.Convert(word);  // add to dict
+        dc_m.fixed_dict.convert(word);  // add to dict
     }
     //  freeze & add unk to fixed_dict
-    dc_m.fixed_dict.Freeze();
-    dc_m.fixed_dict.SetUnk(dc_m.UNK_STR);
+    dc_m.fixed_dict.freeze();
+    dc_m.fixed_dict.set_unk(dc_m.UNK_STR);
     BOOST_LOG_TRIVIAL(info) << "initialize fixed dict done .";
 }
 
@@ -92,10 +92,10 @@ void NERCRFDCModelHandler::do_read_annotated_dataset(istream &is, vector<IndexSe
             string nertag = part.substr(nertag_pos + 1);
             // Parse Number to specific string
             word = replace_number(word);
-            Index dynamic_word_id = dc_m.dynamic_dict_wrapper.Convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
-            Index fixed_word_id = dc_m.fixed_dict.Convert(word);
-            Index postag_id = dc_m.postag_dict.Convert(postag);
-            Index nertag_id = dc_m.ner_dict.Convert(nertag);
+            Index dynamic_word_id = dc_m.dynamic_dict_wrapper.convert(word); // using word_dict_wrapper , if not frozen , will count the word freqency
+            Index fixed_word_id = dc_m.fixed_dict.convert(word);
+            Index postag_id = dc_m.postag_dict.convert(postag);
+            Index nertag_id = dc_m.ner_dict.convert(nertag);
             dynamic_sent.push_back(dynamic_word_id);
             fixed_sent.push_back(fixed_word_id);
             postag_seq.push_back(postag_id);
@@ -122,10 +122,10 @@ void NERCRFDCModelHandler::read_training_data_and_build_dicts(istream &is, vecto
     assert(!dc_m.dynamic_dict.is_frozen() && !dc_m.postag_dict.is_frozen() && !dc_m.ner_dict.is_frozen());
     BOOST_LOG_TRIVIAL(info) << "read training data .";
     do_read_annotated_dataset(is, dynamic_sents, fixed_sents, postag_seqs , ner_seqs);
-    dc_m.dynamic_dict_wrapper.Freeze();
-    dc_m.dynamic_dict_wrapper.SetUnk(dc_m.UNK_STR);
-    dc_m.postag_dict.Freeze();
-    dc_m.ner_dict.Freeze();
+    dc_m.dynamic_dict_wrapper.freeze();
+    dc_m.dynamic_dict_wrapper.set_unk(dc_m.UNK_STR);
+    dc_m.postag_dict.freeze();
+    dc_m.ner_dict.freeze();
     BOOST_LOG_TRIVIAL(info) << "read training data done and set dynamic , postag and ner dict done . ";
 }
 
@@ -172,9 +172,9 @@ void NERCRFDCModelHandler::read_test_data(istream &is, vector<Seq> &raw_test_sen
             string postag = part.substr(delim_pos + 1);
             string number_transed_word = replace_number(raw_word);
             raw_sent[i] = raw_word ;
-            dynamic_words_index_seq[i] = dc_m.dynamic_dict.Convert(number_transed_word);
-            fixed_words_index_seq[i] = dc_m.fixed_dict.Convert(number_transed_word);
-            postag_index_seq[i] = dc_m.postag_dict.Convert(postag);
+            dynamic_words_index_seq[i] = dc_m.dynamic_dict.convert(number_transed_word);
+            fixed_words_index_seq[i] = dc_m.fixed_dict.convert(number_transed_word);
+            postag_index_seq[i] = dc_m.postag_dict.convert(postag);
         }
 
     }
@@ -212,7 +212,7 @@ void NERCRFDCModelHandler::build_model()
 void NERCRFDCModelHandler::load_fixed_embedding(std::istream &is)
 {
     // set lookup parameters from outer word embedding
-    // using words_loopup_param.Initialize( word_id , value_vector )
+    // using words_loopup_param.initialize( word_id , value_vector )
     BOOST_LOG_TRIVIAL(info) << "load pre-trained word embedding .";
     string line;
     vector<string> split_cont;
@@ -221,7 +221,7 @@ void NERCRFDCModelHandler::load_fixed_embedding(std::istream &is)
     unsigned long line_cnt = 0; // for warning when read embedding error
     unsigned long words_cnt_hit = 0;
     vector<float> embedding_vec(dc_m.fixed_embedding_dim , 0.f);
-    Index dynamic_unk = dc_m.dynamic_dict.Convert(dc_m.UNK_STR); // for calc hit rate
+    Index dynamic_unk = dc_m.dynamic_dict.convert(dc_m.UNK_STR); // for calc hit rate
     while (getline(is, line))
     {
         ++line_cnt;
@@ -233,13 +233,13 @@ void NERCRFDCModelHandler::load_fixed_embedding(std::istream &is)
             continue;
         }
         string &word = split_cont.at(0);
-        Index word_id = dc_m.fixed_dict.Convert(word);
+        Index word_id = dc_m.fixed_dict.convert(word);
         for (size_t idx = 1; idx < split_cont.size(); ++idx)
         {
             embedding_vec[idx - 1] = stof(split_cont[idx]);
         }
-        dc_m.fixed_words_lookup_param->Initialize(word_id, embedding_vec);
-        if(dc_m.dynamic_dict.Convert(word) != dynamic_unk) ++words_cnt_hit;
+        dc_m.fixed_words_lookup_param.initialize(word_id, embedding_vec);
+        if(dc_m.dynamic_dict.convert(word) != dynamic_unk) ++words_cnt_hit;
     }
     BOOST_LOG_TRIVIAL(info) << "load fixed embedding done . hit rate " 
         << words_cnt_hit << "/" << dc_m.fixed_embedding_dict_size  << " ("
@@ -299,13 +299,13 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
             for (size_t word_idx = 0; word_idx < p_dynamic_sent->size(); ++word_idx)
             {
                 dynamic_sent_after_replace_unk[word_idx] = 
-                    dc_m.dynamic_dict_wrapper.ConvertProbability(p_dynamic_sent->at(word_idx));
+                    dc_m.dynamic_dict_wrapper.unk_replace_probability(p_dynamic_sent->at(word_idx));
             }
-            dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, 
+            auto loss_expr = dc_m.viterbi_train(cg, &dynamic_sent_after_replace_unk, p_fixed_sent, 
                                         p_postag_seq, p_ner_seq ,  
                                         dropout_rate , 
                                         training_stat4trivial.get());
-            cnn::real loss =  as_scalar(cg->forward());
+            dynet::real loss =  as_scalar(cg->forward(loss_expr));
             cg->backward();
             sgd.update(1.0f);
             delete cg;
@@ -439,14 +439,14 @@ void NERCRFDCModelHandler::predict(std::istream &is, std::ostream &os)
         dc_m.viterbi_predict(&cg, p_dynamic_sent, p_fixed_sent , p_postag_seq , &predict_seq);
         // output the result directly
         os << p_raw_sent->at(0)
-            << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(0))
-            << "#" << dc_m.ner_dict.Convert(predict_seq.at(0));
+            << "/" << dc_m.postag_dict.convert(p_postag_seq->at(0))
+            << "#" << dc_m.ner_dict.convert(predict_seq.at(0));
         for (unsigned k = 1; k < p_raw_sent->size(); ++k)
         {
             os << SPLIT_DELIMITER
                 << p_raw_sent->at(k)
-                << "/" << dc_m.postag_dict.Convert(p_postag_seq->at(k))
-                << "#" << dc_m.ner_dict.Convert(predict_seq.at(k));
+                << "/" << dc_m.postag_dict.convert(p_postag_seq->at(k))
+                << "#" << dc_m.ner_dict.convert(predict_seq.at(k));
         }
         os << "\n";
         stat.total_tags += predict_seq.size() ;

@@ -13,4 +13,4 @@ set(bilstmcrf_libs
 ADD_EXECUTABLE(postagger_crf postagger_bilstmcrf.cpp ${common_headers} 
 ${bilstmcrf_headers} ${common_libs} ${bilstmcrf_libs})
 
-target_link_libraries(postagger_crf cnn ${Boost_LIBRARIES})
+target_link_libraries(postagger_crf dynet ${Boost_LIBRARIES})

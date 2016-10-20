@@ -9,7 +9,7 @@
 using namespace std;
 using namespace slnn;
 namespace po = boost::program_options;
-const string PROGRAM_DESCRIPTION = "NER single_input-classification Procedure based on CNN Library";
+const string PROGRAM_DESCRIPTION = "NER single_input-classification Procedure based on DyNet Library";
 
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -103,7 +103,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     // others will be processed flowing 
     
     // Init 
-    cnn::Initialize(argc, argv, 1234); 
+    dynet::initialize(argc, argv, 1234); 
     Input2DModelHandler<NERSingleClassificationModel> model_handler;
 
     // reading traing data , get word dict size and output tag number
@@ -193,7 +193,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
                     conlleval_script_path + "`") ;
     }
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     Input2DModelHandler<NERSingleClassificationModel> model_handler;
     // Load model 
     ifstream model_is(model_path);
@@ -253,7 +253,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified ! ");
     
     // Init 
-    cnn::Initialize(argc, argv, 1234);
+    dynet::initialize(argc, argv, 1234);
     Input2DModelHandler<NERSingleClassificationModel> model_handler ;
 
     // load model 
