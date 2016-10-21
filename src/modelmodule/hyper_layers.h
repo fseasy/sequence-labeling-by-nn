@@ -50,7 +50,7 @@ struct WindowExprGenerateLayer
 {
     WindowExprGenerateLayer(dynet::Model *dynet_model, unsigned window_sz, unsigned embedding_dim);
     void new_graph(dynet::ComputationGraph &cg);
-    std::vector<dynet::expr::Expression> generate_window_expr_by_concatenating(const std::vector<dynet::expr::Expression> &unit_exprs);
+    std::vector<std::vector<dynet::expr::Expression>> generate_window_expr_list(const std::vector<dynet::expr::Expression> &unit_exprs);
     // data
     dynet::Parameter sos_param;
     dynet::Parameter eos_param;

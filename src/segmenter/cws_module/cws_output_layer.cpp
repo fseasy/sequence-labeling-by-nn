@@ -418,41 +418,4 @@ void CWSSimpleOutputNew::build_output(const std::vector<dynet::expr::Expression>
     swap(pred_out_seq, tmp_pred_out);
 }
 
-/***************************************************
- * Segmentor output :  Simple Bare output (re-write @2016-10-13)
- ***************************************************/
-
-CWSSimpleBareOutput::CWSSimpleBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim)
-    :SimpleBareOutput(m, input_dim, output_dim)
-{}
-
-void CWSSimpleBareOutput::
-build_output(const std::vector<dynet::expr::Expression> &input_expr_seq, std::vector<Index> &out_pred_seq)
-{
-    using std::swap;
-    std::size_t len = input_expr_seq.size();
-    if( 1 == len ) // Special Condition : len = 1
-    {
-        out_pred_seq = { segmenter::Tag::TAG_S_ID };
-        return ;
-    }
-    std::vector<Index> tmp_pred_out(len);
-    Index pre_tag_id = segmenter::Tag::TAG_NONE_ID;
-    for (std::size_t i = 0; i < len - 1; ++i) // select first and middle tags
-    {
-        dynet::expr::Expression out_expr = softmax_layer.build_graph(input_expr_seq[i]) ;
-        std::vector<dynet::real> out_probs = dynet::as_vector(pcg->get_value(out_expr));
-        Index max_prob_tag_in_constrain = segmenter::token_module::select_best_tag_constrained(out_probs , i , pre_tag_id );
-        tmp_pred_out[i] = max_prob_tag_in_constrain ;
-        pre_tag_id = max_prob_tag_in_constrain ;
-    }
-    if( pre_tag_id == segmenter::Tag::TAG_M_ID||  // select last tag
-        pre_tag_id == segmenter::Tag::TAG_B_ID)
-    { 
-        tmp_pred_out[len - 1] = segmenter::Tag::TAG_E_ID; 
-    }
-    else { tmp_pred_out[len - 1] = segmenter::Tag::TAG_S_ID; }
-    swap(out_pred_seq, tmp_pred_out);
-}
-
 } // end of namespace slnn
