@@ -12,7 +12,7 @@ void SegmentorBasicMlpParam::set_param_from_user_defined(const boost::program_op
     corpus_token_embedding_dim = args["word_embedding_dim"].as<unsigned>();
     window_size = args["window_size"].as<unsigned>();
     // Mlp
-    mlp_input_dim = corpus_token_embedding_dim * window_size;
+    window_process_method = args["window_process_method"].as<std::string>();
     //  - parse mlp hidden layer dim list
     std::vector<std::string> dim_str_cont;
     std::string hidden_dim_list_str = args["mlp_hidden_dim_list"].as<std::string>();
@@ -31,6 +31,8 @@ void SegmentorBasicMlpParam::set_param_from_user_defined(const boost::program_op
     }
     mlp_dropout_rate = args["dropout_rate"].as<slnn::type::real>() ;
     mlp_nonlinear_function_str = args["nonlinear_func"].as<std::string>();
+    // Output
+    output_layer_type = args["output_layer_type"].as<std::string>();
     // Others
     replace_freq_threshold = args["replace_freq_threshold"].as<unsigned>();
     replace_prob_threshold = args["replace_prob_threshold"].as<float>();
@@ -42,7 +44,8 @@ std::string SegmentorBasicMlpParam::get_structure_info()
     oss << "+ Model info: \n"
         << "| input: " << "charset-size(" << corpus_token_dict_size << ") embedding-dim(" << corpus_token_embedding_dim
         << ") window-size(" << window_size << ")\n"
-        << "| mlp: " << "input-dim(" << mlp_input_dim << ") hidden-dim-list(";
+        << "| mlp: window process method(" << window_process_method << ") "
+        << "hidden-dim-list(";
     if( !mlp_hidden_dim_list.empty() )
     {
         oss << mlp_hidden_dim_list[0];

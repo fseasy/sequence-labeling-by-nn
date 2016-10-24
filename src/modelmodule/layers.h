@@ -103,10 +103,28 @@ struct Merge4Layer
         const dynet::expr::Expression &e4);
 };
 
-struct MLPHiddenLayer
+class MLPHiddenLayer
 {
+public:
+    // constructor
+    MLPHiddenLayer(dynet::Model *m, unsigned input_dim, const std::vector<unsigned> &hidden_layer_dim_list, 
+        dynet::real dropout_rate=0.f,
+        NonLinearFunc *nonlinear_func=dynet::expr::tanh);
+    MLPHiddenLayer(const MLPHiddenLayer&) = delete;
+    MLPHiddenLayer& operator=(const MLPHiddenLayer&) = delete;
+public:
+    // interface
+    void new_graph(dynet::ComputationGraph &cg);
+    dynet::expr::Expression build_graph(const dynet::expr::Expression &input_expr);
+    void build_graph(const std::vector<dynet::expr::Expression> &input_exprs, std::vector<dynet::expr::Expression> &output_exprs);
+    unsigned get_output_dim(){ return output_dim; }
+    // setter
+    void enable_dropout(){ is_enable_dropout = true; }
+    void disable_dropout(){ is_enable_dropout = false; }
+private:
     // data
     unsigned nr_hidden_layer;
+    unsigned output_dim;
     std::vector<dynet::Parameter> w_list;
     std::vector<dynet::Parameter> b_list;
     std::vector<dynet::expr::Expression> w_expr_list;
@@ -114,18 +132,6 @@ struct MLPHiddenLayer
     dynet::real dropout_rate;
     bool is_enable_dropout;
     NonLinearFunc *nonlinear_func;
-    // constructor
-    MLPHiddenLayer(dynet::Model *m, unsigned input_dim, const std::vector<unsigned> &hidden_layer_dim_list, 
-        dynet::real dropout_rate=0.f,
-        NonLinearFunc *nonlinear_func=dynet::expr::tanh);
-    // interface
-    void new_graph(dynet::ComputationGraph &cg);
-    dynet::expr::Expression
-        build_graph(const dynet::expr::Expression &input_expr);
-    void build_graph(const std::vector<dynet::expr::Expression> &input_exprs, std::vector<dynet::expr::Expression> &output_exprs);
-    // setter
-    void enable_dropout(){ is_enable_dropout = true; }
-    void disable_dropout(){ is_enable_dropout = false; }
 };
 
 

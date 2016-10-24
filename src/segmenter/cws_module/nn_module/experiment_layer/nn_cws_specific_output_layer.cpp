@@ -1,4 +1,4 @@
-#include "cws_specific_output_layer.h"
+#include "nn_cws_specific_output_layer.h"
 #include "segmenter/cws_module/token_module/cws_tag_definition.h"
 #include "segmenter/cws_module/token_module/cws_tag_utility.h"
 namespace slnn{
@@ -42,6 +42,30 @@ build_output(const std::vector<dynet::expr::Expression> &input_expr_seq, std::ve
     }
     else { tmp_pred_out[len - 1] = segmenter::Tag::TAG_S_ID; }
     swap(out_pred_seq, tmp_pred_out);
+}
+
+std::shared_ptr<BareOutputBase>
+create_segmenter_output_layer(const std::string& layer_type, dynet::Model *dynet_model, unsigned input_dim, unsigned output_dim)
+{
+    std::string name(layer_type);
+    for( char &c : name ){ c = ::tolower(c); }
+    if( name == "classification" || name == "cl" )
+    {
+        return std::shared_ptr<BareOutputBase>(new SegmenterClassificationBareOutput(dynet_model, input_dim, output_dim));
+    }
+    else if( name == "pretag" )
+    {
+        throw std::logic_error("havn't implemented.");
+    }
+    else if( name == "crf" )
+    {
+        throw std::logic_error("havn't implemented.");
+    }
+    else
+    {
+        throw std::invalid_argument("un-spport output layer type: '" + layer_type + "'\n"
+            "supported including cl, pretag, crf.\n");
+    }
 }
 
 } // end of namespace experiment
