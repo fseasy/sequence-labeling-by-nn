@@ -102,11 +102,14 @@ set(cws_reader_module
 set(cws_module_headers
     ${cws_module_dir}/cws_tagging_system.h
     ${cws_module_dir}/cws_output_layer.h
+    ${cws_module_dir}/nn_module/experiment_layer/nn_cws_specific_output_layer.h
 )
 set(cws_module_libs
     ${cws_module_dir}/cws_tagging_system.cpp
     ${cws_module_dir}/cws_output_layer.cpp
+    ${cws_module_dir}/nn_module/experiment_layer/nn_cws_specific_output_layer.cpp
 )
+
 
 # combine
 set(cws_common_headers

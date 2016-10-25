@@ -15,6 +15,7 @@ namespace token_module{
 /****************************************************
  * Inline Implementation
  ****************************************************/
+inline
 Index select_best_tag_constrained(const std::vector<dynet::real> &dist, size_t time, Index pre_time_tag_id)
 {
     dynet::real max_prob = std::numeric_limits<dynet::real>::lowest();

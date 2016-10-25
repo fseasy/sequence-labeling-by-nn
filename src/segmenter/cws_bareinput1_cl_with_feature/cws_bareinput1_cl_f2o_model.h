@@ -11,7 +11,7 @@
 #include "dynet/dynet.h"
 
 #include "segmenter/base_model/bareinput1_f2o_model.hpp"
-#include "segmenter/cws_module/cws_output_layer.h"
+#include "segmenter/cws_module/nn_module/experiment_layer/nn_cws_specific_output_layer.h"
 namespace slnn{
 
 template<typename RNNDerived>
@@ -43,7 +43,8 @@ void CWSBareInput1CLF2OModel<RNNDerived>::build_model_structure()
     this->cws_feature_layer = new CWSFeatureLayer(this->m, this->cws_feature, this->word_expr_layer->get_lookup_param());
     this->birnn_layer = new BIRNNLayer<RNNDerived>(this->m, this->nr_rnn_stacked_layer, this->word_embedding_dim, this->rnn_h_dim, 
         this->dropout_rate) ;
-    this->output_layer = new CWSSimpleBareOutput(this->m, this->softmax_layer_input_dim , this->output_dim) ;
+    this->output_layer = new segmenter::nn_module::experiment::SegmenterClassificationBareOutput(this->m, 
+            this->softmax_layer_input_dim , this->output_dim) ;
 }
 
 template <typename RNNDerived>

@@ -28,8 +28,8 @@ WindowExprBigramLayer::WindowExprBigramLayer(dynet::Model *dynet_model, unsigned
     : Tl_param(dynet_model->add_parameters({ unit_embedding_dim, unit_embedding_dim })),
     Tr_param(dynet_model->add_parameters({ unit_embedding_dim, unit_embedding_dim })),
     b_param(dynet_model->add_parameters({ unit_embedding_dim })),
-    output_dim(unit_embedding_dim),
-    cached_c_expr_list(window_sz - 1)
+    cached_c_expr_list(window_sz - 1),
+    output_dim(unit_embedding_dim)
 {
     assert(window_sz > 0);
 }
