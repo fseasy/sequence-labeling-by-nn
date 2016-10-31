@@ -122,6 +122,29 @@ private:
 };
 
 
+class WindowExprAttention1SumLayer : public WindowExprProcessingLayerAbstract
+{
+public:
+    WindowExprAttention1SumLayer(dynet::Model *dynet_model, unsigned unit_embedding_dim, unsigned window_sz);
+    WindowExprAttention1SumLayer(const WindowExprAttention1SumLayer&) = delete;
+    WindowExprAttention1SumLayer& operator=(const WindowExprAttention1SumLayer&) = delete;
+public:
+    void new_graph(dynet::ComputationGraph &rcg) override;
+    unsigned get_output_dim() const override{ return output_dim; }
+    std::vector<dynet::expr::Expression>
+        process(const std::vector<std::vector<dynet::expr::Expression>>& window_expr_list) override;
+private:
+    dynet::Parameter W;
+    dynet::Parameter U;
+    dynet::Parameter v;
+    dynet::expr::Expression W_expr;
+    dynet::expr::Expression U_expr;
+    dynet::expr::Expression v_expr;
+    dynet::ComputationGraph *pcg;
+    unsigned output_dim;
+    unsigned window_sz;
+};
+
 std::shared_ptr<WindowExprProcessingLayerAbstract>
 create_window_expr_processing_layer(const std::string& processing_method,
     dynet::Model *dynet_model, unsigned unit_embedding_dim, unsigned window_sz);
@@ -195,6 +218,18 @@ void WindowExprBigramConcatLayer::new_graph(dynet::ComputationGraph &rcg)
  ************/
 inline
 void WindowExprAttention1Layer::new_graph(dynet::ComputationGraph &rcg)
+{
+    pcg = &rcg;
+    W_expr = dynet::expr::parameter(rcg, W);
+    U_expr = dynet::expr::parameter(rcg, U);
+    v_expr = dynet::expr::parameter(rcg, v);
+}
+
+/**************
+ * Window Expression Attention 1 (sum) Layer
+ **************/
+inline
+void WindowExprAttention1SumLayer::new_graph(dynet::ComputationGraph &rcg)
 {
     pcg = &rcg;
     W_expr = dynet::expr::parameter(rcg, W);
