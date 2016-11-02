@@ -1,4 +1,4 @@
-FILE(GLOB dep_token_module "${cws_module_token_dir}/cws_basic_token_module.*"
+FILE(GLOB dep_token_module "${cws_module_token_dir}/input1/*"
                            "${cws_module_token_dir}/cws_tag_definition.h"
                            "${cws_module_token_dir}/cws_tag_utility.h")
 FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/basic_mlp_param.*")

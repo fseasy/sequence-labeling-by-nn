@@ -1,7 +1,7 @@
 #ifndef SLNN_SEGMENTER_CWS_MODULE_BASIC_TOKEN_MODULE_H_
 #define SLNN_SEGMENTER_CWS_MODULE_BASIC_TOKEN_MODULE_H_
 #include "trivial/lookup_table/lookup_table.h"
-#include "cws_tag_definition.h"
+#include "segmenter/cws_module/token_module/cws_tag_definition.h"
 #include "trivial/charcode/charcode_convertor.h"
 #include "utils/typedeclaration.h"
 
@@ -37,7 +37,7 @@ size_t count_token_from_wordseq(const std::vector<std::u32string> &wordseq)
  *                 c) translate unannoatated raw data to interger char-index.
  *                 d) other interface for lookup table.
  */
-class SegmentorBasicTokenModule
+class TokenSegmenterInput1Unigram
 {
     friend class boost::serialization::access;
 public:
@@ -53,7 +53,7 @@ public:
     using UnannotatedDataRawT = std::u32string;
 public:
 
-    explicit SegmentorBasicTokenModule(unsigned seed) noexcept;
+    explicit TokenSegmenterInput1Unigram(unsigned seed) noexcept;
 
     // DATA TRANSLATING
     Index token2index(char32_t token) const;
@@ -103,7 +103,7 @@ private:
  * @return index of the token
  */
 inline
-Index SegmentorBasicTokenModule::token2index(char32_t token) const
+Index TokenSegmenterInput1Unigram::token2index(char32_t token) const
 {
     return token_dict.convert(token);
 }
@@ -114,7 +114,7 @@ Index SegmentorBasicTokenModule::token2index(char32_t token) const
 * @return unk index(if replace) or the original idx(not replace)
 */
 inline
-Index SegmentorBasicTokenModule::unk_replace_in_probability(Index idx) const
+Index TokenSegmenterInput1Unigram::unk_replace_in_probability(Index idx) const
 {
     return token_dict.unk_replace_in_probability(idx);
 }
@@ -126,8 +126,8 @@ Index SegmentorBasicTokenModule::unk_replace_in_probability(Index idx) const
  * @return unannotated data
  */
 inline
-std::shared_ptr<SegmentorBasicTokenModule::UnannotatedDataProcessedT >
-SegmentorBasicTokenModule::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
+std::shared_ptr<TokenSegmenterInput1Unigram::UnannotatedDataProcessedT >
+TokenSegmenterInput1Unigram::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
     return ann_data.pcharseq;
 }
@@ -135,7 +135,7 @@ SegmentorBasicTokenModule::extract_unannotated_data_from_annotated_data(const An
 
 template <typename ProcessedAnnotatedDataT> 
 ProcessedAnnotatedDataT 
-SegmentorBasicTokenModule::replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const
+TokenSegmenterInput1Unigram::replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const
 {
     ProcessedAnnotatedDataT rep_data;
     rep_data.pcharseq.reset(new std::vector<Index>( *(in_data.pcharseq) ));
@@ -153,7 +153,7 @@ SegmentorBasicTokenModule::replace_low_freq_token2unk(const ProcessedAnnotatedDa
 */
 template <typename ProcessedAnnotatedDataT>
 void 
-SegmentorBasicTokenModule::process_annotated_data(const std::vector<std::u32string>& wordseq, 
+TokenSegmenterInput1Unigram::process_annotated_data(const std::vector<std::u32string>& wordseq, 
     ProcessedAnnotatedDataT& processed_data)
 {
     /*
@@ -194,7 +194,7 @@ SegmentorBasicTokenModule::process_annotated_data(const std::vector<std::u32stri
 */
 template <typename ProcessedUnannotatedDataT>
 void 
-SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
+TokenSegmenterInput1Unigram::process_unannotated_data(const std::u32string &tokenseq,
     ProcessedUnannotatedDataT &processed_out) const
 {
     /**
@@ -221,7 +221,7 @@ SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokens
 template <>
 inline
 void
-SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokenseq,
+TokenSegmenterInput1Unigram::process_unannotated_data(const std::u32string &tokenseq,
     std::vector<Index> &charseq) const
 {
     using std::swap;
@@ -237,7 +237,7 @@ SegmentorBasicTokenModule::process_unannotated_data(const std::u32string &tokens
 * do someting when has read all training data, including freeze lookup table, set unk.
 */
 inline
-void SegmentorBasicTokenModule::finish_read_training_data()
+void TokenSegmenterInput1Unigram::finish_read_training_data()
 {
     token_dict.freeze();
     token_dict.set_unk();
@@ -249,7 +249,7 @@ void SegmentorBasicTokenModule::finish_read_training_data()
 */
 template <typename StructureParamT>
 inline
-void SegmentorBasicTokenModule::set_unk_replace_threshold(const StructureParamT& param) noexcept
+void TokenSegmenterInput1Unigram::set_unk_replace_threshold(const StructureParamT& param) noexcept
 {
     set_unk_replace_threshold(param.replace_freq_threshold, param.replace_prob_threshold);
 }
@@ -258,13 +258,13 @@ void SegmentorBasicTokenModule::set_unk_replace_threshold(const StructureParamT&
 * set unk replace [cnt_threshold] and [prob_threshold].
 */
 inline
-void SegmentorBasicTokenModule::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
+void TokenSegmenterInput1Unigram::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
 {
     token_dict.set_unk_replace_threshold(cnt_threshold, prob_threshold);
 }
 
 inline
-std::string SegmentorBasicTokenModule::get_module_info() const noexcept
+std::string TokenSegmenterInput1Unigram::get_module_info() const noexcept
 {
     std::stringstream oss;
     oss << "token module info: \n"
@@ -274,19 +274,19 @@ std::string SegmentorBasicTokenModule::get_module_info() const noexcept
 }
 
 inline
-std::size_t SegmentorBasicTokenModule::get_charset_size() const noexcept
+std::size_t TokenSegmenterInput1Unigram::get_charset_size() const noexcept
 {
     return token_dict.size();
 }
 
 inline
-std::size_t SegmentorBasicTokenModule::get_tagset_size() const noexcept
+std::size_t TokenSegmenterInput1Unigram::get_tagset_size() const noexcept
 {
     return TAG_SIZE;
 }
 
 template<class Archive>
-void SegmentorBasicTokenModule::serialize(Archive& ar, const unsigned int)
+void TokenSegmenterInput1Unigram::serialize(Archive& ar, const unsigned int)
 {
     ar & token_dict;
 }

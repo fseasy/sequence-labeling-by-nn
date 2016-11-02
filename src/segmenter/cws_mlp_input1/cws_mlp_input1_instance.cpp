@@ -4,7 +4,7 @@ namespace segmenter{
 namespace mlp_input1{
 
 template class SegmentorMlpInput1Template<
-    token_module::SegmentorBasicTokenModule,
+    token_module::TokenSegmenterInput1Unigram,
     structure_param_module::SegmentorBasicMlpParam,
     nn_module::NnSegmenterInput1Abstract>;
 
