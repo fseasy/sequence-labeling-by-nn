@@ -1,7 +1,7 @@
 #ifndef SLNN_SEGMENTER_CWS_MLP_INPUT1_CWS_MLP_INPUT1_INSTANCE_H_
 #define SLNN_SEGMENTER_CWS_MLP_INPUT1_CWS_MLP_INPUT1_INSTANCE_H_
 #include "segmenter/cws_mlp_input1/cws_mlp_input1_template.h"
-#include "segmenter/cws_module/token_module/cws_basic_token_module.h"
+#include "segmenter/cws_module/token_module/input1/token_input1_unigram.h"
 #include "segmenter/cws_module/structure_param_module/basic_mlp_param.h"
 #include "segmenter/cws_module/nn_module/mlp_input1/nn_cws_mlp_input1_abstract.h"
 namespace slnn{

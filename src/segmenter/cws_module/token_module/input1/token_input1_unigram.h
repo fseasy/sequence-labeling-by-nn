@@ -9,7 +9,7 @@ namespace slnn{
 namespace segmenter{
 namespace token_module{
 
-namespace token_module_inner{
+namespace input1_unigram_token_module_inner{
 
 inline 
 std::string token2str(char32_t token)
@@ -171,7 +171,7 @@ TokenSegmenterInput1Unigram::process_annotated_data(const std::vector<std::u32st
     ~ProcessedAnnotatedData(){ delete *; }
     };
     */
-    size_t token_cnt = token_module_inner::count_token_from_wordseq(wordseq);
+    size_t token_cnt = input1_unigram_token_module_inner::count_token_from_wordseq(wordseq);
     std::shared_ptr<std::vector<Index>> &charindex_seq = processed_data.pcharseq;
     std::shared_ptr<std::vector<Index>> &tagindex_seq = processed_data.ptagseq;
     charindex_seq.reset(new std::vector<Index>(token_cnt)); 

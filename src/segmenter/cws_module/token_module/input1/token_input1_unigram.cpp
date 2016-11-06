@@ -8,7 +8,7 @@ namespace token_module{
 * @param seed unsigned, to init the inner LookupTableWithReplace.
 */
 TokenSegmenterInput1Unigram::TokenSegmenterInput1Unigram(unsigned seed) noexcept
-    :token_dict(seed, 1, 0.2F, [](const char32_t &token){ return token_module_inner::token2str(token); })
+    :token_dict(seed, 1, 0.2F, [](const char32_t &token){ return input1_unigram_token_module_inner::token2str(token); })
 {}
 
 } // end of namespace token_module
