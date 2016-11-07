@@ -3,9 +3,14 @@ namespace slnn{
 namespace segmenter{
 namespace mlp_input1{
 
-template class SegmentorMlpInput1Template<
+template class SegmenterMlpInput1Template<
     token_module::TokenSegmenterInput1Unigram,
-    structure_param_module::SegmentorBasicMlpParam,
+    structure_param_module::SegmenterBasicMlpParam,
+    nn_module::NnSegmenterInput1Abstract>;
+
+template class SegmenterMlpInput1Template<
+    token_module::TokenSegmenterInput1Bigram,
+    structure_param_module::SegmenterBasicMlpParam,
     nn_module::NnSegmenterInput1Abstract>;
 
 } // enf of namespace mlp-input1

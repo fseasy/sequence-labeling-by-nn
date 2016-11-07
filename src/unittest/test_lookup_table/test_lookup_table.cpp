@@ -209,11 +209,11 @@ TEST_CASE("LookupTableWithReplace", "[LookupTable]")
     REQUIRE(lookup_table_copy.has_frozen() == lookup_table.has_frozen());
     REQUIRE(lookup_table_copy.has_set_unk() == lookup_table.has_set_unk());
 
-    //LookupTableWithReplace<char32_t> lookup_table_32t;
-    //lookup_table_32t.convert(U'e');
-    //stringstream sss;
-    //boost::archive::text_oarchive too(sss);
-    //too << lookup_table_32t;
-    //boost::archive::text_iarchive tii(sss); => Boost (<= 1.58) does not support de-serialization char32_t defautly!
-    //tii >> lookup_table_32t;
+    LookupTableWithReplace<char32_t> lookup_table_32t;
+    lookup_table_32t.convert(U'e');
+    stringstream sss;
+    boost::archive::text_oarchive too(sss);
+    too << lookup_table_32t;
+    boost::archive::text_iarchive tii(sss); // Boost (<= 1.58) does not support de-serialization char32_t defautly!
+    tii & lookup_table_32t;
 }

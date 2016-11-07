@@ -19,8 +19,6 @@ FILE(GLOB model_template "cws_mlp_input1_template.*")
 
 FILE(GLOB model_instance_files "cws_mlp_input1_instance.*")
 
-set(exe_name "cws_mlp_input1")
-
 set(lib_name "mlp_input1_model")
 
 ADD_LIBRARY(${lib_name}
@@ -41,21 +39,23 @@ ADD_LIBRARY(${lib_name}
 # ( I think it is ok. )
 TARGET_LINK_LIBRARIES(${lib_name} layers) 
 
-add_executable(${exe_name}
-               "${exe_name}.cpp"
-               ${dep_modelhandler}
-              )
+foreach(exe_name "cws_mlp_input1_unigram" "cws_mlp_input1_bigram")
+    add_executable(${exe_name}
+                   "${exe_name}.cpp"
+                   ${dep_modelhandler}
+                  )
 
 
-if (WITH_CUDA_BACKEND)
-    target_link_libraries(${exe_name} gdynet ${Boost_LIBRARIES} trivial layers ${lib_name})
-    add_dependencies(${exe_name} dynetcuda)
-    target_link_libraries(${exe_name} dynetcuda)
-    CUDA_ADD_CUBLAS_TO_TARGET(${exe_name})
-  else()
-    target_link_libraries(${exe_name} dynet ${Boost_LIBRARIES} trivial layers ${lib_name})
-endif (WITH_CUDA_BACKEND)
+    if (WITH_CUDA_BACKEND)
+        target_link_libraries(${exe_name} gdynet ${Boost_LIBRARIES} trivial layers ${lib_name})
+        add_dependencies(${exe_name} dynetcuda)
+        target_link_libraries(${exe_name} dynetcuda)
+        CUDA_ADD_CUBLAS_TO_TARGET(${exe_name})
+      else()
+        target_link_libraries(${exe_name} dynet ${Boost_LIBRARIES} trivial layers ${lib_name})
+    endif (WITH_CUDA_BACKEND)
 
-                      
-SET_PROPERTY(TARGET ${lib_name} PROPERTY FOLDER "segmenter/mlp_input1/lib")
-SET_PROPERTY(TARGET ${exe_name} PROPERTY FOLDER "segmenter/mlp_input1")
+                          
+    SET_PROPERTY(TARGET ${lib_name} PROPERTY FOLDER "segmenter/mlp_input1/lib")
+    SET_PROPERTY(TARGET ${exe_name} PROPERTY FOLDER "segmenter/mlp_input1")
+endforeach()

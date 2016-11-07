@@ -412,7 +412,7 @@ void LookupTable<std::u32string, std::hash<std::u32string>, std::equal_to<std::u
     // save token2idx ( unordered_map<u32string, int> )
     for( const auto& token_idx_pair : token2idx )
     {
-        std::u32string &ustr = token_idx_pair.first;
+        const std::u32string &ustr = token_idx_pair.first;
         std::vector<unsigned> equal_value(ustr.begin(), ustr.end());
         ar &equal_value &token_idx_pair.second;
     }
@@ -422,7 +422,7 @@ void LookupTable<std::u32string, std::hash<std::u32string>, std::equal_to<std::u
         std::vector<unsigned> equal_value(ustr.begin(), ustr.end());
         ar & equal_value;
     }
-    ar & is_fronzen &unk_idx;
+    ar & is_frozen &unk_idx;
 }
 template <>
 template <class Archive>
@@ -444,9 +444,11 @@ void LookupTable<std::u32string, std::hash<std::u32string>, std::equal_to<std::u
     idx2token.resize(dict_sz);
     for( unsigned i = 0; i < dict_sz; ++i )
     {
-        ar &idx2token[i];
+        std::vector<unsigned> unicode_pnt_list;
+        ar & unicode_pnt_list;
+        idx2token[i] = std::u32string(unicode_pnt_list.begin(), unicode_pnt_list.end());
     }
-    ar &is_fronzen &unk_idx;
+    ar &is_frozen &unk_idx;
 }
 
 // - specification for char32_t
@@ -468,7 +470,7 @@ void LookupTable<char32_t, std::hash<char32_t>, std::equal_to<char32_t>>::save(A
         unsigned unicode_point = token;
         ar &unicode_point;
     }
-    ar &is_fronzen &unk_idx;
+    ar &is_frozen &unk_idx;
 }
 template <>
 template <class Archive>
@@ -488,9 +490,11 @@ void LookupTable<char32_t, std::hash<char32_t>, std::equal_to<char32_t>>::load(A
     idx2token.resize(sz);
     for( unsigned i = 0; i < sz; ++i )
     {
-        ar & idx2token[i];
+        unsigned unicode_pnt;
+        ar & unicode_pnt;
+        idx2token[i] = unicode_pnt;
     }
-    ar &is_fronzen &unk_idx;
+    ar &is_frozen &unk_idx;
 }
 
 /************************************

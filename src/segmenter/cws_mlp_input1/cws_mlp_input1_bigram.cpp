@@ -7,9 +7,9 @@ using namespace std;
 namespace po = boost::program_options;
 using namespace slnn;
 using namespace slnn::segmenter;
-using slnn::segmenter::mlp_input1::MlpInput1;
+using slnn::segmenter::mlp_input1::MlpInput1Bigram;
 
-static const string PROGRAM_HEADER = "segmenter Mlp-input1 based on DyNet Library";
+static const string PROGRAM_HEADER = "segmenter Mlp-input1-bigram based on DyNet Library";
 constexpr unsigned DEFAULT_RNG_SEED = 1234;
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -144,7 +144,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     //if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     //build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     //char **dynet_argv_ptr = dynet_argv.get();
-    std::shared_ptr<MlpInput1>  mi1 = MlpInput1::create_new_model(argc, argv, rng_seed);
+    std::shared_ptr<MlpInput1Bigram>  mi1 = MlpInput1Bigram::create_new_model(argc, argv, rng_seed);
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -157,7 +157,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
 
-    vector<MlpInput1::AnnotatedDataProcessedT> training_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> training_data;
     modelhandler::read_training_data(train_is, *mi1, training_data);
     train_is.close();
     
@@ -166,7 +166,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     mi1->build_model_structure();
 
     // reading developing data
-    vector<MlpInput1::AnnotatedDataProcessedT> devel_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> devel_data;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
@@ -246,13 +246,13 @@ int devel_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' .");
     }
-    std::shared_ptr<MlpInput1> mi1 = MlpInput1::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
+    std::shared_ptr<MlpInput1Bigram> mi1 = MlpInput1Bigram::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
     model_is.close();
 
     // read devel data
     ifstream devel_is(devel_data_path) ;
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
-    vector<MlpInput1::AnnotatedDataProcessedT> devel_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> devel_data;
     modelhandler::read_devel_data(devel_is, *mi1, devel_data);
     devel_is.close();
 
@@ -335,7 +335,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' . ");
     }
-    shared_ptr<MlpInput1> mi1 = MlpInput1::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
+    shared_ptr<MlpInput1Bigram> mi1 = MlpInput1Bigram::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
     is.close();
 
     // open raw_data

@@ -6,7 +6,7 @@ namespace slnn{
 namespace segmenter{
 namespace structure_param_module{
 
-void SegmentorBasicMlpParam::set_param_from_user_defined(const boost::program_options::variables_map &args)
+void SegmenterBasicMlpParam::set_param_from_user_defined(const boost::program_options::variables_map &args)
 {
     // Input
     corpus_token_embedding_dim = args["word_embedding_dim"].as<unsigned>();
@@ -38,7 +38,7 @@ void SegmentorBasicMlpParam::set_param_from_user_defined(const boost::program_op
     replace_prob_threshold = args["replace_prob_threshold"].as<float>();
 }
 
-std::string SegmentorBasicMlpParam::get_structure_info()
+std::string SegmenterBasicMlpParam::get_structure_info()
 {
     std::ostringstream oss;
     oss << "+ Model info: \n"

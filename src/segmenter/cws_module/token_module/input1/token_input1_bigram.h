@@ -12,7 +12,7 @@ namespace token_module{
 namespace input1_bigram_token_module_inner{
 
 inline 
-std::string token2str(std::u32string &ustr)
+std::string token2str(const std::u32string &ustr)
 {
     auto conv = charcode::CharcodeConvertor::create_convertor(charcode::EncodingDetector::get_console_encoding());
     return conv->encode(ustr);
@@ -176,7 +176,7 @@ TokenSegmenterInput1Bigram::process_annotated_data(const std::vector<std::u32str
     // char text seq -> char index seq
     for(unsigned word_offset = 0; word_offset < wordseq.size(); ++word_offset )
     {
-        std::u32string &word = wordseq[word_offset]; 
+        const std::u32string &word = wordseq[word_offset]; 
         unsigned word_len = word.size();
         if( word_len == 0 ){ continue; }
         for( unsigned i = 0; i < word_len - 1; ++i )
