@@ -6,6 +6,7 @@
 #include <string>
 #include "dynet/dynet.h"
 #include "dynet/expr.h"
+#include "dynet/lstm.h"
 namespace slnn{
 namespace segmenter{
 namespace nn_module{
@@ -141,6 +142,24 @@ private:
     dynet::expr::Expression U_expr;
     dynet::expr::Expression v_expr;
     dynet::ComputationGraph *pcg;
+    unsigned output_dim;
+    unsigned window_sz;
+};
+
+class WindowExprBiLstmLayer : public WindowExprProcessingLayerAbstract
+{
+public:
+    WindowExprBiLstmLayer(dynet::Model *dynet_model, unsigned unit_embedding_dim, unsigned window_sz);
+    WindowExprBiLstmLayer(const WindowExprBiLstmLayer&) = delete;
+    WindowExprBiLstmLayer& operator=(const WindowExprBiLstmLayer&) = delete;
+public:
+    void new_graph(dynet::ComputationGraph &rcg) override;
+    unsigned get_output_dim() const override { return output_dim; }
+    std::vector<dynet::expr::Expression>
+        process(const std::vector<std::vector<dynet::expr::Expression>> &window_expr_list) override;
+private:
+    dynet::LSTMBuilder l2r_builder;
+    dynet::LSTMBuilder r2l_builder;
     unsigned output_dim;
     unsigned window_sz;
 };

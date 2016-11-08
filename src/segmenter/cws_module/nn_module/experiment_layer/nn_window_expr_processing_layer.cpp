@@ -313,8 +313,44 @@ WindowExprAttention1SumLayer::process(const std::vector<std::vector<dynet::expr:
     return result_expr_list;
 }
 
+/***********
+ * Window Expression Bi-LSTM 
+ ***********/
+WindowExprBiLstmLayer::WindowExprBiLstmLayer(dynet::Model *dynet_model, 
+    unsigned unit_embedding_dim, unsigned window_sz)
+    :l2r_builder(1, unit_embedding_dim, unit_embedding_dim, dynet_model),
+    r2l_builder(1, unit_embedding_dim, unit_embedding_dim, dynet_model),
+    output_dim(unit_embedding_dim * 2),
+    window_sz(window_sz)
+{}
 
+void WindowExprBiLstmLayer::new_graph(dynet::ComputationGraph &rcg)
+{
+    l2r_builder.new_graph(rcg);
+    r2l_builder.new_graph(rcg);
+}
 
+std::vector<dynet::expr::Expression>
+WindowExprBiLstmLayer::process(const std::vector<std::vector<dynet::expr::Expression>> &window_expr_list)
+{
+    unsigned len = window_expr_list.size();
+    unsigned half_sz = len / 2;
+    std::vector<dynet::expr::Expression> result_expr(len);
+    for( unsigned i = 0; i < len; ++i )
+    {
+        const std::vector<dynet::expr::Expression> &window_expr = window_expr_list[i];
+        l2r_builder.start_new_sequence();
+        r2l_builder.start_new_sequence();
+        // --->    <----, bi-directional
+        for( unsigned j = 0; j <= half_sz; ++j )
+        {
+            l2r_builder.add_input(window_expr[j]);
+            r2l_builder.add_input(window_expr[window_sz - 1 - j]);
+        }
+        result_expr[i] = dynet::expr::concatenate({ l2r_builder.back(), r2l_builder.back() });
+    }
+    return result_expr;
+}
 
 /***********
  * create window expression processing layer
@@ -359,6 +395,12 @@ create_window_expr_processing_layer(const std::string& processing_method,
     {
         return std::shared_ptr<WindowExprProcessingLayerAbstract>(
             new WindowExprAttention1SumLayer(dynet_model, unit_embedding_dim, window_sz)
+            );
+    }
+    else if( name == "bilstm" || name == "bi-lstm" )
+    {
+        return std::shared_ptr<WindowExprProcessingLayerAbstract>(
+            new WindowExprBiLstmLayer(dynet_model, unit_embedding_dim, window_sz)
             );
     }
     else
