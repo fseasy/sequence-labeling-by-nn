@@ -318,9 +318,9 @@ WindowExprAttention1SumLayer::process(const std::vector<std::vector<dynet::expr:
  ***********/
 WindowExprBiLstmLayer::WindowExprBiLstmLayer(dynet::Model *dynet_model, 
     unsigned unit_embedding_dim, unsigned window_sz)
-    :l2r_builder(1, unit_embedding_dim, unit_embedding_dim, dynet_model),
-    r2l_builder(1, unit_embedding_dim, unit_embedding_dim, dynet_model),
-    output_dim(unit_embedding_dim * 2),
+    :l2r_builder(1, unit_embedding_dim, 100, dynet_model),
+    r2l_builder(1, unit_embedding_dim, 100, dynet_model),
+    output_dim(100 * 2),
     window_sz(window_sz)
 {}
 
@@ -334,7 +334,7 @@ std::vector<dynet::expr::Expression>
 WindowExprBiLstmLayer::process(const std::vector<std::vector<dynet::expr::Expression>> &window_expr_list)
 {
     unsigned len = window_expr_list.size();
-    unsigned half_sz = len / 2;
+    unsigned half_sz = window_sz / 2;
     std::vector<dynet::expr::Expression> result_expr(len);
     for( unsigned i = 0; i < len; ++i )
     {
