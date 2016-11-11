@@ -5,12 +5,12 @@ namespace nn_module{
 
 
 
-NnSegmenterInput1Abstract::NnSegmenterInput1Abstract(int argc, char **argv, unsigned seed) : 
+NnSegmenterInput1MlpAbstract::NnSegmenterInput1MlpAbstract(int argc, char **argv, unsigned seed) : 
     NeuralNetworkCommonInterfaceCnnImpl(argc, argv, seed)
 {}
 
 dynet::expr::Expression 
-NnSegmenterInput1Abstract::build_training_graph_impl(const std::vector<Index> &charseq, 
+NnSegmenterInput1MlpAbstract::build_training_graph_impl(const std::vector<Index> &charseq, 
     const std::vector<Index> &tagseq)
 {
     //clear_cg(); // !! ATTENTION !!
@@ -39,7 +39,7 @@ NnSegmenterInput1Abstract::build_training_graph_impl(const std::vector<Index> &c
 }
 
 std::vector<Index> 
-NnSegmenterInput1Abstract::predict_impl(const std::vector<Index> &charseq)
+NnSegmenterInput1MlpAbstract::predict_impl(const std::vector<Index> &charseq)
 {
 
     reset_cg();

@@ -7,6 +7,10 @@
 
 namespace slnn{
 
+/*********
+ * Output Base 
+ * output base and dirived class are old and should be abandon.
+ *********/
 struct OutputBase
 {
     OutputBase(dynet::real dropout_rate, NonLinearFunc *nonlinear_func);
@@ -91,7 +95,10 @@ struct CRFOutput : public OutputBase
         IndexSeq &pred_seq) ;
 };
 
-/*  Bare Output */
+/******************
+ * Bare Output Base
+ * should be supported in current and future.
+ ******************/
 
 struct BareOutputBase
 {
@@ -114,6 +121,11 @@ private:
     void concate_input_expr_ptr_group(const std::vector<std::vector<dynet::expr::Expression> *> &input_expr_ptr_group_seq, 
             std::vector<dynet::expr::Expression> &concated_input_expr_cont);
 };
+
+/*************
+ * Simple Bare output.
+ * for general (no tag-transition limit)
+ *************/
 
 struct SimpleBareOutput : public BareOutputBase
 {

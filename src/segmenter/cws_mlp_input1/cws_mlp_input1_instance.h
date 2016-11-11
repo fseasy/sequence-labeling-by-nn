@@ -12,22 +12,22 @@ namespace mlp_input1{
 extern template class SegmenterMlpInput1Template<
     token_module::TokenSegmenterInput1Unigram,
     structure_param_module::SegmenterBasicMlpParam,
-    nn_module::NnSegmenterInput1Abstract>;
+    nn_module::NnSegmenterInput1MlpAbstract>;
 
 using MlpInput1Unigram = SegmenterMlpInput1Template<
     token_module::TokenSegmenterInput1Unigram,
     structure_param_module::SegmenterBasicMlpParam,
-    nn_module::NnSegmenterInput1Abstract>;
+    nn_module::NnSegmenterInput1MlpAbstract>;
 
 extern template class SegmenterMlpInput1Template<
     token_module::TokenSegmenterInput1Bigram,
     structure_param_module::SegmenterBasicMlpParam,
-    nn_module::NnSegmenterInput1Abstract>;
+    nn_module::NnSegmenterInput1MlpAbstract>;
 
 using MlpInput1Bigram = SegmenterMlpInput1Template<
     token_module::TokenSegmenterInput1Bigram,
     structure_param_module::SegmenterBasicMlpParam,
-    nn_module::NnSegmenterInput1Abstract > ;
+    nn_module::NnSegmenterInput1MlpAbstract > ;
 
 } // enf of namespace mlp-input1
 } // enf of namespace segmenter

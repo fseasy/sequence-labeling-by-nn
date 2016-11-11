@@ -53,7 +53,7 @@ std::string SegmenterBasicMlpParam::get_structure_info()
     }
     oss << ") mlp-nonlinear-func(" << mlp_nonlinear_function_str << ") mlp-dropout-rate("
         << mlp_dropout_rate << ")" << "\n"
-        << "| output: " << "output-dim(" << output_dim << ")" << "\n"
+        << "| output: " << "output-dim(" << output_dim << ") type(" << output_layer_type << ")\n"
         << "| others: " << "replace-frequent-threshold(" << replace_freq_threshold << ") "
         << "replace-probability-threshold(" << replace_prob_threshold << ")\n"
         << "= - - - - -";
