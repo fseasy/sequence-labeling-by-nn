@@ -123,8 +123,9 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
   find_mkl()  # sets include/lib directories and sets ${MKL_LIBS} needed for linking
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
-  set(LIBS ${LIBS} ${MKL_LIBS})
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
+  set(LIBS ${LIBS})
+  #set(LIBS ${LIBS} ${MKL_LIBS})
 endif()
 
 ### compiler options(specific)
