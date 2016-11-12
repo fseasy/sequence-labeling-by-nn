@@ -90,6 +90,8 @@ save_model(std::ostream &os, SegmenterRnnInput1Template &m)
     // 3. save token module
     to << *(m.get_token_module());
     // 4. save nn
+    //  - OH! DON't forget to reset the model to it's best state. (BUG FIX.)
+    m.get_nn()->reset2stashed_model();
     to << *(m.get_nn());
 }
 
