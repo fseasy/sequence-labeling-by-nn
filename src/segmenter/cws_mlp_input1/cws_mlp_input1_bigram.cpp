@@ -38,7 +38,9 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("training_update_scale", po::value<float>()->default_value(1.f), "The scale for backward updating.")
-        ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: sgd, adagrad")
+        ("scale_half_decay_period", po::value<unsigned>()->default_value(5), "The training update scale half decay period.")
+        ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: "
+        "sgd, adagrad, momentum, adadelta, rmsprop, adam")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process");
 
     po::options_description model_op("model options");
@@ -98,6 +100,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     struct TrainingOpts
     {
         float training_update_scale;
+        unsigned scale_half_decay_period;
         string training_update_method;
         unsigned do_devel_freq;
         unsigned max_epoch;
@@ -123,6 +126,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     opts.max_epoch = var_map["max_epoch"].as<unsigned>();
     opts.do_devel_freq = var_map["devel_freq"].as<unsigned>();
     opts.training_update_scale = var_map["training_update_scale"].as<float>();
+    opts.scale_half_decay_period = var_map["scale_half_decay_period"].as<unsigned>();
     opts.training_update_method = var_map["training_update_method"].as<string>();
     opts.trivial_report_freq = var_map["trivial_report_freq"].as<unsigned>();
     // check model path

@@ -240,7 +240,8 @@ void train(SLModel &slm,
     std::cerr << "+ Train at " << nr_samples << " instances .\n";
     std::cerr << "++ Training info: \n"
         << "|  training update method(" << opts.training_update_method <<"),\n"
-        << "|  training update scale(" << opts.training_update_scale << "),\n"
+        << "|  training update scale(" << opts.training_update_scale << "),"
+        << "half decay period (" <<  opts.scale_half_decay_period  << " epochs)\n"
         << "|  max epoch(" << opts.max_epoch << "), devel frequence(" << opts.do_devel_freq << ")\n"
         << "== - - - - -\n";
     slm.get_nn()->set_update_method(opts.training_update_method);
@@ -253,7 +254,12 @@ void train(SLModel &slm,
         slm.get_nn()->stash_model_when_best(f1);
         update_recorder.update_training_state(f1, nr_epoch, nr_devel_order);
     };
-
+    float actual_scale = opts.training_update_scale;
+    auto update_epoch = [&opts, &slm, &actual_scale](int nr_epoch)
+    {
+        if( nr_epoch != 0 && nr_epoch % opts.scale_half_decay_period == 0 ){ actual_scale /= 2.f; }
+        slm.get_nn()->update_epoch();
+    };
     // for randomly select instance
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
@@ -280,7 +286,7 @@ void train(SLModel &slm,
             typename SLModel::NnExprT loss_expr = slm.build_training_graph(instance);
             slnn::type::real loss = slm.get_nn()->as_scalar(slm.get_nn()->forward(loss_expr));
             slm.get_nn()->backward(loss_expr);
-            slm.get_nn()->update(opts.training_update_scale);
+            slm.get_nn()->update(actual_scale);
             // record loss
             training_stat_per_epoch.loss += loss;
             training_stat_per_epoch.total_tags += instance.size() ;
@@ -301,7 +307,7 @@ void train(SLModel &slm,
 
         // End of an epoch 
         // 1. update epoch
-        slm.get_nn()->update_epoch();
+        update_epoch(nr_epoch);
         // 2. end timing 
         training_stat_per_epoch.end_time_stat();
         // 3. output info at end of every eopch
@@ -366,7 +372,7 @@ void predict(SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> test_data;
     std::vector<typename SLModel::UnannotatedDataRawT> test_raw_data;
     read_test_data(is, slm, test_data, test_raw_data);
-    std::cerr << "+ Do prediction on " << test_data.size() << " instances .";
+    std::cerr << "+ Do prediction on " << test_data.size() << " instances .\n";
     BasicStat stat(true);
     stat.start_time_stat();
     writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding(), WordOutputDelimiter());
