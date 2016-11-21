@@ -12,7 +12,7 @@ using namespace slnn::charcode::NUnicode;
 
 TEST_CASE("charcode-1", "[UTF8-UNICODE]-SPECIFIC")
 {
-    char32_t unicode_normal_cn = 0x4E70, // <==> UTF8 char 'Mai' (buy in Englist) 
+    char32_t unicode_normal_cn = 0x4E70, // <==> UTF8 char 'Mai' (buy in English) 
         unicode_extend_cn = 0x20005, //   U+20005, see http://www.utf8-chartable.de/unicode-utf8-table.pl
         unicode_ascii = 'b';
     string u8_normal_cn = u8"\u4E70",

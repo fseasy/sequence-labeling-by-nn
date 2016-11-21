@@ -1,5 +1,5 @@
-#ifndef SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_BIGRAM_
-#define SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_BIGRAM_
+#ifndef SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_BIGRAM_H_
+#define SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_BIGRAM_H_
 #include "trivial/lookup_table/lookup_table.h"
 #include "segmenter/cws_module/token_module/cws_tag_definition.h"
 #include "trivial/charcode/charcode_convertor.h"
