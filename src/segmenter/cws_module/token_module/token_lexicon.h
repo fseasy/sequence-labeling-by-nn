@@ -17,6 +17,7 @@ public:
 public:
     void build_inner_lexicon_from_training_data(std::ifstream &training_is);
     std::shared_ptr<std::vector<std::vector<Index>>> extract(const std::u32string& charseq) const;
+    std::size_t size(){ return maxlen4feature; }
 private:
     unsigned maxlen4feature; // pre-define.
     unsigned word_maxlen_in_lexicon; // calc according to final lexicon

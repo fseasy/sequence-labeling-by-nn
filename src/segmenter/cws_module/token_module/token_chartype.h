@@ -13,7 +13,7 @@ class TokenChartype
 public:
     TokenChartype(){}
 public:
-    static constexpr unsigned get_dict_sz() { return 4U; }
+    static constexpr unsigned size() { return 4U; }
     static constexpr Index DefaultType = 0;
     static constexpr Index DigitType = 1;
     static constexpr Index PuncType = 2;
