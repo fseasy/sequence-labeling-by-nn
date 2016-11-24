@@ -14,11 +14,6 @@ TokenSegmenterInput1All::TokenSegmenterInput1All(unsigned seed) noexcept
     state()
 {}
 
-std::string TokenSegmenterInput1All::get_module_info() const noexcept
-{
-    return "";
-}
-
 } // end of namespace token_module
 } // end of namespace segmenter
 } // end of namespace slnn

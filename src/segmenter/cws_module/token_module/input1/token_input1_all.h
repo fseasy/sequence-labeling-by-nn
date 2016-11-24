@@ -45,7 +45,25 @@ void TokenModuleState::serialize(Archive &ar, const unsigned int)
 
 } // end of namespace input1_all_token_module_inner
 
-
+/**
+ * Token Segmenter for input1 with all features.
+ * have the ability to extract unigram, bigram, lexicon, chartype feature and can disable any of them from commandline \
+ * with the constraint that we should ensure at least one of unigram and bigram is enbaled. 
+ * 
+ * call flow:
+ * for training:
+ * 1. init with one parameter: seed
+ * 2. call `set_param`.
+ * 3. call `build_lexicon_if_necessary`
+ * 4. read training data and build feature.
+ * 5. call `finish_read_training_data`
+ * 6. call `replace_low_freq_token2unk` if necessary
+ * 7. serialization
+ * 
+ * for de-serialization
+ * 1. init
+ * 2. un-serialize
+ **/
 class TokenSegmenterInput1All
 {
     friend class boost::serialization::access;
@@ -63,7 +81,7 @@ public:
         { 
             if( punigramseq ){ return punigramseq->size(); }
             else if( pbigramseq ){ return pbigramseq->size(); }
-            else{ throw std::logic_error("unigram or bigram neigher been set."); }
+            else{ throw std::logic_error("at least one of {unigram, bigram} should be enable."); }
         }
     };
     using AnnotatedDataRawT = std::vector<std::u32string>;
@@ -79,7 +97,7 @@ public:
         {
             if( punigramseq ){ return punigramseq->size(); }
             else if( pbigramseq ){ return pbigramseq->size(); }
-            else{ throw std::logic_error("unigram or bigram neigher been set."); }
+            else{ throw std::logic_error("at least one of {unigram, bigram} should be enable."); }
         }
     };
     using UnannotatedDataRawT = std::u32string;
@@ -99,9 +117,10 @@ public:
     template <typename ProcessedUnannotatedDataT>
     void process_unannotated_data(const std::u32string &raw_in, ProcessedUnannotatedDataT &out) const;
 
-    // DICT INTERFACE
+    // PARAM INTERFACE (only for training)
     template <typename StructureParamT>
-    void before_read_training_data(const StructureParamT& param) noexcept;
+    void set_param(const StructureParamT& param);
+    void build_lexicon_if_necessary(std::ifstream &training_is);
     void finish_read_training_data();
 
     // MODULE INFO
@@ -120,7 +139,7 @@ private:
     static std::u32string EOS_REPR;
     slnn::trivial::LookupTableWithReplace<std::u32string> bigram_dict;
     TokenLexicon lexicon_feat;
-    TokenChartype chartype_feat;
+    // TokenChartype is a static class
     input1_all_token_module_inner::TokenModuleState state;
 };
 
@@ -129,6 +148,7 @@ private:
  * Inline/Template Implementation
  *******************/
 
+inline
 TokenSegmenterInput1All::UnannotatedDataProcessedT
 TokenSegmenterInput1All::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
@@ -180,23 +200,35 @@ TokenSegmenterInput1All::process_annotated_data(const std::vector<std::u32string
         for( char32_t uc : word ){ charseq[pos++] = uc; }
     }
     // unigram seq
-    std::shared_ptr<std::vector<Index>> &puni_seq = ann_data.punigramseq;
-    puni_seq.reset(new std::vector<Index>(charseq_len));
-    for( pos = 0; pos < charseq_len; ++pos )
+    if( state.enable_unigram )
     {
-        (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+        std::shared_ptr<std::vector<Index>> &puni_seq = ann_data.punigramseq;
+        puni_seq.reset(new std::vector<Index>(charseq_len));
+        for( pos = 0; pos < charseq_len; ++pos )
+        {
+            (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+        }
     }
     // bigram seq
-    std::shared_ptr<std::vector<Index>> &pbi_seq = ann_data.pbigramseq;
-    for( pos = 0; pos < charseq_len - 1; ++pos )
+    if( state.enable_bigram )
     {
-        (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+        std::shared_ptr<std::vector<Index>> &pbi_seq = ann_data.pbigramseq;
+        for( pos = 0; pos < charseq_len - 1; ++pos )
+        {
+            (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+        }
+        pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     }
-    pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     // lexicon seq
-    ann_data.plexiconseq = lexicon_feat.extract(charseq);
+    if( state.enable_lexicon )
+    {
+        ann_data.plexiconseq = lexicon_feat.extract(charseq);
+    }
     // type seq
-    ann_data.ptypeseq = chartype_feat.extract(charseq);
+    if( state.enable_type )
+    {
+        ann_data.ptypeseq = TokenChartype::extract(charseq);
+    }
     // tag seq
     ann_data.ptagseq.reset(new std::vector<Index>(charseq_len));
     generate_tagseq_from_wordseq2preallocated_space(wordseq, *ann_data.ptagseq);
@@ -209,25 +241,38 @@ TokenSegmenterInput1All::process_unannotated_data(const std::u32string &charseq,
 {
     unsigned charseq_len = charseq.length();
     // unigram seq
-    std::shared_ptr<std::vector<Index>> &puni_seq = unann_data.punigramseq;
-    puni_seq.reset(new std::vector<Index>(charseq_len));
-    for( pos = 0; pos < charseq_len; ++pos )
+    if( state.enable_unigram )
     {
-        (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+        std::shared_ptr<std::vector<Index>> &puni_seq = unann_data.punigramseq;
+        puni_seq.reset(new std::vector<Index>(charseq_len));
+        for( pos = 0; pos < charseq_len; ++pos )
+        {
+            (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+        }
     }
     // bigram seq
-    std::shared_ptr<std::vector<Index>> &pbi_seq = unann_data.pbigramseq;
-    for( pos = 0; pos < charseq_len - 1; ++pos )
+    if( state.enable_bigram )
     {
-        (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+        std::shared_ptr<std::vector<Index>> &pbi_seq = unann_data.pbigramseq;
+        for( pos = 0; pos < charseq_len - 1; ++pos )
+        {
+            (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+        }
+        pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     }
-    pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     // lexicon seq
-    unann_data.plexiconseq = lexicon_feat.extract(charseq);
+    if( state.enable_lexicon )
+    {
+        unann_data.plexiconseq = lexicon_feat.extract(charseq);
+    }
     // type seq
-    unann_data.ptypeseq = chartype_feat.extract(charseq);
+    if( state.enable_type )
+    {
+        unann_data.ptypeseq = TokenChartype::extract(charseq);
+    }
 }
 
+inline
 void TokenSegmenterInput1All::set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept
 {
     unigram_dict.set_unk_replace_threshold(cnt_threshold, prob_threshold);
@@ -235,14 +280,26 @@ void TokenSegmenterInput1All::set_unk_replace_threshold(unsigned cnt_threshold, 
 }
 
 template <typename StructureParamT>
-void TokenSegmenterInput1All::before_read_training_data(const StructureParamT& param) noexcept
+void TokenSegmenterInput1All::set_param(const StructureParamT& param)
 {
     state.enable_unigram = param.enable_unigram;
     state.enable_bigram = param.enable_bigram;
     state.enable_lexicon = param.enable_lexicon;
     state.enable_type = param.enable_type;
+    if( !state.enable_unigram && !state.enable_bigram )
+    { 
+        throw std::logic_error("at least one of {unigram, bigram} should be enable."); 
+    }
     set_unk_replace_threshold(param.replace_freq_threshold, param.replace_prob_threshold);
+    lexicon_feat.set_maxlen4feature(param.lexicon_feature_max_len);
 }
+
+inline
+void TokenSegmenterInput1All::build_lexicon_if_necessary(std::ifstream &is)
+{
+    if( state.enable_lexicon ){ lexicon_feat.build_inner_lexicon_from_training_data(is); }
+}
+
 
 inline
 void TokenSegmenterInput1All::finish_read_training_data()
@@ -254,7 +311,28 @@ void TokenSegmenterInput1All::finish_read_training_data()
     state.unigram_dict_sz = unigram_dict.size();
     state.bigram_dict_sz = bigram_dict.size();
     state.lexicon_dict_sz = lexicon_feat.size();
-    state.type_dict_sz = chartype_feat.size();
+    state.type_dict_sz = TokenChartype::size();
+}
+
+inline
+std::string TokenSegmenterInput1All::get_module_info() const noexcept
+{
+    std::ostringstream oss;
+    oss << "+ Token module info: \n"
+        << std::boolalpha
+        << "| enable unigram(" << state.enable_unigram << ") unigram dict size(" << state.unigram_dict_sz << "\n"
+        << "| enable bigram(" << state.enable_bigram << ") bigram dict size(" << state.bigram_dict_sz << "\n"
+        << "| enable lexicon(" << state.enable_lexicon << ") lexicon feature size(" << state.lexicon_dict_sz << "\n"
+        << "| enable chartype(" << state.enable_type << ") chartype feature size(" << state.type_dict_sz << "\n"
+        << lexicon_feat.get_lexicon_feature_info() << "\n"
+        << "== - - - - -";
+    return oss.str();
+}
+
+template<class Archive>
+void TokenSegmenterInput1All::serialize(Archive& ar, const unsigned int)
+{
+    ar &unigram_dict &bigram_dict &lexicon_feat &state;
 }
 
 } // end of namespace token_module

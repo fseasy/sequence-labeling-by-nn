@@ -36,7 +36,7 @@ void TokenLexicon::build_inner_lexicon_from_training_data(std::ifstream &trainin
     std::sort(freq_list.begin(), freq_list.end(), std::greater<unsigned>());
     unsigned long long truncated_total_freq = total_freq * 0.9L;
     unsigned long long current_freq = 0UL;
-    unsigned freq_threshold = 0U;
+    freq_threshold = 0U;
     for( size_t i = 0; i < freq_list.size(); ++i )
     {
         current_freq += freq_list[i];
@@ -57,6 +57,11 @@ void TokenLexicon::build_inner_lexicon_from_training_data(std::ifstream &trainin
             }
         }
     }
+    // restore the training file state
+    training_is.clear();
+    training_is.seekg(f_pos);
+    training_is.setstate(f_state);
+
 }
 
 std::shared_ptr<std::vector<std::vector<Index>>> TokenLexicon::extract(const std::u32string& charseq) const
