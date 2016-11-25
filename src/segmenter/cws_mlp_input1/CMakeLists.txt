@@ -4,7 +4,7 @@ FILE(GLOB dep_token_module "${cws_module_token_dir}/input1/*"
                            "${cws_module_token_dir}/token_lexicon.*"
                            "${cws_module_token_dir}/token_chartype.*")
 FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/basic_mlp_param.*"
-                                     "${cws_module_structure_param_dir}/mlp_input1_all_param.*")
+                                     "${cws_module_structure_param_dir}/param_mlp_input1_all.*")
 FILE(GLOB dep_nn_general_module "${cws_module_nn_dir}/nn_common_interface.*"
                                 "${cws_module_nn_dir}/nn_common_interface_dynet_impl.*"
                                 "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_abstract.*")
