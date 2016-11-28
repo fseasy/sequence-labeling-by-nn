@@ -7,7 +7,8 @@ FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/basic_ml
                                      "${cws_module_structure_param_dir}/param_mlp_input1_all.*")
 FILE(GLOB dep_nn_general_module "${cws_module_nn_dir}/nn_common_interface.*"
                                 "${cws_module_nn_dir}/nn_common_interface_dynet_impl.*"
-                                "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_abstract.*")
+                                "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_abstract.*"
+                                "${cws_module_nn_dir}/mlp_input1/nn_cws_mlp_input1_all.*")
 FILE(GLOB dep_nn_experiment_module "${cws_module_nn_dir}/experiment_layer/*")
      
 FILE(GLOB dep_modelhandler "${cws_module_dir}/cws_general_modelhandler.*")

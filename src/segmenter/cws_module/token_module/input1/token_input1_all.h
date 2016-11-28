@@ -312,6 +312,7 @@ void TokenSegmenterInput1All::finish_read_training_data()
     state.bigram_dict_sz = bigram_dict.size();
     state.lexicon_dict_sz = lexicon_feat.size();
     state.type_dict_sz = TokenChartype::size();
+    state.tag_dict_sz = TAG_SIZE;
 }
 
 inline
