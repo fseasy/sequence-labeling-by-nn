@@ -201,7 +201,6 @@ void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLM
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
     std::cerr << "= Training data processed done. (line count: " << line_cnt << ", instance number: " <<
         out_training_processed_data.size() << ")\n";
-    slm.finish_read_training_data();
 }
 
 template <typename SLModel>

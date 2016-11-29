@@ -43,7 +43,7 @@ ADD_LIBRARY(${lib_name}
 # ( I think it is ok. )
 TARGET_LINK_LIBRARIES(${lib_name} layers) 
 
-foreach(exe_name "cws_mlp_input1_unigram" "cws_mlp_input1_bigram")
+foreach(exe_name "cws_mlp_input1_unigram" "cws_mlp_input1_bigram" "cws_mlp_input1_all")
     add_executable(${exe_name}
                    "${exe_name}.cpp"
                    ${dep_modelhandler}

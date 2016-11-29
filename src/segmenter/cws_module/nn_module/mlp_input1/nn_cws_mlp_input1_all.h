@@ -11,7 +11,7 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
-class NnSegmenterMlpInput1All : public 
+class NnSegmenterMlpInput1All : public NeuralNetworkCommonInterfaceDynetImpl
 {
 public:
     NnSegmenterMlpInput1All(int argc, char **argv, unsigned seed);
@@ -22,15 +22,22 @@ public:
     template <typename UnannotatedDataProcessedT>
     std::vector<Index> predict(const UnannotatedDataProcessedT &unann_processed_data);
 protected:
-    dynet::expr::Expression build_training_graph_impl(const std::shared_ptr<std::vector<Index>>& unigram_seq,
-        const std::shared_ptr<std::vector<Index>>& bigram_seq,
-        const std::shared_ptr<std::vector<Index>>& lexicon_seq, 
-        const std::shared_ptr<std::vector<Index>>& type_seq, 
-        const std::shared_ptr<std::vector<Index>>& tag_seq);
-    std::vector<Index> predict_impl(const std::shared_ptr<std::vector<Index>>& unigram_seq,
-        const std::shared_ptr<std::vector<Index>>& bigram_seq,
-        const std::shared_ptr<std::vector<Index>>& lexicon_seq, 
-        const std::shared_ptr<std::vector<Index>>& type_seq);
+    dynet::expr::Expression build_training_graph_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
+        const std::shared_ptr<std::vector<Index>>& pbigram_seq,
+        const std::shared_ptr<std::vector<Index>>& plexicon_seq, 
+        const std::shared_ptr<std::vector<Index>>& ptype_seq, 
+        const std::shared_ptr<std::vector<Index>>& ptag_seq);
+    std::vector<Index> predict_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
+        const std::shared_ptr<std::vector<Index>>& pbigram_seq,
+        const std::shared_ptr<std::vector<Index>>& plexicon_seq, 
+        const std::shared_ptr<std::vector<Index>>& ptype_seq);
+private:
+    void new_graph();
+    std::vector<dynet::expr::Expression> concat_all_feature_as_expr(unsigned seq_len,
+        const std::shared_ptr<std::vector<Index>>& punigram_seq,
+        const std::shared_ptr<std::vector<Index>>& pbigram_seq,
+        const std::shared_ptr<std::vector<Index>>& plexicon_seq,
+        const std::shared_ptr<std::vector<Index>>& ptype_seq);
 private:
     std::shared_ptr<Index2ExprLayer> unigram_embed_layer;
     std::shared_ptr<Index2ExprLayer> bigram_embed_layer;
@@ -97,7 +104,7 @@ void NnSegmenterMlpInput1All::build_model_structure(const StructureParamT& param
 }
 
 template <typename AnnotatedDataProcessedT>
-dynet::expr::Expression build_training_graph(const AnnotatedDataProcessedT &ann_processed_data)
+dynet::expr::Expression NnSegmenterMlpInput1All::build_training_graph(const AnnotatedDataProcessedT &ann_processed_data)
 {
     return build_training_graph_impl(ann_processed_data.punigramseq, ann_processed_data.pbigramseq,
         ann_processed_data.plexiconseq, ann_processed_data.ptypeseq, ann_processed_data.ptagseq);
@@ -105,7 +112,7 @@ dynet::expr::Expression build_training_graph(const AnnotatedDataProcessedT &ann_
 
 
 template <typename UnannotatedDataProcessedT>
-std::vector<Index> predict(const UnannotatedDataProcessedT &unann_processed_data)
+std::vector<Index> NnSegmenterMlpInput1All::predict(const UnannotatedDataProcessedT &unann_processed_data)
 {
     return predict_impl(unann_processed_data.punigram_seq, unann_processed_data.pbigram_seq,
         unann_processed_data.plexicon_seq, unann_processed_data.ptypeseq);

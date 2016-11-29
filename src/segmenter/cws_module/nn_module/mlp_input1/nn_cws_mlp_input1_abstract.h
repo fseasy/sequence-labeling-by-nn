@@ -12,7 +12,7 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
-class NnSegmenterInput1MlpAbstract : public NeuralNetworkCommonInterfaceCnnImpl
+class NnSegmenterInput1MlpAbstract : public NeuralNetworkCommonInterfaceDynetImpl
 {
 public:
     NnSegmenterInput1MlpAbstract(int argc, char **argv, unsigned seed);
@@ -63,6 +63,8 @@ NnSegmenterInput1MlpAbstract::build_training_graph(const AnnotatedDataProcessedT
 {
     return build_training_graph_impl(*ann_processed_data.pcharseq, *ann_processed_data.ptagseq);
 }
+
+
 template <typename UnannotatedDataProcessedT>
 inline
 std::vector<Index> 

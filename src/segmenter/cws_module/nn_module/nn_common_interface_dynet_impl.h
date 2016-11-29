@@ -54,7 +54,7 @@ private:
     unsigned dynet_rng_seed;
 };
 
-using NeuralNetworkCommonInterfaceCnnImpl = NeuralNetworkCommonInterface<nn_framework::NN_DyNet, 
+using NeuralNetworkCommonInterfaceDynetImpl = NeuralNetworkCommonInterface<nn_framework::NN_DyNet, 
     dynet::expr::Expression, dynet::Tensor>;
 
 /*********************************************

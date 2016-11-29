@@ -7,9 +7,9 @@ using namespace std;
 namespace po = boost::program_options;
 using namespace slnn;
 using namespace slnn::segmenter;
-using slnn::segmenter::mlp_input1::MlpInput1Unigram;
+using slnn::segmenter::mlp_input1::MlpInput1All;
 
-static const string PROGRAM_HEADER = "segmenter Mlp-input1-unigram based on DyNet Library";
+static const string PROGRAM_HEADER = "segmenter Mlp-input1-all based on DyNet Library";
 constexpr unsigned DEFAULT_RNG_SEED = 1234;
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -23,10 +23,11 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
             "else value leads to output trace info.")
         ("help,h", "Show help information.");
-    
+
     po::options_description dynet_op("dynet options");
     dynet_op.add_options()
         ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .");
+    
     po::options_description file_op("file options");
     file_op.add_options()
         ("training_data", po::value<string>(), "[required] The path to training data")
@@ -40,30 +41,46 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("training_update_scale", po::value<float>()->default_value(1.f), "The scale for backward updating.")
         ("scale_half_decay_period", po::value<unsigned>()->default_value(5), "The training update scale half decay period.")
         ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: "
-        "sgd, adagrad, momentum, adadelta, rmsprop, adam")
+            "sgd, adagrad, momentum, adadelta, rmsprop, adam")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process");
 
     po::options_description model_op("model options");
     model_op.add_options()
         ("rng_seed", po::value<unsigned>()->default_value(DEFAULT_RNG_SEED), "Random Number Generator seed.")
-        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        
+        ("enable_unigram", po::value<bool>()->default_value(true), "Is enable unigram feature")
+        ("enable_bigram", po::value<bool>()->default_value(true), "Is enable bigram feature")
+        ("enable_lexicon", po::value<bool>()->default_value(true), "Is enable lexicon feature")
+        ("enable_type", po::value<bool>()->default_value(true), "Is enable type feature")
+        
+        ("lexicon_feature_max_len", po::value<unsigned>()->default_value(5), "The max length of lexicon")
+
+        ("unigram_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for unigram")
+        ("bigram_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for bigram")
+        ("lexicon_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for lexicon feature.")
+        ("type_embedding_dim", po::value<unsigned>()->default_value(5), "The dimension for chartype feature.")
+        
         ("window_size", po::value<unsigned>()->default_value(5), "The window size")
+        
         ("window_process_method", po::value<string>()->default_value(string("concat")), "The method for window embedding processing."
             "support list: [concat, sum(avg), bigram]")
         ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
-            "separated by comma , like : 512,256,334 ")
+                "separated by comma , like : 512,256,334. can be empty by explicit \"\"")
         ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
         ("nonlinear_func", po::value<string>()->default_value(string("relu")), "Non-linear function for mlp layers")
+        
+        ("tag_embedding_dim", po::value<unsigned>()->default_value(8), "The dimenstion for tag embedding")
         ("output_layer_type", po::value<string>()->default_value(string("cl")), 
             "The output layer type, supporting list: [cl(classification), pretag, crf]")
+        
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
-            "(eg , if set 1, the words of training data which frequency <= 1 may be "
-            "replaced in probability)")
+                "(eg , if set 1, the words of training data which frequency <= 1 may be "
+                "replaced in probability)")
         ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
-                " if words frequency <= replace_freq_threshold , the word will"
-                " be replace in this probability");
-    
-    
+                    " if words frequency <= replace_freq_threshold , the word will"
+                    " be replace in this probability");
+
+
     po::options_description all_op(description);
     all_op.add(generic_op).add(dynet_op).add(file_op).add(training_op).add(model_op);
 
@@ -117,7 +134,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         "using `" + program_name + " train -h ` to see detail parameters .");
     devel_data_path = var_map["devel_data"].as<string>();  
     varmap_key_fatal_check(var_map , "mlp_hidden_dim_list" ,
-        "Error : mlp hidden layer dims should be specified .") ;
+        "Error : mlp hidden layer dims should be specified explicitly.") ;
     varmap_key_fatal_check(var_map , "dropout_rate" ,
         "Error : dropout rate should be specified .") ;
 
@@ -148,24 +165,26 @@ int train_process(int argc, char *argv[], const string &program_name)
     //if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     //build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     //char **dynet_argv_ptr = dynet_argv.get();
-    std::shared_ptr<MlpInput1Unigram>  mi1 = MlpInput1Unigram::create_new_model(argc, argv, rng_seed);
+    std::shared_ptr<MlpInput1All>  mia = MlpInput1All::create_new_model(argc, argv, rng_seed);
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
     if( !model_os ) fatal_error("failed to open model path at '" + model_path + "'") ;
 
-    mi1->set_model_structure_param_from_outer(var_map);
+    // before read training data.
+    mia->set_model_structure_param_from_outer(var_map);
+
     // reading traing data , get word dict size and output tag number
     ifstream train_is(training_data_path);
     if (!train_is) {
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
 
-    vector<MlpInput1Unigram::AnnotatedDataProcessedT> training_data;
-    modelhandler::read_training_data(train_is, *mi1, training_data);
+    vector<MlpInput1All::AnnotatedDataProcessedT> training_data;
+    modelhandler::read_training_data(train_is, *mia, training_data);
     train_is.close();
-    
-    mi1->finish_read_training_data();
+
+    mia->finish_read_training_data();
     // build model structure
     mi1->build_model_structure();
 
@@ -179,7 +198,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     devel_is.close();
     // Train
     modelhandler::train(*mi1, training_data, devel_data, opts);
-     
+
     // save model
     mi1->save_model(model_os);
     model_os.close();
@@ -188,7 +207,7 @@ int train_process(int argc, char *argv[], const string &program_name)
 
 int devel_process(int argc, char *argv[], const string &program_name)
 {
-    
+
     string description = PROGRAM_HEADER + "\n"
         "Validation(develop) process "
         "using `" + program_name + " devel [rnn-type] <options>` to validate . devel options are as following";
@@ -196,11 +215,11 @@ int devel_process(int argc, char *argv[], const string &program_name)
     generic_op.add_options()
         ("config", po::value<string>(), "Path to config file")
         ("help,h", "Show help information.");
-    
+
     po::options_description dynet_op("dynet options");
     dynet_op.add_options()
         ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .");
-    
+
     string devel_data_path, model_path ;
     po::options_description file_op("file options");
     file_op.add_options()
@@ -242,7 +261,7 @@ int devel_process(int argc, char *argv[], const string &program_name)
     if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     char **dynet_argv_ptr = dynet_argv.get();
-    
+
     // Load model 
     ifstream model_is(model_path);
     if (!model_is)
@@ -269,7 +288,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     string description = PROGRAM_HEADER + "\n"
         "Predict process ."
         "using `" + program_name + " predict [rnn-type] <options>` to predict . predict options are as following";
-    
+
     po::options_description generic_op("generic options");
     generic_op.add_options()
         ("config", po::value<string>(), "Path to config file")
@@ -285,7 +304,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
         ("input", po::value<string>(&raw_data_path), "The path to input data.")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
         ("model", po::value<string>(&model_path), "Use to specify the model name(path)");
-    
+
     po::options_description all_op = po::options_description(description);
     // set params to receive the arguments 
     all_op.add(generic_op).add(dynet_op).add(file_op);
@@ -306,7 +325,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
             cerr << "failed to open config file:'" << var_map["config"].as<string>() <<"'\n";
         }
     }
-    
+
     if (var_map.count("help"))
     {
         cerr << all_op << endl;

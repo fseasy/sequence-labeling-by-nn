@@ -11,7 +11,7 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
-class NnSegmenterRnnInput1Abstract : public NeuralNetworkCommonInterfaceCnnImpl
+class NnSegmenterRnnInput1Abstract : public NeuralNetworkCommonInterfaceDynetImpl
 {
 public:
     NnSegmenterRnnInput1Abstract(int argc, char **argv, unsigned seed);

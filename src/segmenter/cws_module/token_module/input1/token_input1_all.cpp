@@ -10,7 +10,6 @@ TokenSegmenterInput1All::TokenSegmenterInput1All(unsigned seed) noexcept
     :unigram_dict(seed),
     bigram_dict(seed),
     lexicon_feat(),
-    chartype_feat(),
     state()
 {}
 

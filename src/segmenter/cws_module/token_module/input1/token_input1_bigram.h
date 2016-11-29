@@ -72,13 +72,16 @@ public:
     // DICT INTERFACE
     void finish_read_training_data();
     template <typename StructureParamT>
-    void set_unk_replace_threshold(const StructureParamT& param) noexcept;
-    void set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept;
+    void set_param_before_process_training_data(const StructureParamT& param);
+    
 
     // MODULE INFO
     std::string get_module_info() const noexcept;
     std::size_t get_charset_size() const noexcept;
     std::size_t get_tagset_size() const noexcept;
+
+protected:
+    void set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept;
 
 private:
     template<class Archive>
@@ -269,7 +272,7 @@ void TokenSegmenterInput1Bigram::finish_read_training_data()
 */
 template <typename StructureParamT>
 inline
-void TokenSegmenterInput1Bigram::set_unk_replace_threshold(const StructureParamT& param) noexcept
+void TokenSegmenterInput1Bigram::set_param_before_process_training_data(const StructureParamT& param)
 {
     set_unk_replace_threshold(param.replace_freq_threshold, param.replace_prob_threshold);
 }

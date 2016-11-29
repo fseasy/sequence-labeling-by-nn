@@ -13,6 +13,11 @@ template class SegmenterMlpInput1Template<
     structure_param_module::SegmenterBasicMlpParam,
     nn_module::NnSegmenterInput1MlpAbstract>;
 
+template class SegmenterMlpInput1Template<
+    token_module::TokenSegmenterInput1All,
+    structure_param_module::ParamSegmenterMlpInput1All,
+    nn_module::NnSegmenterMlpInput1All>;
+
 } // enf of namespace mlp-input1
 } // enf of namespace segmenter
 } // end 

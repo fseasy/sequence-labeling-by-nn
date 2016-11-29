@@ -119,7 +119,7 @@ public:
 
     // PARAM INTERFACE (only for training)
     template <typename StructureParamT>
-    void set_param(const StructureParamT& param);
+    void set_param_before_process_training_data(const StructureParamT& param);
     void build_lexicon_if_necessary(std::ifstream &training_is);
     void finish_read_training_data();
 
@@ -280,7 +280,7 @@ void TokenSegmenterInput1All::set_unk_replace_threshold(unsigned cnt_threshold, 
 }
 
 template <typename StructureParamT>
-void TokenSegmenterInput1All::set_param(const StructureParamT& param)
+void TokenSegmenterInput1All::set_param_before_process_training_data(const StructureParamT& param)
 {
     state.enable_unigram = param.enable_unigram;
     state.enable_bigram = param.enable_bigram;

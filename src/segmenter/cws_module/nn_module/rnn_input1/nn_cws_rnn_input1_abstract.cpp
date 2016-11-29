@@ -6,7 +6,7 @@ namespace nn_module{
 
 
 NnSegmenterRnnInput1Abstract::NnSegmenterRnnInput1Abstract(int argc, char **argv, unsigned seed) : 
-    NeuralNetworkCommonInterfaceCnnImpl(argc, argv, seed)
+    NeuralNetworkCommonInterfaceDynetImpl(argc, argv, seed)
 {}
 
 dynet::expr::Expression 
