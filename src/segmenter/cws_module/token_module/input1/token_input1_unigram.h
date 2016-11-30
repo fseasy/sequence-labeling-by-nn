@@ -49,7 +49,7 @@ public:
         std::size_t size() const { return pcharseq ? pcharseq->size() : 0UL; }
     };
     using AnnotatedDataRawT = std::vector<std::u32string>;
-    using UnannotatedDataProcessedT = std::vector<Index>;
+    using UnannotatedDataProcessedT = std::shared_ptr<std::vector<Index>>;
     using UnannotatedDataRawT = std::u32string;
 public:
 
@@ -58,7 +58,7 @@ public:
     // DATA TRANSLATING
     Index token2index(char32_t token) const;
     Index unk_replace_in_probability(Index idx) const;
-    std::shared_ptr<UnannotatedDataProcessedT>
+    UnannotatedDataProcessedT
     extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
     // WE DO NOT use current class-defined data structure. 
     // ideally, we'll process the derived class-defined data.
@@ -128,7 +128,7 @@ Index TokenSegmenterInput1Unigram::unk_replace_in_probability(Index idx) const
  * @return unannotated data
  */
 inline
-std::shared_ptr<TokenSegmenterInput1Unigram::UnannotatedDataProcessedT >
+TokenSegmenterInput1Unigram::UnannotatedDataProcessedT
 TokenSegmenterInput1Unigram::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
     return ann_data.pcharseq;
@@ -224,14 +224,13 @@ template <>
 inline
 void
 TokenSegmenterInput1Unigram::process_unannotated_data(const std::u32string &tokenseq,
-    std::vector<Index> &charseq) const
+    std::shared_ptr<std::vector<Index>> &charseq) const
 {
     using std::swap;
     size_t token_cnt = tokenseq.size();
-    std::vector<Index> charseq_tmp(token_cnt);
+    charseq.reset(new std::vector<Index>(token_cnt));
     size_t offset = 0;
-    for( char32_t token : tokenseq ){ charseq_tmp[offset++] = token_dict.convert(token); }
-    swap(charseq, charseq_tmp);
+    for( char32_t token : tokenseq ){ (*charseq)[offset++] = token_dict.convert(token); }
 }
 
 

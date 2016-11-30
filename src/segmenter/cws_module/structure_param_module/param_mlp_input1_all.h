@@ -51,8 +51,7 @@ struct ParamSegmenterMlpInput1All
     void set_param_from_user_defined(const boost::program_options::variables_map &args);
     template<typename TokenModuleT>
     void set_param_from_token_module(const TokenModuleT&);
-    std::string get_stucture_info();
-
+    std::string get_structure_info() const noexcept;
     // serialization
     template <class Archive>
     void serialize(Archive &ar, const unsigned int);
@@ -81,7 +80,7 @@ void ParamSegmenterMlpInput1All::serialize(Archive &ar, const unsigned int)
         &lexicon_feature_max_len &unigram_dict_sz &bigram_dict_sz &lexicon_dict_sz &type_dict_sz
         &unigram_embedding_dim &bigram_embedding_dim &lexicon_embedding_dim &type_embedding_dim
         &window_sz
-        &window_processing_method &mlp_hidden_dim_list &mlp_dropout_rate &mlp_nonlinear_func_str
+        &window_process_method &mlp_hidden_dim_list &mlp_dropout_rate &mlp_nonlinear_func_str
         &tag_dict_sz &tag_embedding_dim &output_layer_type
         &replace_freq_threshold &replace_prob_threshold;
 }

@@ -161,7 +161,7 @@ build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
 std::vector<Index> SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
-predict(const UnannotatedDataProcessedT & unann_processed_data)
+predict(const UnannotatedDataProcessedT& unann_processed_data)
 {
     return nn.predict(unann_processed_data);
 }

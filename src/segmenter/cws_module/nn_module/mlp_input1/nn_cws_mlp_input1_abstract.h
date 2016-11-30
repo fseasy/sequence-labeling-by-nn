@@ -70,7 +70,7 @@ inline
 std::vector<Index> 
 NnSegmenterInput1MlpAbstract::predict(const UnannotatedDataProcessedT &unann_processed_data)
 {
-    return predict_impl(unann_processed_data);  
+    return predict_impl(*unann_processed_data);  
 }
 
 

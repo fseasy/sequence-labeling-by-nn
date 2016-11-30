@@ -24,24 +24,24 @@ public:
 protected:
     dynet::expr::Expression build_training_graph_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
         const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-        const std::shared_ptr<std::vector<Index>>& plexicon_seq, 
+        const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq, 
         const std::shared_ptr<std::vector<Index>>& ptype_seq, 
         const std::shared_ptr<std::vector<Index>>& ptag_seq);
     std::vector<Index> predict_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
         const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-        const std::shared_ptr<std::vector<Index>>& plexicon_seq, 
+        const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq, 
         const std::shared_ptr<std::vector<Index>>& ptype_seq);
 private:
     void new_graph();
     std::vector<dynet::expr::Expression> concat_all_feature_as_expr(unsigned seq_len,
         const std::shared_ptr<std::vector<Index>>& punigram_seq,
         const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-        const std::shared_ptr<std::vector<Index>>& plexicon_seq,
+        const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq,
         const std::shared_ptr<std::vector<Index>>& ptype_seq);
 private:
     std::shared_ptr<Index2ExprLayer> unigram_embed_layer;
     std::shared_ptr<Index2ExprLayer> bigram_embed_layer;
-    std::shared_ptr<Index2ExprLayer> lexicon_embed_layer;
+    std::shared_ptr<std::vector<Index2ExprLayer>> lexicon_embed_layer_group; // lexicon feature group has 3 feature
     std::shared_ptr<Index2ExprLayer> type_embed_layer;
 
     std::shared_ptr<WindowExprGenerateLayer> window_expr_generate_layer;
@@ -75,9 +75,9 @@ void NnSegmenterMlpInput1All::build_model_structure(const StructureParamT& param
     }
     if( param.enable_lexicon )
     {
-        lexicon_embed_layer.reset(new Index2ExprLayer(this->get_dynet_model(),
-            param.lexicon_dict_sz, param.lexicon_embedding_dim));
-        total_embed_dim += param.lexicon_embedding_dim;
+        lexicon_embed_layer_group.reset(new std::vector<Index2ExprLayer>(3, 
+            Index2ExprLayer(this->get_dynet_model(), param.lexicon_dict_sz, param.lexicon_embedding_dim)));
+        total_embed_dim += param.lexicon_embedding_dim * 3;
     }
     if( param.enable_type )
     {
@@ -85,21 +85,21 @@ void NnSegmenterMlpInput1All::build_model_structure(const StructureParamT& param
             param.type_dict_sz, param.type_embedding_dim));
         total_embed_dim += param.type_embedding_dim;
     }
-    window_expr_generate_layer.reset(new WindowExprGenerateLayer(this->get_dynet_model(), param.window_size,
+    window_expr_generate_layer.reset(new WindowExprGenerateLayer(this->get_dynet_model(), param.window_sz,
         total_embed_dim));
     window_expr_processing_layer = experiment::create_window_expr_processing_layer(param.window_process_method, this->get_dynet_model(),
-        total_embed_dim, param.window_size);
+        total_embed_dim, param.window_sz);
 
     unsigned output_layer_input_dim = window_expr_processing_layer->get_output_dim();
     if( param.mlp_hidden_dim_list.size() > 0 )
     {
         mlp_hidden_layer.reset(new MLPHiddenLayer(this->get_dynet_model(), window_expr_processing_layer->get_output_dim(),
             param.mlp_hidden_dim_list, param.mlp_dropout_rate,
-            utils::get_nonlinear_function_from_name(param.mlp_nonlinear_function_str)));
+            utils::get_nonlinear_function_from_name(param.mlp_nonlinear_func_str)));
         output_layer_input_dim = mlp_hidden_layer->get_output_dim();
     }
     output_layer = experiment::create_segmenter_output_layer(param.output_layer_type, this->get_dynet_model(),
-        output_layer_input_dim, param.output_dim);
+        output_layer_input_dim, param.tag_dict_sz);
 
 }
 
@@ -114,8 +114,8 @@ dynet::expr::Expression NnSegmenterMlpInput1All::build_training_graph(const Anno
 template <typename UnannotatedDataProcessedT>
 std::vector<Index> NnSegmenterMlpInput1All::predict(const UnannotatedDataProcessedT &unann_processed_data)
 {
-    return predict_impl(unann_processed_data.punigram_seq, unann_processed_data.pbigram_seq,
-        unann_processed_data.plexicon_seq, unann_processed_data.ptypeseq);
+    return predict_impl(unann_processed_data.punigramseq, unann_processed_data.pbigramseq,
+        unann_processed_data.plexiconseq, unann_processed_data.ptypeseq);
 }
 
 } // end of namespace nn module

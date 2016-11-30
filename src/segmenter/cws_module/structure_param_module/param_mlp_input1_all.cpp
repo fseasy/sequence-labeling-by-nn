@@ -36,7 +36,7 @@ void ParamSegmenterMlpInput1All::set_param_from_user_defined(const boost::progra
     replace_prob_threshold = args["replace_prob_threshold"].as<float>();
 }
 
-std::string ParamSegmenterMlpInput1All::get_stucture_info()
+std::string ParamSegmenterMlpInput1All::get_structure_info() const noexcept
 {
     std::ostringstream oss;
     oss << "+ Model Info: \n"
@@ -44,8 +44,8 @@ std::string ParamSegmenterMlpInput1All::get_stucture_info()
         << "| input: " << "enable unigram(" << enable_unigram << ") enable bigram(" << enable_bigram << ")"
         << " enable lexicon(" << enable_lexicon << ") enable type(" << enable_type << ")\n"
         << "|        unigram dict size(" << unigram_dict_sz << ") embedding dim(" << unigram_embedding_dim << ")"
-        << " bigram dict size(" << bigram_dict_sz << ") embedding dim(" << bigram_embedding_dim << ")"
-        << " lexicon dict size(" << lexicon_dict_sz << ") embedding dim(" << lexicon_embedding_dim << ")"
+        << " bigram dict size(" << bigram_dict_sz << ") embedding dim(" << bigram_embedding_dim << ")\n"
+        << "|        lexicon dict size(" << lexicon_dict_sz << ") embedding dim(" << lexicon_embedding_dim << ")"
         << " type dict size(" << type_dict_sz << ") embedding_dim(" << type_embedding_dim << ")\n"
         << "|        window size(" << window_sz << ")\n"
         << "| mlp: " <<"window process method(" << window_process_method << ") mlp hidden dim list(";

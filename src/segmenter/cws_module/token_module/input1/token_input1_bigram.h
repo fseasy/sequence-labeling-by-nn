@@ -49,7 +49,7 @@ public:
         std::size_t size() const { return pcharseq ? pcharseq->size() : 0UL; }
     };
     using AnnotatedDataRawT = std::vector<std::u32string>;
-    using UnannotatedDataProcessedT = std::vector<Index>;
+    using UnannotatedDataProcessedT = std::shared_ptr<std::vector<Index>>;
     using UnannotatedDataRawT = std::u32string;
 public:
 
@@ -58,7 +58,7 @@ public:
     // DATA TRANSLATING
     Index token2index(std::u32string& token) const;
     Index unk_replace_in_probability(Index idx) const;
-    std::shared_ptr<UnannotatedDataProcessedT>
+    UnannotatedDataProcessedT
         extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
     // WE DO NOT use current class-defined data structure. 
     // ideally, we'll process the derived class-defined data.
@@ -125,7 +125,7 @@ Index TokenSegmenterInput1Bigram::unk_replace_in_probability(Index idx) const
 * @return unannotated data
 */
 inline
-std::shared_ptr<TokenSegmenterInput1Bigram::UnannotatedDataProcessedT >
+TokenSegmenterInput1Bigram::UnannotatedDataProcessedT
 TokenSegmenterInput1Bigram::extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const
 {
     return ann_data.pcharseq;
@@ -244,15 +244,14 @@ template <>
 inline
 void
 TokenSegmenterInput1Bigram::process_unannotated_data(const std::u32string &tokenseq,
-    std::vector<Index> &charseq) const
+    std::shared_ptr<std::vector<Index>> &charseq) const
 {
     using std::swap;
     size_t token_cnt = tokenseq.size();
-    std::vector<Index> charseq_tmp(token_cnt);
+    charseq.reset(new std::vector<Index>(token_cnt));
     size_t offset = 0;
-    for( unsigned i = 0; i + 1 < tokenseq.size(); ++i ){ charseq_tmp[offset++] = token_dict.convert(tokenseq.substr(i, 2)); }
-    charseq_tmp[offset] = token_dict.convert(tokenseq.back() + EOS_REPR);
-    swap(charseq, charseq_tmp);
+    for( unsigned i = 0; i + 1 < tokenseq.size(); ++i ){ (*charseq)[offset++] = token_dict.convert(tokenseq.substr(i, 2)); }
+    (*charseq)[offset] = token_dict.convert(tokenseq.back() + EOS_REPR);
 }
 
 

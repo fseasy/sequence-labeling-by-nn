@@ -348,7 +348,7 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
     {
         const typename SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
         std::vector<Index> pred_tagseq = slm.predict(
-            *slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
+            slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
         eval_ins.eval_iteratively(*instance.ptagseq, pred_tagseq);
     }
     stat.end_time_stat();

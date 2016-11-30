@@ -4,12 +4,23 @@ namespace slnn{
 namespace segmenter{
 namespace nn_module{
 
+NnSegmenterMlpInput1All::NnSegmenterMlpInput1All(int argc, char* argv[], unsigned seed)
+    :NeuralNetworkCommonInterfaceDynetImpl(argc, argv, seed)
+{}
+
+
 void NnSegmenterMlpInput1All::new_graph()
 {
     reset_cg();
     if( unigram_embed_layer ){ unigram_embed_layer->new_graph(*get_cg()); }
     if( bigram_embed_layer ){ bigram_embed_layer->new_graph(*get_cg()); }
-    if( lexicon_embed_layer ){ bigram_embed_layer->new_graph(*get_cg()); }
+    if( lexicon_embed_layer_group )
+    { 
+        for( unsigned i = 0; i < lexicon_embed_layer_group->size(); ++i )
+        {
+            (*lexicon_embed_layer_group)[i].new_graph(*get_cg()); 
+        }
+    }
     if( type_embed_layer ){ type_embed_layer->new_graph(*get_cg()); }
     window_expr_generate_layer->new_graph(*get_cg());
     window_expr_processing_layer->new_graph(*get_cg());
@@ -21,7 +32,7 @@ std::vector<dynet::expr::Expression> NnSegmenterMlpInput1All::concat_all_feature
     unsigned seq_len,
     const std::shared_ptr<std::vector<Index>>& punigram_seq,
     const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-    const std::shared_ptr<std::vector<Index>>& plexicon_seq,
+    const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq,
     const std::shared_ptr<std::vector<Index>>& ptype_seq)
 {
     std::vector<std::vector<dynet::expr::Expression>> all_feature_list(seq_len);
@@ -44,11 +55,14 @@ std::vector<dynet::expr::Expression> NnSegmenterMlpInput1All::concat_all_feature
         bigram_embed_layer->index_seq2expr_seq(*pbigram_seq, bigram_feature_list);
         append_feature(bigram_feature_list);
     }
-    if( lexicon_embed_layer )
+    if( lexicon_embed_layer_group )
     {
-        std::vector<dynet::expr::Expression> lexicon_feature_list;
-        lexicon_embed_layer->index_seq2expr_seq(*plexicon_seq, lexicon_feature_list);
-        append_feature(lexicon_feature_list);
+        for( unsigned i = 0; i < lexicon_embed_layer_group->size(); ++i )
+        {
+            std::vector<dynet::expr::Expression> lexicon_feature_list;
+            (*lexicon_embed_layer_group)[i].index_seq2expr_seq((*plexicon_seq)[i], lexicon_feature_list);
+            append_feature(lexicon_feature_list);
+        }
     }
     if( type_embed_layer )
     {
@@ -67,7 +81,7 @@ std::vector<dynet::expr::Expression> NnSegmenterMlpInput1All::concat_all_feature
 
 dynet::expr::Expression NnSegmenterMlpInput1All::build_training_graph_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
     const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-    const std::shared_ptr<std::vector<Index>>& plexicon_seq,
+    const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq,
     const std::shared_ptr<std::vector<Index>>& ptype_seq,
     const std::shared_ptr<std::vector<Index>>& ptag_seq)
 {
@@ -92,7 +106,7 @@ dynet::expr::Expression NnSegmenterMlpInput1All::build_training_graph_impl(const
 
 std::vector<Index> NnSegmenterMlpInput1All::predict_impl(const std::shared_ptr<std::vector<Index>>& punigram_seq,
     const std::shared_ptr<std::vector<Index>>& pbigram_seq,
-    const std::shared_ptr<std::vector<Index>>& plexicon_seq,
+    const std::shared_ptr<std::vector<std::vector<Index>>>& plexicon_seq,
     const std::shared_ptr<std::vector<Index>>& ptype_seq)
 {
     new_graph();

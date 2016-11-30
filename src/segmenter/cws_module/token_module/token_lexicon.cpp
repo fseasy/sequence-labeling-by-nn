@@ -68,7 +68,8 @@ std::shared_ptr<std::vector<std::vector<Index>>> TokenLexicon::extract(const std
 {
     unsigned seq_len = charseq.length();
     std::shared_ptr<std::vector<std::vector<Index>>> lexicon_feat(
-        new std::vector<std::vector<Index>>(seq_len, std::vector<Index>{0, 0, 0})
+        // 3 row, every row is the feature-abstracted sequence corresponding to the feature.
+        new std::vector<std::vector<Index>>(3, std::vector<Index>(seq_len, 0))
     );
     // Max Match
     // this lexicon feature can be look as fusion Max Match Result
@@ -85,22 +86,22 @@ std::shared_ptr<std::vector<std::vector<Index>>> TokenLexicon::extract(const std
         unsigned wordlen = test_word.size();
         // set feature value
         // 1. word start
-        (*lexicon_feat)[i][0] = wordlen - 1; // wordlen >= 1, translate to feature, we minus 1. 
+        (*lexicon_feat)[0][i] = wordlen - 1; // wordlen >= 1, translate to feature, we minus 1. 
         // 2. word middle
         for( unsigned mid = i + 1; mid < i + wordlen - 1; ++mid )
         {
             // wordlen >= 3 when going here. because feature value 0 assign to not going here.
-            // so wordlen - 2 to make feature value correct.
-            (*lexicon_feat)[mid][1] = std::max(static_cast<Index>(wordlen - 2), (*lexicon_feat)[i][1]); 
+            // so `wordlen - 2` to make feature value correct.
+            (*lexicon_feat)[1][mid] = std::max(static_cast<Index>(wordlen - 2), (*lexicon_feat)[1][mid]); 
         }
         // 3. word end
-        (*lexicon_feat)[i + wordlen - 1][2] = std::max(static_cast<Index>(wordlen - 1), (*lexicon_feat)[i][2]);
+        (*lexicon_feat)[2][i + wordlen - 1] = std::max(static_cast<Index>(wordlen - 1), (*lexicon_feat)[2][ i+wordlen-1 ]);
     }
     // at last, we should check the maxlen4feature
     Index feature_maxval = maxlen4feature; // for cast from unsigned to signed.
-    for( std::vector<Index>& feat_item : *lexicon_feat )
+    for( std::vector<Index>& feat_row : *lexicon_feat )
     {
-        for( Index &val : feat_item ){ val = std::max(val, feature_maxval); }
+        for( Index &val : feat_row ){ val = std::min(val, feature_maxval); }
     }
     return lexicon_feat;
 }

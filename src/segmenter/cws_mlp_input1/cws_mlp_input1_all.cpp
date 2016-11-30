@@ -174,33 +174,35 @@ int train_process(int argc, char *argv[], const string &program_name)
     // before read training data.
     mia->set_model_structure_param_from_outer(var_map);
 
-    // reading traing data , get word dict size and output tag number
+    // build lexicon data if necessary, read training data.
     ifstream train_is(training_data_path);
     if (!train_is) {
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
+    mia->get_token_module()->build_lexicon_if_necessary(train_is);
 
     vector<MlpInput1All::AnnotatedDataProcessedT> training_data;
     modelhandler::read_training_data(train_is, *mia, training_data);
     train_is.close();
 
     mia->finish_read_training_data();
+    
     // build model structure
-    mi1->build_model_structure();
+    mia->build_model_structure();
 
     // reading developing data
-    vector<MlpInput1Unigram::AnnotatedDataProcessedT> devel_data;
+    vector<MlpInput1All::AnnotatedDataProcessedT> devel_data;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
     }
-    modelhandler::read_devel_data(devel_is, *mi1, devel_data);
+    modelhandler::read_devel_data(devel_is, *mia, devel_data);
     devel_is.close();
     // Train
-    modelhandler::train(*mi1, training_data, devel_data, opts);
+    modelhandler::train(*mia, training_data, devel_data, opts);
 
     // save model
-    mi1->save_model(model_os);
+    mia->save_model(model_os);
     model_os.close();
     return 0;
 }
@@ -268,18 +270,18 @@ int devel_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' .");
     }
-    std::shared_ptr<MlpInput1Unigram> mi1 = MlpInput1Unigram::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
+    std::shared_ptr<MlpInput1All> mia = MlpInput1All::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
     model_is.close();
 
     // read devel data
     ifstream devel_is(devel_data_path) ;
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
-    vector<MlpInput1Unigram::AnnotatedDataProcessedT> devel_data;
-    modelhandler::read_devel_data(devel_is, *mi1, devel_data);
+    vector<MlpInput1All::AnnotatedDataProcessedT> devel_data;
+    modelhandler::read_devel_data(devel_is, *mia, devel_data);
     devel_is.close();
 
     // devel
-    modelhandler::devel(*mi1, devel_data); 
+    modelhandler::devel(*mia, devel_data); 
     return 0;
 }
 
@@ -357,7 +359,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' . ");
     }
-    shared_ptr<MlpInput1Unigram> mi1 = MlpInput1Unigram::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
+    shared_ptr<MlpInput1All> mia = MlpInput1All::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
     is.close();
 
     // open raw_data
@@ -370,7 +372,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     // open output 
     if ("" == output_path)
     {
-        modelhandler::predict(*mi1, raw_is, cout); // using `cout` as output stream 
+        modelhandler::predict(*mia, raw_is, cout); // using `cout` as output stream 
         raw_is.close();
     }
     else
@@ -381,7 +383,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
             raw_is.close();
             fatal_error("Error : failed open output file at : `" +  output_path + "`.");
         }
-        modelhandler::predict(*mi1, raw_is, os);
+        modelhandler::predict(*mia, raw_is, os);
         os.close();
     }
     return 0;

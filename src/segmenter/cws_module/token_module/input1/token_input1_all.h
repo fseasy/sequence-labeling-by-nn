@@ -1,6 +1,6 @@
 #ifndef SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_ALL_H_
 #define SLNN_SEGMENTER_CWS_MODULE_TOKEN_MODULE_INPUT1_ALL_H_
-#include <functional>
+#include <numeric>
 #include "trivial/lookup_table/lookup_table.h"
 #include "segmenter/cws_module/token_module/cws_tag_definition.h"
 #include "trivial/charcode/charcode_convertor.h"
@@ -167,7 +167,7 @@ TokenSegmenterInput1All::replace_low_freq_token2unk(const ProcessedAnnotatedData
     ProcessedAnnotatedDataT rep_data;
     rep_data.plexiconseq = in_data.plexiconseq;
     rep_data.ptypeseq = in_data.ptypeseq;
-    rep_data.tagseq = in_data.tagseq;
+    rep_data.ptagseq = in_data.ptagseq;
     rep_data.punigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.punigramseq));
     rep_data.pbigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.pbigramseq));
     unsigned seqlen = in_data.size();
@@ -193,7 +193,7 @@ TokenSegmenterInput1All::process_annotated_data(const std::vector<std::u32string
         return lhs_len + rhs.length();
     });
     // generate charseq (next will use)
-    std::u32string charseq(charseq_len);
+    std::u32string charseq(charseq_len, 0U);
     unsigned pos = 0;
     for( const std::u32string& word : wordseq )
     {
@@ -206,16 +206,17 @@ TokenSegmenterInput1All::process_annotated_data(const std::vector<std::u32string
         puni_seq.reset(new std::vector<Index>(charseq_len));
         for( pos = 0; pos < charseq_len; ++pos )
         {
-            (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+            (*puni_seq)[pos] = unigram_dict.convert(charseq[pos]);
         }
     }
     // bigram seq
     if( state.enable_bigram )
     {
         std::shared_ptr<std::vector<Index>> &pbi_seq = ann_data.pbigramseq;
+        pbi_seq.reset(new std::vector<Index>(charseq_len));
         for( pos = 0; pos < charseq_len - 1; ++pos )
         {
-            (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+            (*pbi_seq)[pos] = bigram_dict.convert(charseq.substr(pos, 2));
         }
         pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     }
@@ -245,18 +246,19 @@ TokenSegmenterInput1All::process_unannotated_data(const std::u32string &charseq,
     {
         std::shared_ptr<std::vector<Index>> &puni_seq = unann_data.punigramseq;
         puni_seq.reset(new std::vector<Index>(charseq_len));
-        for( pos = 0; pos < charseq_len; ++pos )
+        for(unsigned pos = 0; pos < charseq_len; ++pos )
         {
-            (*puni_seq)[i] = unigram_dict.convert(charseq[pos]);
+            (*puni_seq)[pos] = unigram_dict.convert(charseq[pos]);
         }
     }
     // bigram seq
     if( state.enable_bigram )
     {
         std::shared_ptr<std::vector<Index>> &pbi_seq = unann_data.pbigramseq;
-        for( pos = 0; pos < charseq_len - 1; ++pos )
+        pbi_seq.reset(new std::vector<Index>(charseq_len));
+        for(unsigned pos = 0; pos < charseq_len - 1; ++pos )
         {
-            (*pbi_seq)[i] = bigram_dict.convert(charseq.substr(pos, 2));
+            (*pbi_seq)[pos] = bigram_dict.convert(charseq.substr(pos, 2));
         }
         pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     }
