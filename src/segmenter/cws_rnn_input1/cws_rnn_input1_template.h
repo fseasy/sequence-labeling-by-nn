@@ -124,6 +124,7 @@ void SegmenterRnnInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 set_model_structure_param_from_outer(const boost::program_options::variables_map &args)
 {
     param.set_param_from_user_defined(args);
+    token_module.set_param_before_process_training_data(param);
 }
 
 
@@ -132,8 +133,8 @@ inline
 void SegmenterRnnInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 finish_read_training_data()
 {
-    param.set_param_from_token_module(token_module);
     token_module.finish_read_training_data();
+    param.set_param_from_token_module(token_module);
 }
 
 
@@ -142,10 +143,6 @@ inline
 void SegmenterRnnInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_model_structure()
 {
-    /*****
-     * May be we should define 2 function for training and predicting progress.
-     *****/
-    token_module.set_unk_replace_threshold(param);
     nn.build_model_structure(param);
     std::cerr << param.get_structure_info() << "\n";
 }

@@ -7,6 +7,7 @@
 #include "segmenter/cws_module/nn_module/experiment_layer/nn_window_expr_processing_layer.h"
 #include "segmenter/cws_module/nn_module/experiment_layer/nn_cws_specific_output_layer.h"
 #include "utils/typedeclaration.h"
+#include "utils/nn_utility.h"
 namespace slnn{
 namespace segmenter{
 namespace nn_module{

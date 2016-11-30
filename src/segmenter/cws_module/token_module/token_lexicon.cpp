@@ -75,7 +75,6 @@ std::shared_ptr<std::vector<std::vector<Index>>> TokenLexicon::extract(const std
     // this lexicon feature can be look as fusion Max Match Result
     for( unsigned i = 0; i < seq_len; ++i ) // index increasing one by one , instead of doing like MM which skip word 
     {
-        unsigned end_pos = std::min(seq_len, i + word_maxlen_in_lexicon);
         // Attention, substr(pos, cnt) automatically processing the situation where `pos + cnt >= len(str)`
         std::u32string test_word = charseq.substr(i, word_maxlen_in_lexicon);
         while( test_word.length() > 1 )
