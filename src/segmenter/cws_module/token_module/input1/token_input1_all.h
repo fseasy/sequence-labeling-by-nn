@@ -164,20 +164,25 @@ template <typename ProcessedAnnotatedDataT>
 ProcessedAnnotatedDataT 
 TokenSegmenterInput1All::replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const
 {
-    ProcessedAnnotatedDataT rep_data;
-    rep_data.plexiconseq = in_data.plexiconseq;
-    rep_data.ptypeseq = in_data.ptypeseq;
-    rep_data.ptagseq = in_data.ptagseq;
-    rep_data.punigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.punigramseq));
-    rep_data.pbigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.pbigramseq));
+    ProcessedAnnotatedDataT rep_data(in_data);
     unsigned seqlen = in_data.size();
-    for( unsigned i = 0; i < seqlen; ++i )
+    if(rep_data.punigramseq)
     {
-        Index &uni_idx = (*rep_data.punigramseq)[i],
-            &bi_idx = (*rep_data.pbigramseq)[i];
-            
-        uni_idx = unigram_dict.unk_replace_in_probability(uni_idx);
-        bi_idx = bigram_dict.unk_replace_in_probability(bi_idx);
+        rep_data.punigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.punigramseq));
+        for( unsigned i = 0; i < seqlen; ++i )
+        {
+            Index &uni_idx = (*rep_data.punigramseq)[i];
+            uni_idx = unigram_dict.unk_replace_in_probability(uni_idx);
+        }
+    }
+    if(rep_data.pbigramseq)
+    {
+        rep_data.pbigramseq = std::shared_ptr<std::vector<Index>>(new std::vector<Index>(*in_data.pbigramseq));
+        for(unsigned i = 0; i < seqlen; ++i)
+        {
+            Index &bi_idx = (*rep_data.pbigramseq)[i];
+            bi_idx = bigram_dict.unk_replace_in_probability(bi_idx);
+        }
     }
     return rep_data;
 }
