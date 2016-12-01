@@ -39,7 +39,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
         ("training_update_scale", po::value<float>()->default_value(1.f), "The scale for backward updating.")
-        ("scale_half_decay_period", po::value<unsigned>()->default_value(5), "The training update scale half decay period.")
+        ("scale_half_decay_period", po::value<unsigned>()->default_value(15), "The training update scale half decay period.")
         ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: "
             "sgd, adagrad, momentum, adadelta, rmsprop, adam")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process");

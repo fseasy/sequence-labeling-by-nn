@@ -2,6 +2,7 @@
 #define SLNN_SEGMENTER_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
 #include <string>
 #include <vector>
+#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -46,6 +47,7 @@ private:
     int nr_devel_order_when_best;
     float train_error_threshold;
     bool is_good;
+    std::vector<std::tuple<float, int, int>> score_list;
 };
 
 } // end of namespace modelhandler-inner
@@ -177,6 +179,7 @@ void TrainingUpdateRecorder::update_training_state(float cur_score, int nr_epoch
         nr_devel_order_when_best = nr_devel_order;
         best_score = cur_score;
     }
+    score_list.push_back({ cur_score, nr_epoch, nr_devel_order });
 }
 
 inline 
