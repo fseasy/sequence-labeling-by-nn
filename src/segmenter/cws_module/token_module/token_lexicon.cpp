@@ -97,7 +97,7 @@ std::shared_ptr<std::vector<std::vector<Index>>> TokenLexicon::extract(const std
         (*lexicon_feat)[2][i + wordlen - 1] = std::max(static_cast<Index>(wordlen - 1), (*lexicon_feat)[2][ i+wordlen-1 ]);
     }
     // at last, we should check the maxlen4feature
-    Index feature_maxval = maxlen4feature; // for cast from unsigned to signed.
+    Index feature_maxval = maxlen4feature - 1; // value should between [0, maxlen)
     for( std::vector<Index>& feat_row : *lexicon_feat )
     {
         for( Index &val : feat_row ){ val = std::min(val, feature_maxval); }
