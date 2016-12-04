@@ -49,13 +49,13 @@ struct EvalResultT
  * do segmenter eval.
  * not thread safe.
  */
-class SegmentorEval
+class SegmenterEval
 {
 public:
-    SegmentorEval();
-    SegmentorEval(const SegmentorEval &) = delete;
-    SegmentorEval(const SegmentorEval &&) = delete;
-    SegmentorEval& operator=(const SegmentorEval&) = delete;
+    SegmenterEval();
+    SegmenterEval(const SegmenterEval &) = delete;
+    SegmenterEval(const SegmenterEval &&) = delete;
+    SegmenterEval& operator=(const SegmenterEval&) = delete;
 public:
     // iteratively
     void start_eval();
@@ -65,7 +65,6 @@ public:
     EvalResultT eval(const std::vector<std::vector<Index>> &gold_tagseq_set, const std::vector<std::vector<Index>> &pred_tagseq);
 private:
     eval_inner::EvalTempResultT eval_one(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq);
-    std::vector<std::pair<unsigned, unsigned>> tagseq2word_range_list(const std::vector<Index> &seq);
 private:
     eval_inner::EvalTempResultT tmp_result4iter;
 };
@@ -76,10 +75,12 @@ private:
  ******************************************/
 
 inline
-void SegmentorEval::start_eval()
+void SegmenterEval::start_eval()
 {
     tmp_result4iter.clear();
 }
+
+
 } // end of namespace eval
 } // end of namespace segmenter
 } // end of namespace slnn

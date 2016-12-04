@@ -65,6 +65,25 @@ std::vector<Index> generate_tagseq_from_word(const std::u32string &word) noexcep
 void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32string> &word_seq,
     std::vector<Index> &out_preallocated_tagseq) noexcept;
 
+
+/**
+ * from tagseq to word range list.
+ * @param tagseq tag sequence
+ * @return word_range_list, word range is a pair <unsigned, unsigned> indicating <start, end> position of a word.
+ */
+std::vector<std::pair<unsigned, unsigned>> 
+tagseq2word_range_list(const std::vector<Index>& tagseq) noexcept;
+
+
+/**
+ * from not valid tagseq to word range list.
+ * @param not_valid_tagseq not valid tag sequence
+ * @return word_range_list, see @tagseq2word_range_list
+ */
+std::vector<std::pair<unsigned, unsigned>> 
+not_valid_tagseq2word_range_list(const std::vector<Index>& not_valid_tagseq) noexcept;
+
+
 /**
 * from char and tag sequence to genrate word sequence
 * @param charseq character sequence, unicode string
@@ -73,6 +92,17 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
 */
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
     const std::vector<Index> &tagseq) noexcept;
+
+/**
+ * from char and not valid tag sequence to word sequence.
+ * the different from `generate_wordseq_from_chartagseq` is that the input tag sequence may be not a valid 
+ * sequence meet the constraint of the segmneter tag definition.
+ * @param charseq character sequence, unicode string
+ * @param not_valid_tagseq tag sequence with may be not valid
+ * @return wordseq unicode string sequence.
+ ***********/
+std::vector<std::u32string> generate_wordseq_from_not_valid_chartagseq(const std::u32string &charseq,
+    const std::vector<Index> &not_valid_tagseq) noexcept;
 
 /**
  * whethere can emit for the current tag id at the current time.
@@ -140,6 +170,67 @@ void generate_tagseq_from_wordseq2preallocated_space(const std::vector<std::u32s
     }
 }
 
+inline
+std::vector<std::pair<unsigned, unsigned>> 
+tagseq2word_range_list(const std::vector<Index>& tagseq) noexcept
+{
+    std::vector<std::pair<unsigned, unsigned>> tmp_word_ranges ;
+    unsigned range_s = 0 ;
+    for( unsigned i = 0 ; i < tagseq.size() ; ++i )
+    {
+        Index tag_id = tagseq.at(i) ;
+        if( tag_id == Tag::TAG_E_ID || tag_id == Tag::TAG_S_ID)
+        {
+            tmp_word_ranges.push_back({ range_s , i }) ;
+            range_s = i + 1 ;
+        }
+    }
+    return tmp_word_ranges;
+}
+
+inline 
+std::vector<std::pair<unsigned, unsigned>> 
+not_valid_tagseq2word_range_list(const std::vector<Index>& not_valid_tagseq) noexcept
+{
+    std::vector<std::pair<unsigned, unsigned>> word_range_list;
+    unsigned range_spos = 0U;
+    for( unsigned range_epos = 0U; range_epos < not_valid_tagseq.size(); ++range_epos )
+    {
+        Index cur_tag = not_valid_tagseq[range_epos];
+        if( cur_tag == Tag::TAG_B_ID )
+        {
+            // if has not processed segmentation(not valid)
+            if( range_epos > range_spos )
+            {
+                word_range_list.push_back(std::make_pair(range_spos, range_epos - 1));
+                range_spos = range_epos;
+            }
+        }
+        else if( cur_tag == Tag::TAG_S_ID )
+        {
+            // whether has not processed segmentation(not valid)
+            if( range_epos > range_spos )
+            {
+                word_range_list.push_back(std::make_pair(range_spos, range_epos - 1));
+            }
+            // add current pos as the word
+            word_range_list.push_back(std::make_pair(range_epos, range_epos));
+            range_spos = range_epos + 1; // set the next start pos.
+        }
+        else if( cur_tag == Tag::TAG_E_ID )
+        {
+            // including current char
+            word_range_list.push_back(std::make_pair(range_spos, range_epos));
+            range_spos = range_epos + 1;
+        }
+    }
+    // if has the left(not valid)
+    if( range_spos < not_valid_tagseq.size() )
+    {
+        word_range_list.push_back(std::make_pair(range_spos, static_cast<unsigned>(not_valid_tagseq.size()) - 1));
+    }
+    return word_range_list;
+}
 
 inline 
 std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32string &charseq,
@@ -157,6 +248,50 @@ std::vector<std::u32string> generate_wordseq_from_chartagseq(const std::u32strin
             wordseq.push_back(charseq.substr(slice_spos, word_len));
             slice_spos = i + 1;
         }
+    }
+    return wordseq;
+}
+
+inline
+std::vector<std::u32string> generate_wordseq_from_not_valid_chartagseq(const std::u32string& charseq,
+    const std::vector<Index>& not_valid_tagseq) noexcept
+{
+    std::vector<std::u32string> wordseq;
+    std::size_t slice_spos = 0U;
+    for( std::size_t slice_epos = 0; slice_epos < charseq.size(); ++slice_epos )
+    {
+        Index cur_tag = not_valid_tagseq[slice_epos];
+        if( cur_tag == Tag::TAG_B_ID)
+        {
+            // if previous has the not processed segmentation. (not valid part)
+            if( slice_epos > slice_spos )
+            {
+                wordseq.push_back(charseq.substr(slice_spos, slice_epos - slice_spos));
+                slice_spos = slice_epos;
+            }
+        }
+        else if( cur_tag == Tag::TAG_S_ID )
+        {
+            // if previous has the not processed segmentation. (not valid part)
+            if( slice_epos > slice_spos )
+            {
+                wordseq.push_back(charseq.substr(slice_spos, slice_epos - slice_spos));
+            }
+            // the current char is a new segmentation.
+            wordseq.push_back(charseq.substr(slice_epos, 1));
+            slice_spos = slice_epos + 1; // set the next start pos.
+        }
+        else if( cur_tag == Tag::TAG_E_ID )
+        {
+            // including the current char, no matter what the start tag is.
+            wordseq.push_back(charseq.substr(slice_spos, slice_epos - slice_spos + 1));
+            slice_spos = slice_epos + 1; // set the next start pos.
+        }
+    }
+    // process the last. (not valid part)
+    if( slice_spos < charseq.size() )
+    {
+        wordseq.push_back(charseq.substr(slice_spos, charseq.size() - slice_spos));
     }
     return wordseq;
 }
