@@ -3,18 +3,18 @@ namespace slnn{
 namespace segmenter{
 namespace eval{
 
-SegmentorEval::SegmentorEval()
+SegmenterEval::SegmenterEval()
     :tmp_result4iter()
 {}
 
-void SegmentorEval::eval_iteratively(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
+void SegmenterEval::eval_iteratively(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
 {
     assert(gold_tagseq.size() == pred_tagseq.size());
     eval_inner::EvalTempResultT cur_tmp_result = eval_one(gold_tagseq, pred_tagseq);
     tmp_result4iter += cur_tmp_result;
 }
 
-EvalResultT SegmentorEval::end_eval()
+EvalResultT SegmenterEval::end_eval()
 {
     float Acc = (tmp_result4iter.nr_tag == 0) ? 0.f 
         : static_cast<float>(tmp_result4iter.nr_tag_predict_right) / tmp_result4iter.nr_tag * 100.f ;
@@ -31,7 +31,7 @@ EvalResultT SegmentorEval::end_eval()
     tmp.nr_token_predict_right = tmp_result4iter.nr_token_predict_right;
     return tmp;
 }
-EvalResultT SegmentorEval::eval(const std::vector<std::vector<Index>> &gold_tagseq_set, const std::vector<std::vector<Index>> &pred_tagseq_set)
+EvalResultT SegmenterEval::eval(const std::vector<std::vector<Index>> &gold_tagseq_set, const std::vector<std::vector<Index>> &pred_tagseq_set)
 {
     eval_inner::EvalTempResultT backup = tmp_result4iter;
     start_eval();
@@ -44,11 +44,11 @@ EvalResultT SegmentorEval::eval(const std::vector<std::vector<Index>> &gold_tags
     return result;
 }
 
-eval_inner::EvalTempResultT SegmentorEval::eval_one(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
+eval_inner::EvalTempResultT SegmenterEval::eval_one(const std::vector<Index> &gold_tagseq, const std::vector<Index> &pred_tagseq)
 {
     assert(gold_tagseq.size() == pred_tagseq.size()) ;
-    std::vector<std::pair<unsigned, unsigned>> gold_words = tagseq2word_range_list(gold_tagseq) ;
-    std::vector<std::pair<unsigned, unsigned>> pred_words = tagseq2word_range_list(pred_tagseq) ;
+    std::vector<std::pair<unsigned, unsigned>> gold_words = token_module::tagseq2word_range_list(gold_tagseq) ;
+    std::vector<std::pair<unsigned, unsigned>> pred_words = token_module::not_valid_tagseq2word_range_list(pred_tagseq) ;
     unsigned gold_word_size = gold_words.size(),
         pred_word_size = pred_words.size() ;
     size_t gold_pos = 0 ,
@@ -80,27 +80,6 @@ eval_inner::EvalTempResultT SegmentorEval::eval_one(const std::vector<Index> &go
     tmp_result.nr_token_predict = pred_word_size;
     tmp_result.nr_token_predict_right = correct_cnt;
     return tmp_result;
-}
-
-std::vector<std::pair<unsigned, unsigned>> SegmentorEval::tagseq2word_range_list(const std::vector<Index> &seq)
-{
-    std::vector<std::pair<unsigned, unsigned>> tmp_word_ranges ;
-    unsigned range_s = 0 ;
-    for( unsigned i = 0 ; i < seq.size() ; ++i )
-    {
-        Index tag_id = seq.at(i) ;
-        if( tag_id == Tag::TAG_S_ID )
-        {
-            tmp_word_ranges.push_back({ i , i }) ;
-            range_s = i + 1 ;
-        }
-        else if( tag_id == Tag::TAG_E_ID)
-        {
-            tmp_word_ranges.push_back({ range_s , i }) ;
-            range_s = i + 1 ;
-        }
-    }
-    return tmp_word_ranges;
 }
 
 }

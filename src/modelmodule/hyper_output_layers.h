@@ -7,9 +7,9 @@
 
 namespace slnn{
 
-/*********
+/********* ABANDON 
  * Output Base 
- * output base and dirived class are old and should be abandon.
+ * output base and dirived class are old and should be **abandon**.
  *********/
 struct OutputBase
 {

@@ -373,7 +373,7 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
 
     stat::SegmentorStat stat(true);
     stat.start_time_stat();
-    eval::SegmentorEval eval_ins;
+    eval::SegmenterEval eval_ins;
     eval_ins.start_eval();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {

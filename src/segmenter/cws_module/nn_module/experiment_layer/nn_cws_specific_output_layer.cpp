@@ -51,7 +51,8 @@ create_segmenter_output_layer(const std::string& layer_type, dynet::Model *dynet
     for( char &c : name ){ c = ::tolower(c); }
     if( name == "classification" || name == "cl" )
     {
-        return std::shared_ptr<BareOutputBase>(new SegmenterClassificationBareOutput(dynet_model, input_dim, output_dim));
+        // just classification by the current state. No tag constraint of CWS.
+        return std::shared_ptr<BareOutputBase>(new SimpleBareOutput(dynet_model, input_dim, output_dim));
     }
     else if( name == "pretag" )
     {
@@ -60,6 +61,12 @@ create_segmenter_output_layer(const std::string& layer_type, dynet::Model *dynet
     else if( name == "crf" )
     {
         throw std::logic_error("havn't implemented.");
+    }
+    else if( name == "classification_limit" || name == "cl_limit" )
+    {
+        // the original classification decoding method.
+        // decode the current tag Y with the condition of previous tag YP and using the hard limit: YP -> Y is the valid transition. 
+        return std::shared_ptr<BareOutputBase>(new SegmenterClassificationBareOutput(dynet_model, input_dim, output_dim));
     }
     else
     {
