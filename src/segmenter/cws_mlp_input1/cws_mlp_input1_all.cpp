@@ -155,6 +155,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : model file `" + model_path + "` has already exists .");
     }
+    string log_path = model_path + ".log";
     unsigned rng_seed = var_map["rng_seed"].as<unsigned>();
     // others will be processed flowing 
 
@@ -199,11 +200,24 @@ int train_process(int argc, char *argv[], const string &program_name)
     modelhandler::read_devel_data(devel_is, *mia, devel_data);
     devel_is.close();
     // Train
-    modelhandler::train(*mia, training_data, devel_data, opts);
+    auto devel_record_list = modelhandler::train(*mia, training_data, devel_data, opts);
 
     // save model
     mia->save_model(model_os);
     model_os.close();
+    // save log
+    try
+    {
+        std::cerr << "+ Try to wirte devel score list to '" << log_path << "'.\n";
+        std::ofstream log_os(log_path);
+        log_os.exceptions(log_os.failbit);
+        modelhandler::write_record_list(log_os, devel_record_list);
+        std::cerr << "- done.\n";
+    }
+    catch( const std::ios_base::failure &e )
+    {
+        std::cerr << "- failed.(" << e.what() << ")\n";
+    }
     return 0;
 }
 

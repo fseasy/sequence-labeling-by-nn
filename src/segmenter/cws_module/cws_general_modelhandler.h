@@ -30,6 +30,8 @@ unsigned read_unannotated_data(std::istream &is, SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data);
 
+void write_record_list(std::ostream &os, const std::vector<std::tuple<float, int, int>> &record_list);
+
 class TrainingUpdateRecorder
 {
 public:
@@ -37,20 +39,24 @@ public:
     void update_training_state(float current_score, int nr_epoch, int nr_devel_order);
     bool is_training_ok();
     void set_train_error_threshold(float error_threshold);
+    void write_record_list(std::ostream &os);
 public: // getter
     int get_best_epoch(){ return nr_epoch_when_best; }
     int get_best_devel_order(){ return nr_devel_order_when_best; }
     float get_best_score(){ return best_score; }
+    std::vector<std::tuple<float, int, int>> get_record_list(){ return record_list; }
 private:
     float best_score;
     int nr_epoch_when_best;
     int nr_devel_order_when_best;
     float train_error_threshold;
     bool is_good;
-    std::vector<std::tuple<float, int, int>> score_list;
+    std::vector<std::tuple<float, int, int>> record_list;
 };
 
 } // end of namespace modelhandler-inner
+
+using modelhandler_inner::write_record_list;
 
 inline
 const std::u32string& WordOutputDelimiter()
@@ -80,7 +86,8 @@ template <typename SLModel>
 void build_model(SLModel &slm);
 
 template <typename SLModel, typename TrainingOpts>
-void train(SLModel &slm,
+std::vector<std::tuple<float, int, int>>
+train(SLModel &slm,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &training_data,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data,
     const TrainingOpts &opts);
@@ -179,13 +186,32 @@ void TrainingUpdateRecorder::update_training_state(float cur_score, int nr_epoch
         nr_devel_order_when_best = nr_devel_order;
         best_score = cur_score;
     }
-    score_list.push_back({ cur_score, nr_epoch, nr_devel_order });
+    record_list.push_back(std::make_tuple(cur_score, nr_epoch, nr_devel_order));
 }
 
 inline 
 bool TrainingUpdateRecorder::is_training_ok()
 {
     return is_good;
+}
+
+inline
+void TrainingUpdateRecorder::write_record_list(std::ostream &os)
+{
+    // no override when different namespace
+    modelhandler_inner::write_record_list(os, record_list);
+}
+
+inline
+void write_record_list(std::ostream &os, const std::vector<std::tuple<float, int, int>> &record_list)
+{
+    os << "F1" << "\t" << "devel-epoch" << "\t" 
+        << "devel-order" << "\n";
+    for(const std::tuple<float, int, int> &record : record_list )
+    {
+        os << std::get<0>(record) << "\t" << std::get<1>(record) << "\t"
+            << std::get<2>(record) << "\n";
+    }
 }
 
 } // end of namespce modelhandler-inner
@@ -233,7 +259,8 @@ void build_model(SLModel &slm)
 }
 
 template <typename SLModel, typename TrainingOpts>
-void train(SLModel &slm,
+std::vector<std::tuple<float, int, int>>
+train(SLModel &slm,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &training_data,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data,
     const TrainingOpts &opts)
@@ -335,6 +362,7 @@ void train(SLModel &slm,
         << "| at epoch: " << update_recorder.get_best_epoch() << ", \n"
         << "| devel order: " << update_recorder.get_best_devel_order() << "\n"
         << "= - - - - -\n";
+    return update_recorder.get_record_list();
 }
 
 template <typename SLModel>
