@@ -218,19 +218,164 @@ void CRFOutput::build_output(const std::vector<dynet::expr::Expression> &expr_co
     std::swap(tmp_predict_ner_seq, pred_seq);
 }
 
-/* Bare Output Base */
-BareOutputBase::BareOutputBase(dynet::Model *m, unsigned input_dim, unsigned output_dim)
-    :softmax_layer(m, input_dim, output_dim)
-{}
+
+/****************
+ * Bare Output base class.
+ * 
+ *****************/
 
 BareOutputBase::~BareOutputBase(){}
 
 /*********************************
  * Bare Output : [Simple] Bare Output 
  *********************************/
-SimpleBareOutput::SimpleBareOutput(dynet::Model *m, unsigned inputs_total_dim, unsigned output_dim)
-    :BareOutputBase(m, inputs_total_dim, output_dim)
+SimpleBareOutput::SimpleBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim)
+    :softmax_layer(m, input_dim, output_dim)
 {}
+
+
+/*********************
+ * crf output class.
+ *
+ **/
+
+CrfBareOutput::CrfBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim)
+    :tagdict_sz(output_dim),
+    state_score_layer(m, input_dim, output_dim),
+    init_score_lookup_param(m->add_lookup_parameters(output_dim, { 1 })),
+    transition_score_lookup_param(m->add_lookup_parameters(output_dim * output_dim, {1}))
+{}
+
+
+dynet::expr::Expression
+CrfBareOutput::build_output_loss(const std::vector<dynet::expr::Expression>& input_expr_seq,
+    const std::vector<Index>& gold_tag_seq)
+{
+    unsigned seq_len = input_expr_seq.size();
+    if( seq_len == 0 ){ return dynet::expr::Expression(); }
+    // get init score expr
+    std::vector<dynet::expr::Expression> init_score_expr(tagdict_sz);
+    for( unsigned i = 0; i < tagdict_sz; ++i )
+    {
+        init_score_expr[i] = dynet::expr::lookup(*pcg, init_score_lookup_param, i);
+    }
+    // get trans score expr
+    std::vector<dynet::expr::Expression> transition_score_expr(tagdict_sz * tagdict_sz);
+    for( unsigned flat_idx = 0; flat_idx < tagdict_sz * tagdict_sz; ++flat_idx )
+    {
+        transition_score_expr[flat_idx] = dynet::expr::lookup(*pcg, transition_score_lookup_param, flat_idx);
+    }
+    // calculate all state score.
+    std::vector<dynet::expr::Expression> state_score_expr(seq_len);
+    for( unsigned i = 0; i < seq_len; ++i )
+    {
+        state_score_expr[i] = state_score_layer.build_graph(input_expr_seq[i]);
+    }
+    // viterbi
+    std::vector<dynet::expr::Expression> cur_time_score_list(tagdict_sz),
+        pre_time_score_list(tagdict_sz);
+    std::vector<dynet::expr::Expression> gold_score_container;
+    gold_score_container.reserve(2 * seq_len);
+    // 1. init
+    for( unsigned tagidx = 0; tagidx < tagdict_sz; ++tagidx )
+    {
+        cur_time_score_list[tagidx] = init_score_expr[tagidx] + dynet::expr::pick(state_score_expr[0], tagidx);
+    }
+    gold_score_container.push_back(init_score_expr[gold_tag_seq[0]]);
+    gold_score_container.push_back(dynet::expr::pick(state_score_expr[0], gold_tag_seq[0]));
+    // 2. continues
+    for( unsigned t = 1; t < seq_len; ++t )
+    {
+        swap(cur_time_score_list, pre_time_score_list);
+        for( unsigned tagidx = 0; tagidx < tagdict_sz; ++tagidx )
+        {
+            std::vector<dynet::expr::Expression> pre2cur_score(tagdict_sz);
+            for( unsigned pre_tagidx = 0; pre_tagidx < tagdict_sz; ++pre_tagidx )
+            {
+                unsigned flat_idx = flat_transition_index(pre_tagidx, tagidx);
+                pre2cur_score[pre_tagidx] = pre_time_score_list[pre_tagidx] + transition_score_expr[flat_idx];
+            }
+            cur_time_score_list[tagidx] = dynet::expr::logsumexp(pre2cur_score) + dynet::expr::pick(state_score_expr[t], tagidx);
+           
+        }
+        unsigned gold_flat_idx = flat_transition_index(gold_tag_seq[t - 1], gold_tag_seq[t]);
+        gold_score_container.push_back(transition_score_expr[gold_flat_idx]);
+        gold_score_container.push_back(dynet::expr::pick(state_score_expr[t], gold_tag_seq[t]));
+    }
+    dynet::expr::Expression pred_score_expr = dynet::expr::logsumexp(cur_time_score_list),
+        gold_score_expr = dynet::expr::sum(gold_score_container);
+    return pred_score_expr - gold_score_expr;
+}
+
+
+void
+CrfBareOutput::build_output(const std::vector<dynet::expr::Expression>& input_expr_seq,
+    std::vector<Index>& pred_tagseq)
+{
+    unsigned seq_len = input_expr_seq.size();
+    // init score
+    std::vector<slnn::type::real> init_score_list(tagdict_sz);
+    for( unsigned tagidx = 0; tagidx < tagdict_sz; ++tagidx )
+    {
+        auto cur_init_score_expr = dynet::expr::lookup(*pcg, init_score_lookup_param, tagidx);
+        init_score_list[tagidx] = dynet::as_scalar(pcg->get_value(cur_init_score_expr));
+    }
+    // transition score
+    std::vector<slnn::type::real> transition_score_list(tagdict_sz * tagdict_sz);
+    for( unsigned flat_idx = 0; flat_idx < tagdict_sz * tagdict_sz; ++flat_idx )
+    {
+        auto cur_score_expr = dynet::expr::lookup(*pcg, transition_score_lookup_param, flat_idx);
+        transition_score_list[flat_idx] = dynet::as_scalar(pcg->get_value(cur_score_expr));
+    }
+    // state score
+    std::vector<std::vector<slnn::type::real>> state_score_list(seq_len);
+    for( unsigned t = 0; t < seq_len; ++t )
+    {
+        auto cur_score_expr = state_score_layer.build_graph(input_expr_seq[t]);
+        state_score_list[t] = dynet::as_vector(pcg->get_value(cur_score_expr));
+    }
+    // viterbi
+    // - time 0 no trace back
+    std::vector<std::vector<unsigned>> traceback_matrix(seq_len - 1, std::vector<unsigned>(tagdict_sz));
+    std::vector<slnn::type::real> cur_time_score_list(tagdict_sz),
+        pre_time_score_list(tagdict_sz);
+    // - time 0
+    for( unsigned tagidx = 0; tagidx < tagdict_sz; ++tagidx )
+    {
+        cur_time_score_list[tagidx] = init_score_list[tagidx] + state_score_list[0][tagidx];
+    }
+    // - continues
+    for( unsigned t = 1; t < seq_len; ++t )
+    {
+        swap(cur_time_score_list, pre_time_score_list);
+        for( unsigned tagidx = 0; tagidx < tagdict_sz; ++tagidx )
+        {
+            std::vector<slnn::type::real> pre2cur_tag_score_list(tagdict_sz);
+            for( unsigned pre_tagidx = 0; pre_tagidx < tagdict_sz; ++pre_tagidx )
+            {
+                unsigned flat_idx = flat_transition_index(pre_tagidx, tagidx);
+                pre2cur_tag_score_list[pre_tagidx] = pre_time_score_list[pre_tagidx] + transition_score_list[flat_idx];
+            }
+            auto max_pre2cur_score_iter = std::max_element(pre2cur_tag_score_list.begin(), pre2cur_tag_score_list.end());
+            unsigned pre_tagidx_with_max_score = std::distance(pre2cur_tag_score_list.begin(), max_pre2cur_score_iter);
+            cur_time_score_list[tagidx] = *max_pre2cur_score_iter + state_score_list[t][tagidx];
+            traceback_matrix[t - 1][tagidx] = pre_tagidx_with_max_score;
+        }
+    }
+    // - find the path with max score.
+    auto end_tagidx_with_max_score = std::distance(cur_time_score_list.begin(), 
+        std::max_element(cur_time_score_list.begin(), cur_time_score_list.end()) );
+    std::vector<Index> tmp_pred_tagseq(seq_len);
+    tmp_pred_tagseq.back() = end_tagidx_with_max_score;
+    unsigned pre_tag = tmp_pred_tagseq.back();
+    for( int t = seq_len - 1; t >= 1; --t )
+    {
+        pre_tag = traceback_matrix[t - 1][pre_tag]; // traceback matrix record from time 1.
+        tmp_pred_tagseq[t - 1] = pre_tag;
+    }
+    swap(tmp_pred_tagseq, pred_tagseq);
+}
+
 
 /************* SoftmaxLayer ***********/
 

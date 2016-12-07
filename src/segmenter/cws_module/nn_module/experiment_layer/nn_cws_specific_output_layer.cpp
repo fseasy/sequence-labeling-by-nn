@@ -60,7 +60,7 @@ create_segmenter_output_layer(const std::string& layer_type, dynet::Model *dynet
     }
     else if( name == "crf" )
     {
-        throw std::logic_error("havn't implemented.");
+        return std::shared_ptr<BareOutputBase>(new CrfBareOutput(dynet_model, input_dim, output_dim));
     }
     else if( name == "classification_limit" || name == "cl_limit" )
     {
