@@ -269,12 +269,13 @@ train(SLModel &slm,
     std::cerr << "+ Train at " << nr_samples << " instances .\n";
     std::cerr << "++ Training info: \n"
         << "|  training update method(" << opts.training_update_method <<"),\n"
+        << "|  learning rate(" << opts.learning_rate << ") eta decay(" << opts.eta_decay << "_\n"
         << "|  training update scale(" << opts.training_update_scale << "), "
         << "half decay period (" <<  opts.scale_half_decay_period  << " epochs)\n"
         << "|  max epoch(" << opts.max_epoch << "), devel frequence(" << opts.do_devel_freq << ")\n"
         << "== - - - - -\n";
     slm.get_nn()->set_update_method(opts.training_update_method);
-
+    slm.get_nn()->set_optimizer_params(opts.learning_rate, opts.eta_decay);
     modelhandler_inner::TrainingUpdateRecorder update_recorder;
     auto do_devel_in_training = [&devel_data, &slm, &update_recorder](int nr_epoch, int nr_devel_order) 
     {
@@ -288,6 +289,8 @@ train(SLModel &slm,
     {
         if( nr_epoch != 0 && nr_epoch % opts.scale_half_decay_period == 0 ){ actual_scale /= 2.f; }
         slm.get_nn()->update_epoch();
+        std::cerr << "-- Update epoch. learning rate currently is " << slm.get_nn()->get_current_learning_rate()
+            << "\n";
     };
     // for randomly select instance
     std::vector<unsigned> access_order(nr_samples);

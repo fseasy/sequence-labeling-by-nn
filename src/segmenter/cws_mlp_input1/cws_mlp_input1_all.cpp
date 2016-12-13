@@ -1,3 +1,4 @@
+#include <limits>
 #include <boost/program_options.hpp>
 #include "cws_mlp_input1_instance.h"
 #include "segmenter/cws_module/cws_general_modelhandler.h"
@@ -38,8 +39,10 @@ int train_process(int argc, char *argv[], const string &program_name)
     training_op.add_options()
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
         ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("learning_rate", po::value<float>(), "The learning rate for optimizer.")
+        ("eta_decay", po::value<float>()->default_value(0.04F), "The eta = eta0 / (1 + nr_epoch * eta_decay) param of eta_decay.")
         ("training_update_scale", po::value<float>()->default_value(1.f), "The scale for backward updating.")
-        ("scale_half_decay_period", po::value<unsigned>()->default_value(15), "The training update scale half decay period.")
+        ("scale_half_decay_period", po::value<unsigned>()->default_value(numeric_limits<unsigned>::max()), "The training update scale half decay period.")
         ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: "
             "sgd, adagrad, momentum, adadelta, rmsprop, adam")
         ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process");
@@ -116,6 +119,8 @@ int train_process(int argc, char *argv[], const string &program_name)
     // checking requiring key and build training options
     struct TrainingOpts
     {
+        float learning_rate;
+        float eta_decay;
         float training_update_scale;
         unsigned scale_half_decay_period;
         string training_update_method;
@@ -140,8 +145,12 @@ int train_process(int argc, char *argv[], const string &program_name)
 
     varmap_key_fatal_check(var_map, "max_epoch",
         "Error : max epoch num should be specified .");
+    varmap_key_fatal_check(var_map, "learning_rate",
+        "Error: learning rate should be specified.");
     opts.max_epoch = var_map["max_epoch"].as<unsigned>();
     opts.do_devel_freq = var_map["devel_freq"].as<unsigned>();
+    opts.learning_rate = var_map["learning_rate"].as<float>();
+    opts.eta_decay = var_map["eta_decay"].as<float>();
     opts.training_update_scale = var_map["training_update_scale"].as<float>();
     opts.scale_half_decay_period = var_map["scale_half_decay_period"].as<unsigned>();
     opts.training_update_method = var_map["training_update_method"].as<string>();

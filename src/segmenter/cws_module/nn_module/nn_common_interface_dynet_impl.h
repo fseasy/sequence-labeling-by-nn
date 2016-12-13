@@ -26,6 +26,8 @@ public:
     NeuralNetworkCommonInterface& operator=(const NeuralNetworkCommonInterface &) = delete;
     // training
     void set_update_method(const std::string &optmization_name);
+    void set_optimizer_params(float learning_rate, float eta_decay);
+    float get_current_learning_rate(){ return trainer->eta; };
     void update(slnn::type::real scale);
     void update_epoch();
     const NnValueT& forward(const NnExprT&);
@@ -81,6 +83,16 @@ NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dy
     delete pcg;
     delete dynet_model;
 }
+
+inline
+void
+NeuralNetworkCommonInterface<nn_framework::NN_DyNet, dynet::expr::Expression, dynet::Tensor>::
+set_optimizer_params(float learning_rate, float eta_decay)
+{
+    trainer->eta0 = learning_rate;
+    trainer->eta_decay = eta_decay;
+}
+
 
 inline
 void 
