@@ -44,7 +44,7 @@ dynet::expr::Expression POSFeatureLayer::build_prefix_suffix_feature_expr(dynet:
 {
     if( idx == POSFeature::FeatureEmptyIndexPlaceholder )
     {
-        return dynet::expr::zeroes(*pcg, lookup_param->dim);
+        return dynet::expr::zeroes(*pcg, lookup_param.dim());
     }
     else
     {
