@@ -97,7 +97,7 @@ float Word2vecEmbeddingHelper::calc_hit_rate(dynet::Dict &fixed_dict, dynet::Dic
         Index word_idx = word_key; // in fact, to avoid compare between signed and unsigned
         if( word_idx == fixed_unk ){ continue; }
         string word = fixed_dict.convert(word_idx);
-        if( dynamic_dict.Contains(word) ){ ++nr_hit_word; }
+        if( dynamic_dict.contains(word) ){ ++nr_hit_word; }
     }
     float hit_rate = (dynamic_dict_sz ? static_cast<float>(nr_hit_word) / dynamic_dict_sz : 0.f) * 100 ;
     BOOST_LOG_TRIVIAL(info) << "intersected words num : " << nr_hit_word << "\t"

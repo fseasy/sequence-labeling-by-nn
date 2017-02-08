@@ -121,7 +121,7 @@ Expression NERDCModel::negative_loglikelihood(ComputationGraph *p_cg,
         // if statistic , calc output at timestep t
         if (p_stat != nullptr)
         {
-            vector<float> output_values = as_vector(cg.incremental_forward());
+            vector<float> output_values = as_vector(cg.incremental_forward( tag_output_layer_output_at_timestep_t));
             Index tag_id_with_max_value = distance(output_values.begin(), max_element(output_values.begin(), output_values.end()));
             ++(p_stat->total_tags); // == ++stat->total_tags ;
             if (tag_id_with_max_value == p_ner_seq->at(i)) ++(p_stat->correct_tags);
@@ -176,8 +176,8 @@ void NERDCModel::do_predict(ComputationGraph *p_cg,
         Expression merge_bilstm_pretag_exp = merge_bilstm_and_pretag_layer->build_graph(l2r_lstm_output_exp_cont[i],
             r2l_lstm_output_exp_cont[i], pretag_lookup_exp);
         Expression tag_hidden_layer_output_at_timestep_t = rectify(merge_bilstm_pretag_exp);
-        tag_output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
-        vector<float> output_values = as_vector(cg.incremental_forward());
+        Expression output_expr = tag_output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t);
+        vector<float> output_values = as_vector(cg.incremental_forward(output_expr));
         unsigned tag_id_with_max_value = distance(output_values.cbegin(), max_element(output_values.cbegin(), output_values.cend()));
         tmp_predict_tag_seq.at(i) = tag_id_with_max_value ;
         // set pretag_lookup_exp for next timestep 
