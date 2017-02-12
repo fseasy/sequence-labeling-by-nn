@@ -2,6 +2,7 @@
 #define SLNN_SEGMENTER_CWS_MODULE_CWS_GENERAL_MODELHANDLER_H_
 #include <string>
 #include <vector>
+#include <tuple>
 #include <iostream>
 #include <fstream>
 #include <algorithm>
@@ -29,6 +30,8 @@ unsigned read_unannotated_data(std::istream &is, SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> &out_unann_processed_data,
     std::vector<typename SLModel::UnannotatedDataRawT> &out_unann_raw_data);
 
+void write_record_list(std::ostream &os, const std::vector<std::tuple<float, int, int>> &record_list);
+
 class TrainingUpdateRecorder
 {
 public:
@@ -36,19 +39,24 @@ public:
     void update_training_state(float current_score, int nr_epoch, int nr_devel_order);
     bool is_training_ok();
     void set_train_error_threshold(float error_threshold);
+    void write_record_list(std::ostream &os);
 public: // getter
     int get_best_epoch(){ return nr_epoch_when_best; }
     int get_best_devel_order(){ return nr_devel_order_when_best; }
     float get_best_score(){ return best_score; }
+    std::vector<std::tuple<float, int, int>> get_record_list(){ return record_list; }
 private:
     float best_score;
     int nr_epoch_when_best;
     int nr_devel_order_when_best;
     float train_error_threshold;
     bool is_good;
+    std::vector<std::tuple<float, int, int>> record_list;
 };
 
 } // end of namespace modelhandler-inner
+
+using modelhandler_inner::write_record_list;
 
 inline
 const std::u32string& WordOutputDelimiter()
@@ -78,7 +86,8 @@ template <typename SLModel>
 void build_model(SLModel &slm);
 
 template <typename SLModel, typename TrainingOpts>
-void train(SLModel &slm,
+std::vector<std::tuple<float, int, int>>
+train(SLModel &slm,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &training_data,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data,
     const TrainingOpts &opts);
@@ -177,12 +186,32 @@ void TrainingUpdateRecorder::update_training_state(float cur_score, int nr_epoch
         nr_devel_order_when_best = nr_devel_order;
         best_score = cur_score;
     }
+    record_list.push_back(std::make_tuple(cur_score, nr_epoch, nr_devel_order));
 }
 
 inline 
 bool TrainingUpdateRecorder::is_training_ok()
 {
     return is_good;
+}
+
+inline
+void TrainingUpdateRecorder::write_record_list(std::ostream &os)
+{
+    // no override when different namespace
+    modelhandler_inner::write_record_list(os, record_list);
+}
+
+inline
+void write_record_list(std::ostream &os, const std::vector<std::tuple<float, int, int>> &record_list)
+{
+    os << "F1" << "\t" << "devel-epoch" << "\t" 
+        << "devel-order" << "\n";
+    for(const std::tuple<float, int, int> &record : record_list )
+    {
+        os << std::get<0>(record) << "\t" << std::get<1>(record) << "\t"
+            << std::get<2>(record) << "\n";
+    }
 }
 
 } // end of namespce modelhandler-inner
@@ -201,7 +230,6 @@ void read_training_data(std::istream &is, SLModel &slm, std::vector<typename SLM
     unsigned line_cnt = modelhandler_inner::read_annotated_data(is, slm, out_training_processed_data);
     std::cerr << "= Training data processed done. (line count: " << line_cnt << ", instance number: " <<
         out_training_processed_data.size() << ")\n";
-    slm.finish_read_training_data();
 }
 
 template <typename SLModel>
@@ -231,7 +259,8 @@ void build_model(SLModel &slm)
 }
 
 template <typename SLModel, typename TrainingOpts>
-void train(SLModel &slm,
+std::vector<std::tuple<float, int, int>>
+train(SLModel &slm,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &training_data,
     const std::vector<typename SLModel::AnnotatedDataProcessedT> &devel_data,
     const TrainingOpts &opts)
@@ -240,11 +269,13 @@ void train(SLModel &slm,
     std::cerr << "+ Train at " << nr_samples << " instances .\n";
     std::cerr << "++ Training info: \n"
         << "|  training update method(" << opts.training_update_method <<"),\n"
-        << "|  training update scale(" << opts.training_update_scale << "),\n"
+        << "|  learning rate(" << opts.learning_rate << ") eta decay(" << opts.eta_decay << "_\n"
+        << "|  training update scale(" << opts.training_update_scale << "), "
+        << "half decay period (" <<  opts.scale_half_decay_period  << " epochs)\n"
         << "|  max epoch(" << opts.max_epoch << "), devel frequence(" << opts.do_devel_freq << ")\n"
         << "== - - - - -\n";
     slm.get_nn()->set_update_method(opts.training_update_method);
-
+    slm.get_nn()->set_optimizer_params(opts.learning_rate, opts.eta_decay);
     modelhandler_inner::TrainingUpdateRecorder update_recorder;
     auto do_devel_in_training = [&devel_data, &slm, &update_recorder](int nr_epoch, int nr_devel_order) 
     {
@@ -253,7 +284,14 @@ void train(SLModel &slm,
         slm.get_nn()->stash_model_when_best(f1);
         update_recorder.update_training_state(f1, nr_epoch, nr_devel_order);
     };
-
+    float actual_scale = opts.training_update_scale;
+    auto update_epoch = [&opts, &slm, &actual_scale](int nr_epoch)
+    {
+        if( nr_epoch != 0 && nr_epoch % opts.scale_half_decay_period == 0 ){ actual_scale /= 2.f; }
+        slm.get_nn()->update_epoch();
+        std::cerr << "-- Update epoch. learning rate currently is " << slm.get_nn()->get_current_learning_rate()
+            << "\n";
+    };
     // for randomly select instance
     std::vector<unsigned> access_order(nr_samples);
     for( unsigned i = 0; i < nr_samples; ++i ) access_order[i] = i;
@@ -280,7 +318,7 @@ void train(SLModel &slm,
             typename SLModel::NnExprT loss_expr = slm.build_training_graph(instance);
             slnn::type::real loss = slm.get_nn()->as_scalar(slm.get_nn()->forward(loss_expr));
             slm.get_nn()->backward(loss_expr);
-            slm.get_nn()->update(opts.training_update_scale);
+            slm.get_nn()->update(actual_scale);
             // record loss
             training_stat_per_epoch.loss += loss;
             training_stat_per_epoch.total_tags += instance.size() ;
@@ -301,7 +339,7 @@ void train(SLModel &slm,
 
         // End of an epoch 
         // 1. update epoch
-        slm.get_nn()->update_epoch();
+        update_epoch(nr_epoch);
         // 2. end timing 
         training_stat_per_epoch.end_time_stat();
         // 3. output info at end of every eopch
@@ -327,6 +365,7 @@ void train(SLModel &slm,
         << "| at epoch: " << update_recorder.get_best_epoch() << ", \n"
         << "| devel order: " << update_recorder.get_best_devel_order() << "\n"
         << "= - - - - -\n";
+    return update_recorder.get_record_list();
 }
 
 template <typename SLModel>
@@ -337,13 +376,13 @@ float devel(SLModel &slm, const std::vector<typename SLModel::AnnotatedDataProce
 
     stat::SegmentorStat stat(true);
     stat.start_time_stat();
-    eval::SegmentorEval eval_ins;
+    eval::SegmenterEval eval_ins;
     eval_ins.start_eval();
     for( unsigned access_idx = 0; access_idx < nr_samples; ++access_idx )
     {
         const typename SLModel::AnnotatedDataProcessedT &instance = devel_data[access_idx];
         std::vector<Index> pred_tagseq = slm.predict(
-            *slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
+            slm.get_token_module()->extract_unannotated_data_from_annotated_data(instance));
         eval_ins.eval_iteratively(*instance.ptagseq, pred_tagseq);
     }
     stat.end_time_stat();
@@ -366,7 +405,7 @@ void predict(SLModel &slm,
     std::vector<typename SLModel::UnannotatedDataProcessedT> test_data;
     std::vector<typename SLModel::UnannotatedDataRawT> test_raw_data;
     read_test_data(is, slm, test_data, test_raw_data);
-    std::cerr << "+ Do prediction on " << test_data.size() << " instances .";
+    std::cerr << "+ Do prediction on " << test_data.size() << " instances .\n";
     BasicStat stat(true);
     stat.start_time_stat();
     writer::SegmentorWriter writer_ins(os, charcode::EncodingDetector::get_detector()->get_encoding(), WordOutputDelimiter());

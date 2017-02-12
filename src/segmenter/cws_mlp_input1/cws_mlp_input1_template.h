@@ -11,7 +11,7 @@ namespace segmenter{
 namespace mlp_input1{
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
-class SegmentorMlpInput1Template
+class SegmenterMlpInput1Template
 {
 public:
     // typename
@@ -31,15 +31,15 @@ public:
     std::mt19937* get_mt19937_rng() { static std::mt19937 rng(rng_seed); return &rng; }
     unsigned get_rng_seed() const { return rng_seed; }
 private:
-    explicit SegmentorMlpInput1Template(int argc, char **argv, unsigned seed) ;
+    explicit SegmenterMlpInput1Template(int argc, char **argv, unsigned seed) ;
 public:
-    SegmentorMlpInput1Template(const SegmentorMlpInput1Template&) = delete;
-    SegmentorMlpInput1Template(SegmentorMlpInput1Template &&) = delete;
-    SegmentorMlpInput1Template& operator=(const SegmentorMlpInput1Template&) = delete;
+    SegmenterMlpInput1Template(const SegmenterMlpInput1Template&) = delete;
+    SegmenterMlpInput1Template(SegmenterMlpInput1Template &&) = delete;
+    SegmenterMlpInput1Template& operator=(const SegmenterMlpInput1Template&) = delete;
 public:
-    static std::shared_ptr<SegmentorMlpInput1Template> create_new_model(int argc, char**argv, unsigned seed);
-    static void save_model(std::ostream &os, SegmentorMlpInput1Template &m);
-    static std::shared_ptr<SegmentorMlpInput1Template> load_and_build_model(std::istream &is, int argc, char **argv);
+    static std::shared_ptr<SegmenterMlpInput1Template> create_new_model(int argc, char**argv, unsigned seed);
+    static void save_model(std::ostream &os, SegmenterMlpInput1Template &m);
+    static std::shared_ptr<SegmenterMlpInput1Template> load_and_build_model(std::istream &is, int argc, char **argv);
     void save_model(std::ostream &os) { save_model(os, *this); }
 public:
     void set_model_structure_param_from_outer(const boost::program_options::variables_map &args);
@@ -59,8 +59,8 @@ private:
  **************************************************/
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
-SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
-SegmentorMlpInput1Template(int argc, char **argv, unsigned seed)
+SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+SegmenterMlpInput1Template(int argc, char **argv, unsigned seed)
     :token_module(seed),
     nn(argc, argv, seed),
     rng_seed(seed)
@@ -68,18 +68,18 @@ SegmentorMlpInput1Template(int argc, char **argv, unsigned seed)
 
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
-std::shared_ptr<SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>>
-SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+std::shared_ptr<SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>>
+SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 create_new_model(int argc, char **argv, unsigned seed)
 {
-    return std::shared_ptr<SegmentorMlpInput1Template>(new SegmentorMlpInput1Template(argc, argv, seed));
+    return std::shared_ptr<SegmenterMlpInput1Template>(new SegmenterMlpInput1Template(argc, argv, seed));
 }
 
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 void 
-SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
-save_model(std::ostream &os, SegmentorMlpInput1Template &m)
+SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+save_model(std::ostream &os, SegmenterMlpInput1Template &m)
 {
     boost::archive::text_oarchive to(os);
     // 1. first save the seed.
@@ -90,12 +90,14 @@ save_model(std::ostream &os, SegmentorMlpInput1Template &m)
     // 3. save token module
     to << *(m.get_token_module());
     // 4. save nn
+    //  - OH! DON't forget to reset the model to it's best state. (BUG FIX.)
+    m.get_nn()->reset2stashed_model();
     to << *(m.get_nn());
 }
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
-std::shared_ptr<SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>> 
-SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+std::shared_ptr<SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>> 
+SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 load_and_build_model(std::istream &is, int argc, char **argv)
 {
     boost::archive::text_iarchive ti(is);
@@ -103,7 +105,7 @@ load_and_build_model(std::istream &is, int argc, char **argv)
     unsigned seed;
     ti >> seed;
     // 2. create model by the seed
-    std::shared_ptr<SegmentorMlpInput1Template> m = create_new_model(argc, argv, seed);
+    std::shared_ptr<SegmenterMlpInput1Template> m = create_new_model(argc, argv, seed);
     // 3. read structure param
     ti >> *m->get_param();
     // 4. read token module
@@ -118,40 +120,37 @@ load_and_build_model(std::istream &is, int argc, char **argv)
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-void SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+void SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 set_model_structure_param_from_outer(const boost::program_options::variables_map &args)
 {
     param.set_param_from_user_defined(args);
+    token_module.set_param_before_process_training_data(param);
 }
 
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-void SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+void SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 finish_read_training_data()
 {
-    param.set_param_from_token_module(token_module);
-    token_module.finish_read_training_data();
+    token_module.finish_read_training_data();  // Ensure we call `finish_read_training_data` before set param.
+    param.set_param_from_token_module(token_module);   
 }
 
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-void SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+void SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_model_structure()
 {
-    /*****
-     * May be we should define 2 function for training and predicting progress.
-     *****/
-    token_module.set_unk_replace_threshold(param);
     nn.build_model_structure(param);
     std::cerr << param.get_structure_info() << "\n";
 }
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-typename SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::NnExprT
-SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+typename SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::NnExprT
+SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
 build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 {
     AnnotatedDataProcessedT data_after_unk_replace = 
@@ -161,8 +160,8 @@ build_training_graph(const AnnotatedDataProcessedT& ann_processed_data)
 
 template <typename TokenModuleT, typename StructureParamT, typename NnModuleT>
 inline
-std::vector<Index> SegmentorMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
-predict(const UnannotatedDataProcessedT & unann_processed_data)
+std::vector<Index> SegmenterMlpInput1Template<TokenModuleT, StructureParamT, NnModuleT>::
+predict(const UnannotatedDataProcessedT& unann_processed_data)
 {
     return nn.predict(unann_processed_data);
 }

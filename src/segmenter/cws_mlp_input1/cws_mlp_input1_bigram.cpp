@@ -1,5 +1,5 @@
 #include <boost/program_options.hpp>
-#include "cws_mlp_input1_cl_model.h"
+#include "cws_mlp_input1_instance.h"
 #include "segmenter/cws_module/cws_general_modelhandler.h"
 #include "utils/general.hpp"
 
@@ -7,9 +7,9 @@ using namespace std;
 namespace po = boost::program_options;
 using namespace slnn;
 using namespace slnn::segmenter;
-using slnn::segmenter::mlp_input1::MlpInput1Cl;
+using slnn::segmenter::mlp_input1::MlpInput1Bigram;
 
-static const string PROGRAM_HEADER = "segmenter Mlp-input1 based on DyNet Library";
+static const string PROGRAM_HEADER = "segmenter Mlp-input1-bigram based on DyNet Library";
 constexpr unsigned DEFAULT_RNG_SEED = 1234;
 
 int train_process(int argc, char *argv[], const string &program_name)
@@ -17,39 +17,78 @@ int train_process(int argc, char *argv[], const string &program_name)
     string description = PROGRAM_HEADER + "\n"
         "Training process .\n"
         "using `" + program_name + " train [rnn-type] <options>` to train . Training options are as following";
-    po::options_description op_des = po::options_description(description);
-    op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
-        ("rng_seed", po::value<unsigned>()->default_value(DEFAULT_RNG_SEED), "Random Number Generator seed.")
+    po::options_description generic_op("generic options");
+    generic_op.add_options()
+        ("config", po::value<string>(), "Path to config file")
+        ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
+            "else value leads to output trace info.")
+        ("help,h", "Show help information.");
+    
+    po::options_description dynet_op("dynet options");
+    dynet_op.add_options()
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .");
+    po::options_description file_op("file options");
+    file_op.add_options()
         ("training_data", po::value<string>(), "[required] The path to training data")
         ("devel_data", po::value<string>(), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("model", po::value<string>(), "Use to specify the model name(path)");
+
+    po::options_description training_op("training options");
+    training_op.add_options()
         ("max_epoch", po::value<unsigned>(), "The epoch to iterate for training")
-        ("model", po::value<string>(), "Use to specify the model name(path)")
         ("devel_freq", po::value<unsigned>()->default_value(100000), "The frequent(samples number)to validate(if set) . validation will be done after every devel-freq training samples")
+        ("learning_rate", po::value<float>(), "The learning rate for optimizer.")
+        ("eta_decay", po::value<float>()->default_value(0.04F), "The eta = eta0 / (1 + nr_epoch * eta_decay) param of eta_decay.")
         ("training_update_scale", po::value<float>()->default_value(1.f), "The scale for backward updating.")
-        ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: sgd, adagrad")
+        ("scale_half_decay_period", po::value<unsigned>()->default_value(5), "The training update scale half decay period.")
+        ("training_update_method", po::value<string>()->default_value("sgd"), "The update method, support list: "
+        "sgd, adagrad, momentum, adadelta, rmsprop, adam")
+        ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process");
+
+    po::options_description model_op("model options");
+    model_op.add_options()
+        ("rng_seed", po::value<unsigned>()->default_value(DEFAULT_RNG_SEED), "Random Number Generator seed.")
+        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
+        ("window_size", po::value<unsigned>()->default_value(5), "The window size")
+        ("window_process_method", po::value<string>()->default_value(string("concat")), "The method for window embedding processing."
+            "support list: [concat, sum(avg), bigram]")
+        ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
+            "separated by comma , like : 512,256,334 ")
+        ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
+        ("nonlinear_func", po::value<string>()->default_value(string("relu")), "Non-linear function for mlp layers")
+        ("output_layer_type", po::value<string>()->default_value(string("cl")), 
+            "The output layer type, supporting list: [cl(classification), pretag, crf]")
         ("replace_freq_threshold", po::value<unsigned>()->default_value(1), "The frequency threshold to replace the word to UNK in probability"
             "(eg , if set 1, the words of training data which frequency <= 1 may be "
             "replaced in probability)")
         ("replace_prob_threshold", po::value<float>()->default_value(0.2f), "The probability threshold to replace the word to UNK ."
                 " if words frequency <= replace_freq_threshold , the word will"
-                " be replace in this probability")
-        ("word_embedding_dim", po::value<unsigned>()->default_value(50), "The dimension for dynamic channel word embedding.")
-        ("window_size", po::value<unsigned>()->default_value(5), "The window size")
-        ("mlp_hidden_dim_list",po::value<string>(), "The dimension list for mlp hidden layers , dims should be give positive number "
-            "separated by comma , like : 512,256,334 ")
-        ("dropout_rate", po::value<float>(), "droupout rate for training (mlp hidden layers)")
-        ("nonlinear_func", po::value<string>()->default_value(string("relu")), "Non-linear function for mlp layers")
-        ("trivial_report_freq", po::value<unsigned>()->default_value(5000), "Trace frequent during training process")
-        ("logging_verbose", po::value<int>()->default_value(0), "The switch for logging trace . If 0 , trace will be ignored ,"
-            "else value leads to output trace info.")
-        ("help,h", "Show help information.");
+                " be replace in this probability");
+    
+    
+    po::options_description all_op(description);
+    all_op.add(generic_op).add(dynet_op).add(file_op).add(training_op).add(model_op);
+
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc, argv).options(all_op).allow_unregistered().run(), var_map);
     po::notify(var_map);
+    if( var_map.count("config") )
+    {
+        ifstream conf_is(var_map["config"].as<string>());
+        if( conf_is )
+        {
+            po::store(po::parse_config_file(conf_is, all_op, true),
+                var_map);
+            po::notify(var_map);
+        }
+        else
+        {
+            cerr << "failed to open config file:'" << var_map["config"].as<string>() <<"'\n";
+        }
+    }
     if (var_map.count("help"))
     {
-        cerr << op_des << endl;
+        cerr << all_op << endl;
         return 0;
     }
     // trace switch
@@ -62,7 +101,10 @@ int train_process(int argc, char *argv[], const string &program_name)
     // checking requiring key and build training options
     struct TrainingOpts
     {
+        float learning_rate;
+        float eta_decay;
         float training_update_scale;
+        unsigned scale_half_decay_period;
         string training_update_method;
         unsigned do_devel_freq;
         unsigned max_epoch;
@@ -85,9 +127,14 @@ int train_process(int argc, char *argv[], const string &program_name)
 
     varmap_key_fatal_check(var_map, "max_epoch",
         "Error : max epoch num should be specified .");
+    varmap_key_fatal_check(var_map, "learning_rate",
+        "Error: learning rate should be specified.");
     opts.max_epoch = var_map["max_epoch"].as<unsigned>();
     opts.do_devel_freq = var_map["devel_freq"].as<unsigned>();
+    opts.learning_rate = var_map["learning_rate"].as<float>();
+    opts.eta_decay = var_map["eta_decay"].as<float>();
     opts.training_update_scale = var_map["training_update_scale"].as<float>();
+    opts.scale_half_decay_period = var_map["scale_half_decay_period"].as<unsigned>();
     opts.training_update_method = var_map["training_update_method"].as<string>();
     opts.trivial_report_freq = var_map["trivial_report_freq"].as<unsigned>();
     // check model path
@@ -99,6 +146,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : model file `" + model_path + "` has already exists .");
     }
+    string log_path = model_path + ".log";
     unsigned rng_seed = var_map["rng_seed"].as<unsigned>();
     // others will be processed flowing 
 
@@ -109,7 +157,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     //if( var_map.count("dynet-mem") != 0 ){ dynet_mem = var_map["dynet-mem"].as<unsigned>();}
     //build_dynet_parameters(program_name, dynet_mem, dynet_argc, dynet_argv);
     //char **dynet_argv_ptr = dynet_argv.get();
-    std::shared_ptr<MlpInput1Cl>  mi1 = MlpInput1Cl::create_new_model(argc, argv, rng_seed);
+    std::shared_ptr<MlpInput1Bigram>  mi1 = MlpInput1Bigram::create_new_model(argc, argv, rng_seed);
 
     // pre-open model file, avoid fail after a long time training
     ofstream model_os(model_path);
@@ -122,7 +170,7 @@ int train_process(int argc, char *argv[], const string &program_name)
         fatal_error("Error : failed to open training: `" + training_data_path + "` .");
     }
 
-    vector<MlpInput1Cl::AnnotatedDataProcessedT> training_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> training_data;
     modelhandler::read_training_data(train_is, *mi1, training_data);
     train_is.close();
     
@@ -131,7 +179,7 @@ int train_process(int argc, char *argv[], const string &program_name)
     mi1->build_model_structure();
 
     // reading developing data
-    vector<MlpInput1Cl::AnnotatedDataProcessedT> devel_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> devel_data;
     std::ifstream devel_is(devel_data_path);
     if (!devel_is) {
         fatal_error("Error : failed to open devel file: `" + devel_data_path + "`");
@@ -140,36 +188,73 @@ int train_process(int argc, char *argv[], const string &program_name)
     devel_is.close();
     
     // Train
-    modelhandler::train(*mi1, training_data, devel_data, opts);
+    auto devel_record_list = modelhandler::train(*mi1, training_data, devel_data, opts);
      
     // save model
     mi1->save_model(model_os);
     model_os.close();
+    // save log
+    try
+    {
+        std::cerr << "+ Try to wirte devel score list to '" << log_path << "'.\n";
+        std::ofstream log_os(log_path);
+        log_os.exceptions(log_os.failbit);
+        modelhandler::write_record_list(log_os, devel_record_list);
+        std::cerr << "- done.\n";
+    }
+    catch( const std::ios_base::failure &e )
+    {
+        std::cerr << "- failed.(" << e.what() << ")\n";
+    }
     return 0;
 }
 
 int devel_process(int argc, char *argv[], const string &program_name)
 {
+    
     string description = PROGRAM_HEADER + "\n"
         "Validation(develop) process "
         "using `" + program_name + " devel [rnn-type] <options>` to validate . devel options are as following";
-    po::options_description op_des = po::options_description(description);
-    // set params to receive the arguments 
-    string devel_data_path, model_path ;
-    op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
-        ("devel_data", po::value<string>(&devel_data_path), "The path to validation data .")
-        ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
+    po::options_description generic_op("generic options");
+    generic_op.add_options()
+        ("config", po::value<string>(), "Path to config file")
         ("help,h", "Show help information.");
+    
+    po::options_description dynet_op("dynet options");
+    dynet_op.add_options()
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .");
+    
+    string devel_data_path, model_path ;
+    po::options_description file_op("file options");
+    file_op.add_options()
+        ("devel_data", po::value<string>(&devel_data_path), "The path to developing data . For validation duration training . Empty for discarding .")
+        ("model", po::value<string>(&model_path), "Use to specify the model name(path)");
+
+    po::options_description all_op = po::options_description(description);
+    // set params to receive the arguments 
+    all_op.add(generic_op).add(dynet_op).add(file_op);
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc, argv).options(all_op).allow_unregistered().run(), var_map);
     po::notify(var_map);
+    if( var_map.count("config") )
+    {
+        ifstream conf_is(var_map["config"].as<string>());
+        if( conf_is )
+        {
+            po::store(po::parse_config_file(conf_is, all_op, true),
+                var_map);
+            po::notify(var_map);
+        }
+        else
+        {
+            cerr << "failed to open config file:'" << var_map["config"].as<string>() <<"'\n";
+        }
+    }
     if (var_map.count("help"))
     {
-        cerr << op_des << endl;
+        cerr << all_op << endl;
         return 0;
     }
-
     varmap_key_fatal_check(var_map, "devel_data", "Error : validation(develop) data should be specified !");
     varmap_key_fatal_check(var_map, "model", "Error : model path should be specified !");
     if( !FileUtils::exists(devel_data_path) ) fatal_error("Error : failed to find devel data at `" + devel_data_path + "`") ;
@@ -187,13 +272,13 @@ int devel_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' .");
     }
-    std::shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
+    std::shared_ptr<MlpInput1Bigram> mi1 = MlpInput1Bigram::load_and_build_model(model_is, dynet_argc, dynet_argv_ptr);
     model_is.close();
 
     // read devel data
     ifstream devel_is(devel_data_path) ;
     if( !devel_is ) fatal_error("Error : failed to open devel data at `" + devel_data_path + "`") ;
-    vector<MlpInput1Cl::AnnotatedDataProcessedT> devel_data;
+    vector<MlpInput1Bigram::AnnotatedDataProcessedT> devel_data;
     modelhandler::read_devel_data(devel_is, *mi1, devel_data);
     devel_is.close();
 
@@ -207,20 +292,47 @@ int predict_process(int argc, char *argv[], const string &program_name)
     string description = PROGRAM_HEADER + "\n"
         "Predict process ."
         "using `" + program_name + " predict [rnn-type] <options>` to predict . predict options are as following";
-    po::options_description op_des = po::options_description(description);
+    
+    po::options_description generic_op("generic options");
+    generic_op.add_options()
+        ("config", po::value<string>(), "Path to config file")
+        ("help,h", "Show help information.");
+
+    po::options_description dynet_op("dynet options");
+    dynet_op.add_options()
+        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .");
+
     string raw_data_path, output_path, model_path;
-    op_des.add_options()
-        ("dynet-mem", po::value<unsigned>(), "pre-allocated memory pool for DyNet library (MB) .")
+    po::options_description file_op("file options");
+    file_op.add_options()
         ("input", po::value<string>(&raw_data_path), "The path to input data.")
         ("output", po::value<string>(&output_path), "The path to storing result . using `stdout` if not specified .")
-        ("model", po::value<string>(&model_path), "Use to specify the model name(path)")
-        ("help,h", "Show help information.");
+        ("model", po::value<string>(&model_path), "Use to specify the model name(path)");
+    
+    po::options_description all_op = po::options_description(description);
+    // set params to receive the arguments 
+    all_op.add(generic_op).add(dynet_op).add(file_op);
     po::variables_map var_map;
-    po::store(po::command_line_parser(argc, argv).options(op_des).allow_unregistered().run(), var_map);
+    po::store(po::command_line_parser(argc, argv).options(all_op).allow_unregistered().run(), var_map);
     po::notify(var_map);
+    if( var_map.count("config") )
+    {
+        ifstream conf_is(var_map["config"].as<string>());
+        if( conf_is )
+        {
+            po::store(po::parse_config_file(conf_is, all_op, true),
+                var_map);
+            po::notify(var_map);
+        }
+        else
+        {
+            cerr << "failed to open config file:'" << var_map["config"].as<string>() <<"'\n";
+        }
+    }
+    
     if (var_map.count("help"))
     {
-        cerr << op_des << endl;
+        cerr << all_op << endl;
         return 0;
     }
 
@@ -249,7 +361,7 @@ int predict_process(int argc, char *argv[], const string &program_name)
     {
         fatal_error("Error : failed to open model path at '" + model_path + "' . ");
     }
-    shared_ptr<MlpInput1Cl> mi1 = MlpInput1Cl::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
+    shared_ptr<MlpInput1Bigram> mi1 = MlpInput1Bigram::load_and_build_model(is, dynet_argc, dynet_argv_ptr);
     is.close();
 
     // open raw_data

@@ -63,29 +63,30 @@ WindowExprGenerateLayer::WindowExprGenerateLayer(dynet::Model *dynet_model, unsi
     window_sz(window_sz)
 {}
 
-std::vector<dynet::expr::Expression>
-WindowExprGenerateLayer::generate_window_expr_by_concatenating(const std::vector<dynet::expr::Expression> &unit_exprs)
+std::vector<std::vector<dynet::expr::Expression>>
+WindowExprGenerateLayer::generate_window_expr_list(const std::vector<dynet::expr::Expression> &unit_exprs)
 {
-    std::deque<dynet::expr::Expression> window_expr_list(window_sz);
     unsigned len = unit_exprs.size();
-    // init
+    std::vector<std::vector<dynet::expr::Expression>> window_expr_list(len);
+    std::deque<dynet::expr::Expression> window_expr(window_sz);
+    // init . generate the first window expr
     unsigned half_sz = window_sz / 2;
-    for( unsigned i = 0; i < half_sz; ++i ){ window_expr_list[i] = sos_expr; }
+    for( unsigned i = 0; i < half_sz; ++i ){ window_expr[i] = sos_expr; }
     for( unsigned i = half_sz; i < window_sz; ++i )
     {
-        window_expr_list[i] = i < len ? unit_exprs[i] : eos_expr;
+        window_expr[i] = i < len ? unit_exprs[i] : eos_expr;
     }
-    // generate window concatenated expr 
-    std::vector<dynet::expr::Expression> concat_expr_list(len);
-    concat_expr_list[0] = dynet::expr::concatenate(window_expr_list);
+    // generate window expr list 
+    // TODO: can be optimized -> at range [ 1 -> len - half_sz), no need to jude i + half_sz < len; 
+    window_expr_list[0] = std::vector<dynet::expr::Expression>(window_expr.begin(), window_expr.end());
     for( unsigned i = 1; i < len; ++i )
     {
         // scroll
-        window_expr_list.pop_front();
-        window_expr_list.push_back(i + half_sz < len ? unit_exprs[i + half_sz] : eos_expr);
-        concat_expr_list[i] = dynet::expr::concatenate(window_expr_list);
+        window_expr.pop_front();
+        window_expr.push_back(i + half_sz < len ? unit_exprs[i + half_sz] : eos_expr);
+        window_expr_list[i] = std::vector<dynet::expr::Expression>(window_expr.begin(), window_expr.end());
     }
-    return concat_expr_list;
+    return window_expr_list;
 }
 
 } // end of namespace slnn

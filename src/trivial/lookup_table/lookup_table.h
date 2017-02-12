@@ -15,6 +15,7 @@
 #include <boost/serialization/access.hpp>
 #include <boost/serialization/unordered_map.hpp>
 #include <boost/serialization/vector.hpp>
+#include <boost/serialization/split_member.hpp>
 namespace slnn{
 namespace trivial{
 namespace lookup_table{
@@ -135,7 +136,10 @@ protected:
 
 protected:
     template<class Archive>
-    void serialize(Archive& ar, const unsigned int);
+    void save(Archive &ar, const unsigned int) const;
+    template <class Archive>
+    void load(Archive &ar, const unsigned int);
+    BOOST_SERIALIZATION_SPLIT_MEMBER();
 
 private:
     std::unordered_map<TokenType, Index, Hash, KeyEqual> token2idx;
@@ -383,9 +387,114 @@ size_t LookupTable<TokenType, Hash, KeyEqual>::size_without_unk() const noexcept
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 template<class Archive>
-void LookupTable<TokenType, Hash, KeyEqual>::serialize(Archive& ar, const unsigned int)
+void LookupTable<TokenType, Hash, KeyEqual>::save(Archive& ar, const unsigned int) const
 {
     ar &token2idx &idx2token &is_frozen &unk_idx;
+}
+
+template <typename TokenType, typename Hash,  typename KeyEqual>
+template<class Archive>
+void LookupTable<TokenType, Hash, KeyEqual>::load(Archive& ar, const unsigned int)
+{
+    ar &token2idx &idx2token &is_frozen &unk_idx;
+}
+
+// specification
+// - specification for u32string
+template <>
+template <class Archive>
+void LookupTable<std::u32string, std::hash<std::u32string>, std::equal_to<std::u32string>>::save(Archive &ar, const unsigned int) const
+{
+    // boost don't support serialize u32string defautly, so we have to do it by self.
+    // save the dict size for loading...
+    unsigned dict_sz = token2idx.size();
+    ar & dict_sz;
+    // save token2idx ( unordered_map<u32string, int> )
+    for( const auto& token_idx_pair : token2idx )
+    {
+        const std::u32string &ustr = token_idx_pair.first;
+        std::vector<unsigned> equal_value(ustr.begin(), ustr.end());
+        ar &equal_value &token_idx_pair.second;
+    }
+    // save idx2token
+    for( const auto& ustr : idx2token )
+    {
+        std::vector<unsigned> equal_value(ustr.begin(), ustr.end());
+        ar & equal_value;
+    }
+    ar & is_frozen &unk_idx;
+}
+template <>
+template <class Archive>
+void LookupTable<std::u32string, std::hash<std::u32string>, std::equal_to<std::u32string>>::load(Archive &ar, const unsigned int)
+{
+    // load token2idx
+    unsigned dict_sz;
+    ar & dict_sz;
+    // load token2idx
+    for( unsigned i = 0; i < dict_sz; ++i )
+    {
+        std::vector<unsigned> equal_value;
+        Index idx;
+        ar & equal_value &idx;
+        std::u32string ustr(equal_value.begin(), equal_value.end());
+        token2idx[ustr] = idx;
+    }
+    // load idx2token
+    idx2token.resize(dict_sz);
+    for( unsigned i = 0; i < dict_sz; ++i )
+    {
+        std::vector<unsigned> unicode_pnt_list;
+        ar & unicode_pnt_list;
+        idx2token[i] = std::u32string(unicode_pnt_list.begin(), unicode_pnt_list.end());
+    }
+    ar &is_frozen &unk_idx;
+}
+
+// - specification for char32_t
+template <>
+template <class Archive>
+void LookupTable<char32_t, std::hash<char32_t>, std::equal_to<char32_t>>::save(Archive &ar, const unsigned int) const
+{
+    unsigned sz = token2idx.size();
+    ar & sz;
+    // token2idx
+    for( const auto& token_idx_pair : token2idx )
+    {
+        unsigned unicode_point = token_idx_pair.first;
+        ar &unicode_point &token_idx_pair.second;
+    }
+    // idx2token
+    for( const auto& token : idx2token )
+    {
+        unsigned unicode_point = token;
+        ar &unicode_point;
+    }
+    ar &is_frozen &unk_idx;
+}
+template <>
+template <class Archive>
+void LookupTable<char32_t, std::hash<char32_t>, std::equal_to<char32_t>>::load(Archive &ar, const unsigned int)
+{
+    unsigned sz;
+    ar &sz;
+    // token2idx
+    for( unsigned i = 0; i < sz; ++i )
+    {
+        unsigned unicode_pnt;
+        Index idx;
+        ar & unicode_pnt &idx;
+        token2idx[unicode_pnt] = idx;
+    }
+    // idx2token
+    idx2token.resize(sz);
+    for( unsigned i = 0; i < sz; ++i )
+    {
+        unsigned unicode_pnt;
+        ar & unicode_pnt;
+        idx2token[i] = unicode_pnt;
+    }
+    ar &is_frozen &unk_idx;
 }
 
 /************************************

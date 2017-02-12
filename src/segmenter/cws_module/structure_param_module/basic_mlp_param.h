@@ -18,7 +18,7 @@ namespace structure_param_module{
  * using this to decouple the (frontend-param, token-module) and the nn module
  */
 
-struct SegmentorBasicMlpParam
+struct SegmenterBasicMlpParam
 {
     friend class boost::serialization::access;
     // Data
@@ -27,11 +27,12 @@ struct SegmentorBasicMlpParam
     unsigned corpus_token_dict_size;
     unsigned window_size;
     //   - Mlp
-    unsigned mlp_input_dim;
+    std::string window_process_method;
     std::vector<unsigned> mlp_hidden_dim_list;
     slnn::type::real mlp_dropout_rate;
     std::string mlp_nonlinear_function_str;
     //   - Ouptut
+    std::string output_layer_type;
     unsigned output_dim;
     //   - Others
     unsigned replace_freq_threshold;
@@ -51,7 +52,7 @@ struct SegmentorBasicMlpParam
  **********************************************/
 
 template<typename TokenModuleT>
-void SegmentorBasicMlpParam::set_param_from_token_module(const TokenModuleT &token_module)
+void SegmenterBasicMlpParam::set_param_from_token_module(const TokenModuleT &token_module)
 {
     // Input - dict size
     corpus_token_dict_size = token_module.get_charset_size();
@@ -61,11 +62,11 @@ void SegmentorBasicMlpParam::set_param_from_token_module(const TokenModuleT &tok
 
 
 template <class Archive>
-void SegmentorBasicMlpParam::serialize(Archive &ar, const unsigned int)
+void SegmenterBasicMlpParam::serialize(Archive &ar, const unsigned int)
 {
     ar &corpus_token_embedding_dim &corpus_token_dict_size &window_size
-        &mlp_input_dim &mlp_hidden_dim_list &mlp_dropout_rate &mlp_nonlinear_function_str
-        &output_dim
+        &window_process_method &mlp_hidden_dim_list &mlp_dropout_rate &mlp_nonlinear_function_str
+        &output_layer_type  &output_dim
         &replace_freq_threshold &replace_prob_threshold;
 }
 

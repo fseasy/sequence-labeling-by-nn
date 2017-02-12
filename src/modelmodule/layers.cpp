@@ -53,7 +53,8 @@ Merge4Layer::~Merge4Layer(){}
 MLPHiddenLayer::MLPHiddenLayer(Model *m, unsigned input_dim, const vector<unsigned> &layers_dim, 
     dynet::real dropout_rate,
     NonLinearFunc *nonlinear_func)
-    :nr_hidden_layer(layers_dim.size()),
+    : nr_hidden_layer(layers_dim.size()),
+    output_dim(nr_hidden_layer > 0 ? layers_dim.back() : input_dim),
     w_list(nr_hidden_layer),
     b_list(nr_hidden_layer),
     w_expr_list(nr_hidden_layer),

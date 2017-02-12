@@ -2,7 +2,10 @@
 #define POSTAGGER_BASEMODEL_INPUT1_MLP_MODEL_NO_FEATURE_H_
 
 #include <boost/program_options.hpp>
-
+#include <boost/archive/text_iarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
+#include <boost/serialization/split_member.hpp>
+#include <boost/serialization/vector.hpp>
 #include "dynet/dynet.h"
 
 #include "modelmodule/context_feature.h"

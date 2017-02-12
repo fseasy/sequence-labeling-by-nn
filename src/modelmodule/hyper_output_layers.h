@@ -7,6 +7,10 @@
 
 namespace slnn{
 
+/********* ABANDON 
+ * Output Base 
+ * output base and dirived class are old and should be **abandon**.
+ *********/
 struct OutputBase
 {
     OutputBase(dynet::real dropout_rate, NonLinearFunc *nonlinear_func);
@@ -91,15 +95,15 @@ struct CRFOutput : public OutputBase
         IndexSeq &pred_seq) ;
 };
 
-/*  Bare Output */
+/******************
+ * Bare Output Base
+ * should be supported in current and future.
+ ******************/
 
 struct BareOutputBase
 {
-    dynet::ComputationGraph *pcg;
-    DenseLayer softmax_layer;
-    BareOutputBase(dynet::Model *m, unsigned input_dim, unsigned output_dim);
     virtual ~BareOutputBase();
-    virtual void new_graph(dynet::ComputationGraph &cg);
+    virtual void new_graph(dynet::ComputationGraph &cg) = 0;
     dynet::expr::Expression
         build_output_loss(const std::vector<std::vector<dynet::expr::Expression> *> &input_expr_ptr_group_seq,
             const IndexSeq &gold_seq); 
@@ -115,14 +119,57 @@ private:
             std::vector<dynet::expr::Expression> &concated_input_expr_cont);
 };
 
+/*************
+ * Simple Bare output.
+ * for general (no tag-transition limit)
+ *************/
+
 struct SimpleBareOutput : public BareOutputBase
 {
+
+public:
     SimpleBareOutput(dynet::Model *m, unsigned inputs_total_dim, unsigned output_dim);
+
+public:
+    void new_graph(dynet::ComputationGraph &cg) override;
     dynet::expr::Expression
         build_output_loss(const std::vector<dynet::expr::Expression> &input_expr_seq,
             const IndexSeq &gold_seq) override;
     void build_output(const std::vector<dynet::expr::Expression> &input_expr_seq,
         IndexSeq &predicted_seq) override;
+protected:
+    dynet::ComputationGraph *pcg;
+    DenseLayer softmax_layer;
+};
+
+/******************
+ * CRF Bare output.
+ * for general.
+ * *Attention:* this implementation is different from the previous CRFOutput implementation
+ ******************/
+
+class CrfBareOutput : public BareOutputBase
+{
+
+public:
+    CrfBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim);
+
+public:
+    void new_graph(dynet::ComputationGraph &cg) override;
+    dynet::expr::Expression
+        build_output_loss(const std::vector<dynet::expr::Expression>& input_expr_seq,
+            const std::vector<Index>& gold_output_seq) override;
+    void build_output(const std::vector<dynet::expr::Expression>& input_expr_seq,
+        std::vector<Index>& pred_output_seq) override;
+private:
+    // `to` keeps unchange when viterbi.
+    unsigned flat_transition_index(unsigned from, unsigned to){ return from + tagdict_sz * to; }
+protected:
+    std::size_t tagdict_sz;
+    DenseLayer state_score_layer;
+    dynet::LookupParameter init_score_lookup_param;
+    dynet::LookupParameter transition_score_lookup_param;
+    dynet::ComputationGraph *pcg;
 };
 
 // softmax layer
@@ -349,14 +396,6 @@ void CRFOutput::new_graph(dynet::ComputationGraph &cg)
     emit_layer.new_graph(cg) ;
 }
 
-/* Bare Output Base */
-inline
-void BareOutputBase::new_graph(dynet::ComputationGraph &cg)
-{
-    pcg = &cg;
-    softmax_layer.new_graph(cg);
-}
-
 inline 
 void BareOutputBase::concate_input_expr_ptr_group(const std::vector<std::vector<dynet::expr::Expression>*> &input_expr_ptr_group_seq,
     std::vector<dynet::expr::Expression> &concated_input_expr_cont)
@@ -399,6 +438,15 @@ void BareOutputBase::build_output(const std::vector<std::vector<dynet::expr::Exp
 }
 
 /* Sample BareOutput Base */
+
+/* Bare Output Base */
+inline
+void SimpleBareOutput::new_graph(dynet::ComputationGraph &cg)
+{
+    pcg = &cg;
+    softmax_layer.new_graph(cg);
+}
+
 inline
 dynet::expr::Expression
 SimpleBareOutput::build_output_loss(const std::vector<dynet::expr::Expression> &input_expr_seq,
@@ -430,6 +478,18 @@ void SimpleBareOutput::build_output(const std::vector<dynet::expr::Expression> &
     }
     swap(predicted_seq, tmp_pred_seq);
 }
+
+/************
+ * crf bare output class.
+ **/
+
+inline
+void CrfBareOutput::new_graph(dynet::ComputationGraph& cg)
+{
+    state_score_layer.new_graph(cg);
+    pcg = &cg;
+}
+
 
 /******* Softmax layer **********/
 

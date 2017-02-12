@@ -3,10 +3,6 @@ cmake_minimum_required(VERSION 2.8 FATAL_ERROR)
 
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-if(NOT WIN32)
-    set(CMAKE_CXX_FLAGS "-Wall -std=c++11 -O3 -g")
-endif()
-
 set (EXECUTABLE_OUTPUT_PATH ${PROJECT_SOURCE_DIR}/bin)
 
 enable_testing()
@@ -22,11 +18,9 @@ function(find_mkl)
   find_library(MKL_CORE_LIB NAMES "mkl_intel_lp64" "mkl_intel_thread" "mkl_core"
                PATHS ${MKL_ROOT} ${MKL_ROOT}/lib/${MKL_ARCH}
                DOC "MKL core library path")
-  MESSAGE("core lib: " ${MKL_CORE_LIB})
   find_library(MKL_COMPILER_LIB NAMES "libiomp5(md.so)?"
                PATHS ${MKL_ROOT} ${MKL_ROOT}/../compiler/lib/${MKL_ARCH} ${MKL_ROOT}/../lib/${MKL_ARCH}_lin
                DOC "MKL compiler lib (for threaded MKL)")
-  MESSAGE("compiler lib: " ${MKL_COMPILER_LIB})
   if(MKL_INCLUDE_DIR AND MKL_CORE_LIB AND MKL_COMPILER_LIB)
       get_filename_component(MKL_CORE_LIB_DIR ${MKL_CORE_LIB} PATH)
       get_filename_component(MKL_COMPILER_LIB_DIR ${MKL_COMPILER_LIB} PATH)
@@ -81,7 +75,6 @@ if(WIN32)
     #set(LIBS ${LIBS} ${Boost_LIBRARIES})
     #add_definitions(-DBOOST_ALL_DYN_LINK)
     set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} /LIBPATH:${Boost_LIBRARY_DIRS}")
-    MESSAGE(${LIBS} ${Boost_LIBRARIES})
 else()
     set(LIBS ${LIBS} ${Boost_LIBRARIES} pthread)
 endif()
@@ -130,9 +123,9 @@ set(LIBS ${LIBS} ${CMAKE_THREAD_LIBS_INIT})
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_FAST_MATH")
 if (MKL OR MKL_ROOT)
   find_mkl()  # sets include/lib directories and sets ${MKL_LIBS} needed for linking
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
-  set(LIBS ${LIBS} ${MKL_LIBS})
-  MESSAGE(${LIBS})
+  #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEIGEN_USE_MKL_ALL")
+  set(LIBS ${LIBS})
+  #set(LIBS ${LIBS} ${MKL_LIBS})
 endif()
 
 ### compiler options(specific)

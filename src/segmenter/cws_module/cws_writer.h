@@ -40,7 +40,7 @@ inline
 void SegmentorWriter::write(const std::u32string &charseq, const std::vector<Index> &tagseq)
 {
     if( charseq.size() == 0 ){ writeline(""); return; }
-    std::vector<std::u32string> wordseq = token_module::generate_wordseq_from_chartagseq(charseq, tagseq);
+    std::vector<std::u32string> wordseq = token_module::generate_wordseq_from_not_valid_chartagseq(charseq, tagseq);
     std::ostringstream oss;
     oss << conv->encode(wordseq[0]);
     for( std::size_t i = 1; i < wordseq.size(); ++i )

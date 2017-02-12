@@ -306,7 +306,7 @@ void NERCRFDCModelHandler::train(const vector<IndexSeq> *p_dynamic_sents, const 
                                         dropout_rate , 
                                         training_stat4trivial.get());
             dynet::real loss =  as_scalar(cg->forward(loss_expr));
-            cg->backward();
+            cg->backward(loss_expr);
             sgd.update(1.0f);
             delete cg;
             if (training_stat4trivial) training_stat4trivial->loss += loss;

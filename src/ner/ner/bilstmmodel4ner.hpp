@@ -507,7 +507,7 @@ struct BILSTMModel4NER
             // if statistic , calc output at timestep t
             if (p_stat != nullptr)
             {
-                vector<float> output_values = as_vector(cg.incremental_forward());
+                vector<float> output_values = as_vector(cg.incremental_forward(tag_output_layer_output_at_timestep_t ));
                 float max_value = output_values[0];
                 Index tag_id_with_max_value = 0;
                 for (unsigned i = 1; i < NER_LAYER_OUTPUT_DIM; ++i)
@@ -574,8 +574,8 @@ struct BILSTMModel4NER
             Expression bilstm_pretag_merge_exp = bilstm_pretag_merge_layer->build_graph(l2r_lstm_output_exp_cont[i],
                 r2l_lstm_output_exp_cont[i], pretag_lookup_exp);
             Expression tag_hidden_layer_output_at_timestep_t = dynet::expr::rectify(bilstm_pretag_merge_exp);
-            output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t); 
-            vector<float> output_values = as_vector(cg.incremental_forward());
+            Expression output_expr = output_linear_layer->build_graph(tag_hidden_layer_output_at_timestep_t); 
+            vector<float> output_values = as_vector(cg.incremental_forward(output_expr));
             float max_value = output_values[0];
             unsigned tag_id_with_max_value = 0;
             for (unsigned i = 1; i < NER_LAYER_OUTPUT_DIM; ++i)

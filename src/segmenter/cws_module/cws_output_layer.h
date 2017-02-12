@@ -93,15 +93,5 @@ struct CWSSimpleOutputNew : SimpleOutput
 
 };
 
-/******************************************************
- * Simple Bare Output for Segmentor
- ******************************************************/
-struct CWSSimpleBareOutput : public SimpleBareOutput
-{
-    CWSSimpleBareOutput(dynet::Model *m, unsigned input_dim, unsigned output_dim);
-    void build_output(const std::vector<dynet::expr::Expression>& input_expr_seq, std::vector<Index>& out_pred_seq) override;
-};
-
-
 } // end of namespace slnn
 #endif 
