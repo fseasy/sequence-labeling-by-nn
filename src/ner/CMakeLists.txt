@@ -33,9 +33,10 @@ set(ner_common_libs
     ${common_libs}
 )
 
-add_subdirectory(ner)   
+add_subdirectory(ner_cl)   
 add_subdirectory(ner_doublechannel)
 add_subdirectory(ner_crf_dc)
 add_subdirectory(ner_crf)
 
-add_subdirectory(ner_single_classification)
+#add_subdirectory(ner_single_classification)
+ADD_SUBDIRECTORY(mlp)
