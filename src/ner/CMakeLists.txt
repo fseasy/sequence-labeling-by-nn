@@ -12,6 +12,9 @@ set(ner_modelhandler_dir
     ${ner_base_dir}/model_handler
 )
 
+
+SET(ner_module ${ner_base_dir}/module)
+
 # single input model
 set(single_input_model_headers
     ${ner_base_model_dir}/input2D_model.h
@@ -32,6 +35,7 @@ set(ner_common_headers
 set(ner_common_libs
     ${common_libs}
 )
+
 
 add_subdirectory(ner_cl)   
 add_subdirectory(ner_doublechannel)

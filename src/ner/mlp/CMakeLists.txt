@@ -2,6 +2,10 @@ FILE(GLOB dep_token_module token_module.*)
 FILE(GLOB dep_structure_param_module structure_param_module*)
 FILE(GLOB dep_nn_module nn_module4cl*)
 
+FILE(GLOB dep_io ${ner_module}/ner_reader.* 
+				 ${source_directory}/utils/reader.* 
+				 ${source_directory}/utils/writer.*)
+
 SET(program_name "cl")
 
 ADD_EXECUTABLE( ${program_name}
@@ -9,6 +13,7 @@ ADD_EXECUTABLE( ${program_name}
 				${dep_token_module}
 				${dep_structure_param_module}
 				${dep_nn_module}
+				${dep_io}
 				)
 
 if (WITH_CUDA_BACKEND)

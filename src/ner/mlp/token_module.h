@@ -3,6 +3,10 @@
 
 #include <vector>
 #include <string>
+#include <iostream>
+
+#include "ner/module/ner_reader.h"
+
 namespace slnn{
 namespace ner{
 namespace token_module{
@@ -16,9 +20,14 @@ namespace token_module{
 
 /**
  * annotated instance structure. no copy, no share. 
- * WORD_POS#NER
+ * WORD_POS#NER\tWORD_POS#NER
  *
  **/
+
+const char32_t PIECE_DELIM = U'\t';
+const char32_t WORD_POS_DELIM = U'_';
+const char32_t POS_NER_DELIM = U'#';
+
 
 struct UnannotatedInstance
 {
@@ -42,7 +51,55 @@ struct AnnotatedInstance: public UnannotatedInstance
     }
 };
 
-
+void read_annotated_data2raw_instance_list(std::istream &is,
+    std::vector<AnnotatedInstance> &raw_instance_list)
+{
+    using std::swap;
+    reader::NerUnicodeReader reader(is,
+        charcode::EncodingDetector::get_detector()->detect_and_set_encoding(is));
+    std::u32string uline;
+    std::size_t line_cnt = 0;
+    std::vector<AnnotatedInstance> instance_list;
+    auto get_token = [](const std::u32string &piece, std::u32string& word,
+        std::u32string& pos_tag, std::u32string& ner_tag)
+    {
+        //TODO: FINISH it !
+    };
+    while( reader.readline(uline) )
+    {
+        ++line_cnt;
+        std::size_t len = uline.length();
+        if( len == 0 ){ continue; }
+        AnnotatedInstance instance;
+        // WORD_POS#NER\tWORD_POS#NER
+        std::size_t piece_spos = 0U,
+            piece_epos = uline.find(piece_spos, PIECE_DELIM);
+        while( piece_epos != std::u32string::npos )
+        {
+            auto underline_pos = uline.rfind(WORD_POS_DELIM, piece_epos);
+            auto sharp_pos = uline.rfind(POS_NER_DELIM, piece_epos);
+            if( underline_pos == std::u32string::npos ||
+                underline_pos <= piece_spos ||
+                sharp_pos == std::u32string::npos ||
+                sharp_pos <= underline_pos )
+            {
+                // no toleration for training data.
+                throw std::runtime_error("ill-formated annotated instance at line: " +
+                    std::to_string(line_cnt));
+            }
+            instance.push_back(uline.substr(piece_spos, underline_pos - piece_spos),
+                uline.substr(underline_pos + 1, sharp_pos - underline_pos - 1),
+                uline.substr(sharp_pos + 1, piece_epos - sharp_pos - 1));
+            piece_spos = piece_epos + 1;
+            piece_epos = uline.find(piece_spos, PIECE_DELIM);
+        }
+        // the last part
+        auto underline_pos = uline.rfind(WORD_POS_DELIM);
+        auto sharp_pos = uline.rfind()
+        std::size_t underline_pos = uline.rfind(U"_");
+        std::size_t sharp_pos = u
+    }
+}
 
 } // namespace token_module
 } // namespace ner
