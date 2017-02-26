@@ -60,10 +60,22 @@ void read_annotated_data2raw_instance_list(std::istream &is,
     std::u32string uline;
     std::size_t line_cnt = 0;
     std::vector<AnnotatedInstance> instance_list;
-    auto get_token = [](const std::u32string &piece, std::u32string& word,
+    auto get_token = [&line_cnt](const std::u32string &piece, std::u32string& word,
         std::u32string& pos_tag, std::u32string& ner_tag)
     {
         //TODO: FINISH it !
+        auto underline_pos = piece.rfind(WORD_POS_DELIM),
+            sharp_pos = piece.rfind(POS_NER_DELIM);
+        if( underline_pos == std::u32string::npos ||
+            sharp_pos == std::u32string::npos ||
+            sharp_pos < underline_pos )
+        {
+            throw std::runtime_error("ill-formated annotated instance at line: " +
+                line_cnt);
+        }
+        word = piece.substr(0, underline_pos);
+        pos_tag = piece.substr(underline_pos + 1, sharp_pos - underline_pos - 1);
+        ner_tag = piece.substr(sharp_pos + 1);
     };
     while( reader.readline(uline) )
     {
@@ -76,29 +88,21 @@ void read_annotated_data2raw_instance_list(std::istream &is,
             piece_epos = uline.find(piece_spos, PIECE_DELIM);
         while( piece_epos != std::u32string::npos )
         {
-            auto underline_pos = uline.rfind(WORD_POS_DELIM, piece_epos);
-            auto sharp_pos = uline.rfind(POS_NER_DELIM, piece_epos);
-            if( underline_pos == std::u32string::npos ||
-                underline_pos <= piece_spos ||
-                sharp_pos == std::u32string::npos ||
-                sharp_pos <= underline_pos )
-            {
-                // no toleration for training data.
-                throw std::runtime_error("ill-formated annotated instance at line: " +
-                    std::to_string(line_cnt));
-            }
-            instance.push_back(uline.substr(piece_spos, underline_pos - piece_spos),
-                uline.substr(underline_pos + 1, sharp_pos - underline_pos - 1),
-                uline.substr(sharp_pos + 1, piece_epos - sharp_pos - 1));
+            std::u32string word, pos_tag, ner_tag;
+            get_token(uline.substr(piece_spos, piece_epos - piece_spos), word, pos_tag, ner_tag);
+            instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
             piece_spos = piece_epos + 1;
+            // if piece_spos >= size(), always return std::u32string::npos
             piece_epos = uline.find(piece_spos, PIECE_DELIM);
         }
         // the last part
-        auto underline_pos = uline.rfind(WORD_POS_DELIM);
-        auto sharp_pos = uline.rfind()
-        std::size_t underline_pos = uline.rfind(U"_");
-        std::size_t sharp_pos = u
+        std::u32string word, pos_tag, ner_tag;
+        get_token(uline.substr(piece_spos), word, pos_tag, ner_tag);
+        instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
+        // Annotated Instance has implicitly-defined Move-Assignment Operator
+        instance_list.push_back(std::move(instance));
     }
+    swap(raw_instance_list, instance_list);
 }
 
 } // namespace token_module
