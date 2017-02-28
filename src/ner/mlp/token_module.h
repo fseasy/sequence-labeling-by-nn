@@ -24,9 +24,10 @@ namespace token_module{
  *
  **/
 
-const char32_t PIECE_DELIM = U'\t';
-const char32_t WORD_POS_DELIM = U'_';
-const char32_t POS_NER_DELIM = U'#';
+constexpr char32_t PIECE_DELIM = U'\t';
+constexpr char32_t TRAIN_WORD_POS_DELIM = U'/';
+constexpr char32_t DEVEL_WORD_POS_DELIM = U'_';
+constexpr char32_t POS_NER_DELIM = U'#';
 
 
 struct UnannotatedInstance
@@ -38,6 +39,7 @@ struct UnannotatedInstance
     {
         word_seq.push_back(std::move(word)); pos_tag_seq.push_back(std::move(pos_tag));
     }
+    std::u32string to_string();
 };
 
 struct AnnotatedInstance: public UnannotatedInstance
@@ -49,8 +51,11 @@ struct AnnotatedInstance: public UnannotatedInstance
         UnannotatedInstance::push_back(std::move(word), std::move(pos_tag));
         ner_tag_seq.push_back(std::move(ner_tag));
     }
+    std::u32string to_string();
 };
 
+
+inline
 void read_annotated_data2raw_instance_list(std::istream &is,
     std::vector<AnnotatedInstance> &raw_instance_list)
 {
@@ -61,11 +66,13 @@ void read_annotated_data2raw_instance_list(std::istream &is,
     std::size_t line_cnt = 0;
     std::vector<AnnotatedInstance> instance_list;
     auto get_token = [&line_cnt](const std::u32string &piece, std::u32string& word,
-        std::u32string& pos_tag, std::u32string& ner_tag)
+        std::u32string& pos_tag, std::u32string& ner_tag,
+        char32_t word_pos_delim=TRAIN_WORD_POS_DELIM,
+        char32_t pos_ner_delim=POS_NER_DELIM)
     {
         //TODO: FINISH it !
-        auto underline_pos = piece.rfind(WORD_POS_DELIM),
-            sharp_pos = piece.rfind(POS_NER_DELIM);
+        auto underline_pos = piece.rfind(word_pos_delim),
+            sharp_pos = piece.rfind(pos_ner_delim);
         if( underline_pos == std::u32string::npos ||
             sharp_pos == std::u32string::npos ||
             sharp_pos < underline_pos )
