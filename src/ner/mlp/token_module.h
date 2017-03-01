@@ -4,8 +4,9 @@
 #include <vector>
 #include <string>
 #include <iostream>
-
+#include <sstream>
 #include "ner/module/ner_reader.h"
+#include "trivial/lookup_table/lookup_table.h"
 
 namespace slnn{
 namespace ner{
@@ -26,7 +27,7 @@ namespace token_module{
 
 constexpr char32_t PIECE_DELIM = U'\t';
 constexpr char32_t TRAIN_WORD_POS_DELIM = U'/';
-constexpr char32_t DEVEL_WORD_POS_DELIM = U'_';
+constexpr char32_t TEST_WORD_POS_DELIM = U'_';
 constexpr char32_t POS_NER_DELIM = U'#';
 
 
@@ -54,63 +55,81 @@ struct AnnotatedInstance: public UnannotatedInstance
     std::u32string to_string();
 };
 
+struct TokenDict
+{
+    slnn::trivial::LookupTableWithReplace<std::u32string> word_dict;
+    slnn::trivial::LookupTable<std::u32string> pos_tag_dict;
+    slnn::trivial::LookupTable<std::u32string> neg_tag_dict;
+};
 
-inline
-void read_annotated_data2raw_instance_list(std::istream &is,
-    std::vector<AnnotatedInstance> &raw_instance_list)
+AnnotatedInstance line2annotated_instance(const std::u32string& uline);
+
+UnannotatedInstance line2unannotated_instance(const std::u32string &uline);
+
+template<typename InstanceType>
+std::vector<InstanceType>
+dataset2instance_list(std::istream& is, InstanceType(*line2instance_func)(const std::u32string&));
+
+std::vector<AnnotatedInstance>
+annotated_dataset2instance_list(std::ifstream &is);
+
+std::vector<UnannotatedInstance>
+unannotated_dataset2instance_list(std::ifstream &is);
+
+TokenDict build_token_dict(const std::vector<AnnotatedInstance>&);
+
+/***************************
+ * Inline Implementation
+ ***************************/
+
+template<typename InstanceType>
+std::vector<InstanceType>
+dataset2instance_list(std::istream& is, 
+    InstanceType(*line2instance_func)(const std::u32string&))
 {
     using std::swap;
     reader::NerUnicodeReader reader(is,
         charcode::EncodingDetector::get_detector()->detect_and_set_encoding(is));
     std::u32string uline;
     std::size_t line_cnt = 0;
-    std::vector<AnnotatedInstance> instance_list;
-    auto get_token = [&line_cnt](const std::u32string &piece, std::u32string& word,
-        std::u32string& pos_tag, std::u32string& ner_tag,
-        char32_t word_pos_delim=TRAIN_WORD_POS_DELIM,
-        char32_t pos_ner_delim=POS_NER_DELIM)
-    {
-        //TODO: FINISH it !
-        auto underline_pos = piece.rfind(word_pos_delim),
-            sharp_pos = piece.rfind(pos_ner_delim);
-        if( underline_pos == std::u32string::npos ||
-            sharp_pos == std::u32string::npos ||
-            sharp_pos < underline_pos )
-        {
-            throw std::runtime_error("ill-formated annotated instance at line: " +
-                line_cnt);
-        }
-        word = piece.substr(0, underline_pos);
-        pos_tag = piece.substr(underline_pos + 1, sharp_pos - underline_pos - 1);
-        ner_tag = piece.substr(sharp_pos + 1);
-    };
+    std::vector<InstanceType> instance_list;
+
     while( reader.readline(uline) )
     {
         ++line_cnt;
         std::size_t len = uline.length();
         if( len == 0 ){ continue; }
-        AnnotatedInstance instance;
-        // WORD_POS#NER\tWORD_POS#NER
-        std::size_t piece_spos = 0U,
-            piece_epos = uline.find(piece_spos, PIECE_DELIM);
-        while( piece_epos != std::u32string::npos )
-        {
-            std::u32string word, pos_tag, ner_tag;
-            get_token(uline.substr(piece_spos, piece_epos - piece_spos), word, pos_tag, ner_tag);
-            instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
-            piece_spos = piece_epos + 1;
-            // if piece_spos >= size(), always return std::u32string::npos
-            piece_epos = uline.find(piece_spos, PIECE_DELIM);
-        }
-        // the last part
-        std::u32string word, pos_tag, ner_tag;
-        get_token(uline.substr(piece_spos), word, pos_tag, ner_tag);
-        instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
         // Annotated Instance has implicitly-defined Move-Assignment Operator
-        instance_list.push_back(std::move(instance));
+        try
+        {
+            instance_list.push_back(line2instance_func(uline));
+        }
+        catch( std::runtime_error & e )
+        {
+            // catch and add the line cnt info.
+            std::ostringstream oss;
+            oss << e.what() << " at line: " << line_cnt;
+            throw std::runtime_error(oss.str());
+        }
+
     }
-    swap(raw_instance_list, instance_list);
+    return instance_list;
 }
+
+inline
+std::vector<AnnotatedInstance>
+annotated_dataset2instance_list(std::ifstream &is)
+{
+    return dataset2instance_list(is, line2annotated_instance);
+}
+
+inline 
+std::vector<UnannotatedInstance>
+unannotated_dataset2instance_list(std::ifstream &is)
+{
+    return dataset2instance_list(is, &line2unannotated_instance);
+}
+
 
 } // namespace token_module
 } // namespace ner
