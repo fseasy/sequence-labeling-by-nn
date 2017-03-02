@@ -107,10 +107,25 @@ UnannotatedInstance line2unannotated_instance(const std::u32string &uline)
     return instance;
 }
 
-TokenDict build_token_dict(const std::vector<AnnotatedInstance>&)
+TokenDict build_token_dict(const std::vector<AnnotatedInstance>& instance_list)
 {
     // !TODO
     TokenDict token_dict;
+    for( const auto& instance : instance_list )
+    {
+        for( const auto& word : instance.word_seq )
+        {
+            token_dict.word_dict.convert(word);
+        }
+        for( const auto& pos : instance.pos_tag_seq )
+        {
+            token_dict.pos_tag_dict.convert(pos);
+        }
+        for( const auto& ner : instance.ner_tag_seq )
+        {
+            token_dict.ner_tag_dict.convert(ner);
+        }
+    }
     return token_dict;
 }
 

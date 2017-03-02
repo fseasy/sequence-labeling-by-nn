@@ -57,9 +57,9 @@ struct AnnotatedInstance: public UnannotatedInstance
 
 struct TokenDict
 {
-    slnn::trivial::LookupTableWithReplace<std::u32string> word_dict;
+    slnn::trivial::LookupTable<std::u32string> word_dict;
     slnn::trivial::LookupTable<std::u32string> pos_tag_dict;
-    slnn::trivial::LookupTable<std::u32string> neg_tag_dict;
+    slnn::trivial::LookupTable<std::u32string> ner_tag_dict;
 };
 
 AnnotatedInstance line2annotated_instance(const std::u32string& uline);
