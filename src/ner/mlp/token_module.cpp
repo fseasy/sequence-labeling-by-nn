@@ -4,7 +4,7 @@ namespace slnn{
 namespace ner{
 namespace token_module{
 
-std::u32string UnannotatedInstance::to_string()
+Str UnannotatedInstance::to_string() const
 {
     std::basic_stringstream<char32_t> iss;
     if( size() > 0 )
@@ -18,7 +18,7 @@ std::u32string UnannotatedInstance::to_string()
     return iss.str();
 }
 
-std::u32string AnnotatedInstance::to_string()
+Str AnnotatedInstance::to_string() const
 {
     std::basic_stringstream<char32_t> iss;
     if( size() > 0 )
@@ -34,19 +34,19 @@ std::u32string AnnotatedInstance::to_string()
     return iss.str();
 }
 
-AnnotatedInstance line2annotated_instance(const std::u32string& uline)
+AnnotatedInstance line2annotated_instance(const Str& uline)
 {
     AnnotatedInstance instance;
     // WORD_POS#NER\tWORD_POS#NER
-    auto get_token = [](const std::u32string &piece, std::u32string& word,
-        std::u32string& pos_tag, std::u32string& ner_tag,
+    auto get_token = [](const Str &piece, Str& word,
+        Str& pos_tag, Str& ner_tag,
         char32_t word_pos_delim=TRAIN_WORD_POS_DELIM,
         char32_t pos_ner_delim=POS_NER_DELIM)
     {
         auto underline_pos = piece.rfind(word_pos_delim),
             sharp_pos = piece.rfind(pos_ner_delim);
-        if( underline_pos == std::u32string::npos ||
-            sharp_pos == std::u32string::npos ||
+        if( underline_pos == Str::npos ||
+            sharp_pos == Str::npos ||
             sharp_pos < underline_pos )
         {
             throw std::runtime_error("ill-formated annotated instance");
@@ -57,32 +57,32 @@ AnnotatedInstance line2annotated_instance(const std::u32string& uline)
     };
     std::size_t piece_spos = 0U,
         piece_epos = uline.find(PIECE_DELIM, piece_spos);
-    while( piece_epos != std::u32string::npos )
+    while( piece_epos != Str::npos )
     {
-        std::u32string word, pos_tag, ner_tag;
+        Str word, pos_tag, ner_tag;
         get_token(uline.substr(piece_spos, piece_epos - piece_spos), word, pos_tag, ner_tag);
         instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
         piece_spos = piece_epos + 1;
-        // if piece_spos >= size(), always return std::u32string::npos
+        // if piece_spos >= size(), always return Str::npos
         piece_epos = uline.find(PIECE_DELIM, piece_spos);
     }
     // the last part
-    std::u32string word, pos_tag, ner_tag;
+    Str word, pos_tag, ner_tag;
     get_token(uline.substr(piece_spos), word, pos_tag, ner_tag);
     instance.push_back(std::move(word), std::move(pos_tag), std::move(ner_tag));
     return instance;
 }
 
-UnannotatedInstance line2unannotated_instance(const std::u32string &uline)
+UnannotatedInstance line2unannotated_instance(const Str &uline)
 {
     UnannotatedInstance instance;
     // WORD_POS#NER\tWORD_POS#NER
-    auto get_token = [](const std::u32string &piece, std::u32string& word,
-        std::u32string& pos_tag,
+    auto get_token = [](const Str &piece, Str& word,
+        Str& pos_tag,
         char32_t word_pos_delim=TEST_WORD_POS_DELIM)
     {
         auto underline_pos = piece.rfind(word_pos_delim);
-        if( underline_pos == std::u32string::npos)
+        if( underline_pos == Str::npos)
         {
             throw std::runtime_error("ill-formated annotated instance");
         }
@@ -91,17 +91,17 @@ UnannotatedInstance line2unannotated_instance(const std::u32string &uline)
     };
     std::size_t piece_spos = 0U,
         piece_epos = uline.find(PIECE_DELIM, piece_spos);
-    while( piece_epos != std::u32string::npos )
+    while( piece_epos != Str::npos )
     {
-        std::u32string word, pos_tag;
+        Str word, pos_tag;
         get_token(uline.substr(piece_spos, piece_epos - piece_spos), word, pos_tag);
         instance.push_back(std::move(word), std::move(pos_tag));
         piece_spos = piece_epos + 1;
-        // if piece_spos >= size(), always return std::u32string::npos
+        // if piece_spos >= size(), always return Str::npos
         piece_epos = uline.find(PIECE_DELIM, piece_spos);
     }
     // the last part
-    std::u32string word, pos_tag;
+    Str word, pos_tag;
     get_token(uline.substr(piece_spos), word, pos_tag);
     instance.push_back(std::move(word), std::move(pos_tag));
     return instance;
@@ -127,6 +127,77 @@ TokenDict build_token_dict(const std::vector<AnnotatedInstance>& instance_list)
     }
     token_dict.freeze_and_set_unk();
     return token_dict;
+}
+
+
+Str InstanceFeature::to_string() const
+{
+    std::basic_stringstream<char32_t> oss;
+    auto out1pair = [&oss, this](std::size_t pos)
+    {
+        oss << std::to_string(this->word_feat->at(pos)).c_str() << TEST_WORD_POS_DELIM
+            << std::to_string(this->pos_tag_feat->at(pos)).c_str();
+    };
+    if( size() > 0U )
+    {
+        out1pair(0);
+    }
+    for( std::size_t i = 1U; i < size(); ++i )
+    {
+        oss << U' ';
+        out1pair(i);
+    }
+    return oss.str();
+}
+
+Str InstanceFeature::to_char_string(const TokenDict& dict) const
+{
+    std::basic_stringstream<char32_t> oss;
+    auto out1pair = [&dict, &oss, this](std::size_t pos)
+    {
+        Str word;
+        InstanceFeature::FeatIndex word_feat = this->word_feat->at(pos);
+        if( word_feat == dict.word_dict.get_unk_idx() )
+        {
+            word = U"_UNK_";
+        }
+        else{ word = dict.word_dict.convert_ban_unk(word_feat); }
+        oss << word
+            << TEST_WORD_POS_DELIM
+            << dict.pos_tag_dict.convert_ban_unk(this->pos_tag_feat->at(pos));
+    };
+    if( size() > 0U )
+    {
+        out1pair(0U);
+    }
+    for( std::size_t i = 1U; i < size(); ++i )
+    {
+        oss << U' ';
+        out1pair(i);
+    }
+    return oss.str();
+}
+
+NerTagIndexSeq ner_seq2ner_index_seq(const StrSeq& ner_seq, const TokenDict& dict)
+{
+    std::size_t len = ner_seq.size();
+    NerTagIndexSeq ner_index_seq(len);
+    for( std::size_t i = 0; i < len; ++i )
+    {
+        ner_index_seq[i] = dict.ner_tag_dict.convert(ner_seq[i]);
+    }
+    return ner_index_seq;
+}
+
+StrSeq ner_index_seq2ner_seq(const NerTagIndexSeq& index_seq, const TokenDict &dict)
+{
+    std::size_t len = index_seq.size();
+    StrSeq ner_tag_seq(len);
+    for( std::size_t i = 0; i < len; ++i )
+    {
+        ner_tag_seq[i] = dict.ner_tag_dict.convert_ban_unk(index_seq[i]);
+    }
+    return ner_tag_seq;
 }
 
 } // end of namespace token-module

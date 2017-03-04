@@ -33,35 +33,39 @@ constexpr char32_t POS_NER_DELIM = U'#';
 * WORD_POS#NER\tWORD_POS#NER
 *
 **/
+
+using Str = std::u32string;
+using StrSeq = std::vector<Str>;
+
 struct UnannotatedInstance
 {
-    std::vector<std::u32string> word_seq;
-    std::vector<std::u32string> pos_tag_seq;
-    std::size_t size(){ return word_seq.size(); }
-    void push_back(const std::u32string &&word, const std::u32string &&pos_tag)
+    StrSeq word_seq;
+    StrSeq pos_tag_seq;
+    std::size_t size() const { return word_seq.size(); }
+    void push_back(const Str &&word, const Str &&pos_tag)
     {
         word_seq.push_back(std::move(word)); pos_tag_seq.push_back(std::move(pos_tag));
     }
-    std::u32string to_string();
+    Str to_string() const ;
 };
 
 struct AnnotatedInstance: public UnannotatedInstance
 {
-    std::vector<std::u32string> ner_tag_seq;
-    void push_back(const std::u32string &&word, const std::u32string &&pos_tag, 
-                   const std::u32string &&ner_tag)
+    StrSeq ner_tag_seq;
+    void push_back(const Str &&word, const Str &&pos_tag, 
+                   const Str &&ner_tag)
     {
         UnannotatedInstance::push_back(std::move(word), std::move(pos_tag));
         ner_tag_seq.push_back(std::move(ner_tag));
     }
-    std::u32string to_string();
+    Str to_string() const ;
 };
 
 struct TokenDict
 {
-    slnn::trivial::LookupTable<std::u32string> word_dict;
-    slnn::trivial::LookupTable<std::u32string> pos_tag_dict;
-    slnn::trivial::LookupTable<std::u32string> ner_tag_dict;
+    slnn::trivial::LookupTable<Str> word_dict;
+    slnn::trivial::LookupTable<Str> pos_tag_dict;
+    slnn::trivial::LookupTable<Str> ner_tag_dict;
 
 
     void freeze_and_set_unk()
@@ -69,9 +73,9 @@ struct TokenDict
         word_dict.freeze(); pos_tag_dict.freeze(); ner_tag_dict.freeze(); 
         word_dict.set_unk();
     }
-    std::size_t word_num_with_unk(){ return word_dict.size(); }
-    std::size_t pos_tag_num(){ return pos_tag_dict.size(); }
-    std::size_t ner_tag_num(){ return ner_tag_dict.size(); }
+    std::size_t word_num_with_unk() const { return word_dict.size(); }
+    std::size_t pos_tag_num() const { return pos_tag_dict.size(); }
+    std::size_t ner_tag_num() const { return ner_tag_dict.size(); }
 };
 
 /******
@@ -83,20 +87,27 @@ struct InstanceFeature
     using FeatSeq = std::vector<FeatIndex>;
     std::shared_ptr<FeatSeq> word_feat;
     std::shared_ptr<FeatSeq> pos_tag_feat;
-    std::shared_ptr<FeatSeq> ner_tag_feat;
+
+    std::size_t size() const { if( word_feat ){ return word_feat->size(); } else{ return 0U; } }
+    Str to_string() const;
+    Str to_char_string(const TokenDict&) const;
+
 };
+
+using NerTagIndex = int;
+using NerTagIndexSeq = std::vector<NerTagIndex>;
 
 /*****
  * interface.
  ******/
 
-AnnotatedInstance line2annotated_instance(const std::u32string& uline);
+AnnotatedInstance line2annotated_instance(const Str& uline);
 
-UnannotatedInstance line2unannotated_instance(const std::u32string &uline);
+UnannotatedInstance line2unannotated_instance(const Str& uline);
 
 template<typename InstanceType>
 std::vector<InstanceType>
-dataset2instance_list(std::istream& is, InstanceType(*line2instance_func)(const std::u32string&));
+dataset2instance_list(std::istream& is, InstanceType(*line2instance_func)(const Str&));
 
 std::vector<AnnotatedInstance>
 annotated_dataset2instance_list(std::ifstream &is);
@@ -106,8 +117,15 @@ unannotated_dataset2instance_list(std::ifstream &is);
 
 TokenDict build_token_dict(const std::vector<AnnotatedInstance>&);
 
+/**********
+ *  feature, including word, pos-tag
+ **********/
 template<typename InstanceT>
 InstanceFeature instance2feature(const InstanceT&, const TokenDict&);
+
+NerTagIndexSeq ner_seq2ner_index_seq(const StrSeq&, const TokenDict&);
+StrSeq ner_index_seq2ner_seq(const NerTagIndexSeq& ner_index_seq, const TokenDict&);
+
 
 /***************************
  * Inline Implementation
@@ -116,12 +134,12 @@ InstanceFeature instance2feature(const InstanceT&, const TokenDict&);
 template<typename InstanceType>
 std::vector<InstanceType>
 dataset2instance_list(std::istream& is, 
-    InstanceType(*line2instance_func)(const std::u32string&))
+    InstanceType(*line2instance_func)(const Str&))
 {
     using std::swap;
     reader::NerUnicodeReader reader(is,
         charcode::EncodingDetector::get_detector()->detect_and_set_encoding(is));
-    std::u32string uline;
+    Str uline;
     std::size_t line_cnt = 0;
     std::vector<InstanceType> instance_list;
 
@@ -166,7 +184,15 @@ template<typename InstanceT>
 InstanceFeature instance2feature(const InstanceT& instance, const TokenDict& dict)
 {
     InstanceFeature feat;
-
+    std::size_t len = instance.size();
+    feat.word_feat = std::make_shared<InstanceFeature::FeatSeq>(InstanceFeature::FeatSeq(len));
+    feat.pos_tag_feat = std::make_shared<InstanceFeature::FeatSeq>(InstanceFeature::FeatSeq(len));
+    for( std::size_t i = 0; i < len; ++i )
+    {
+        (*feat.word_feat)[i] = dict.word_dict.convert(instance.word_seq[i]);
+        (*feat.pos_tag_feat)[i] = dict.pos_tag_dict.convert(instance.pos_tag_seq[i]);
+    }
+    return feat;
 }
 
 } // namespace token_module

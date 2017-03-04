@@ -6,6 +6,7 @@
 #include <sys/stat.h>
 #include <string>
 #include <cstring>
+#include <sstream>
 #include <cstdio>
 
 #ifndef __linux     // WINDOWS
@@ -52,6 +53,7 @@ struct FileUtils
 
 } ;
 
+inline
 void fatal_error(const std::string &exit_msg)
 {
         BOOST_LOG_TRIVIAL(fatal) << exit_msg << "\n"
@@ -62,11 +64,13 @@ void fatal_error(const std::string &exit_msg)
         exit(1) ;
 }
 
+inline
 void varmap_key_fatal_check(boost::program_options::variables_map &var_map , const std::string &key , const std::string &exit_msg)
 {
     if(0 == var_map.count(key)) fatal_error(exit_msg) ;
 }
 
+inline
 void build_dynet_parameters(const std::string &program_name, unsigned dynet_mem, int &dynet_argc, std::shared_ptr<char *> &dynet_argv_sp)
 {
     char * program_name_cstr = new char[program_name.length() + 1](); // value initialization
@@ -106,6 +110,24 @@ void build_dynet_parameters(const std::string &program_name, unsigned dynet_mem,
         dynet_argv_sp = std::shared_ptr<char *>(dynet_argv_cstr, deleter);
     }
 }
+
+template<typename CharT>
+inline
+auto join(std::vector<std::basic_string<CharT>>& str_list, CharT delim) 
+-> std::basic_string<CharT>
+{
+    std::basic_stringstream<CharT> oss;
+    if( str_list.size() > 0U )
+    {
+        oss << str_list[0];
+    }
+    for( std::size_t i = 1U; i < str_list.size(); ++i )
+    {
+        oss << delim << str_list[i];
+    }
+    return oss.str();
+}
+
 
 } // end of namespace slnn
 

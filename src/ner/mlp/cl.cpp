@@ -1,6 +1,7 @@
 #include <vector>
 #include <fstream>
 #include <iostream>
+#include <utils/general.hpp>
 #include "ner/mlp/token_module.h"
 
 namespace token_module = slnn::ner::token_module;
@@ -44,8 +45,25 @@ int main()
     input_is.close();
     
     // token dict
-    token_module::build_token_dict(instance_list);
+    auto token_dict = token_module::build_token_dict(instance_list);
     
-    
+    // Instance 2 feature
+    std::cout << std::endl;
+    auto feat = token_module::instance2feature(instance_list[0], token_dict);
+    std::cout << conv->encode(feat.to_string()) << std::endl;
+    std::cout << conv->encode(feat.to_char_string(token_dict)) << std::endl;
+
+    feat = token_module::instance2feature(u_instance_list[1], token_dict);
+    std::cout << conv->encode(feat.to_string()) << std::endl;
+    std::cout << conv->encode(feat.to_char_string(token_dict)) << std::endl;
+
+    // get ner gold index sequence
+    std::cout << std::endl;
+    auto index_seq = token_module::ner_seq2ner_index_seq(instance_list[0].ner_tag_seq, token_dict);
+    auto ner_tag_seq = token_module::ner_index_seq2ner_seq(index_seq, token_dict);
+    std::cout << conv->encode(slnn::join(instance_list[0].ner_tag_seq, U' ')) << std::endl;
+    std::cout << conv->encode(slnn::join(ner_tag_seq, U' ')) << std::endl;
+
+
     return 0;
 }
