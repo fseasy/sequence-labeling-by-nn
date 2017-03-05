@@ -107,7 +107,8 @@ UnannotatedInstance line2unannotated_instance(const Str &uline)
     return instance;
 }
 
-TokenDict build_token_dict(const std::vector<AnnotatedInstance>& instance_list)
+std::shared_ptr<TokenDict >
+build_token_dict(const std::vector<AnnotatedInstance>& instance_list)
 {
     TokenDict token_dict;
     for( const auto& instance : instance_list )
@@ -126,7 +127,24 @@ TokenDict build_token_dict(const std::vector<AnnotatedInstance>& instance_list)
         }
     }
     token_dict.freeze_and_set_unk();
-    return token_dict;
+    return std::make_shared<TokenDict>(token_dict);
+}
+
+std::shared_ptr<WordFeatInfo>
+build_word_feat_info(const TokenDict& dict, const std::vector<InstanceFeature>& feat_list)
+{
+    WordFeatInfo info;
+    std::size_t word_num = dict.word_num_with_unk();
+    info.word_cnt_lookup.resize(word_num, 0U);
+    for( size_t i = 0; i < feat_list.size(); ++i )
+    {
+        for( InstanceFeature::FeatIndex word_id : *(feat_list[i].word_feat) )
+        {
+            ++info.word_cnt_lookup[word_id];
+        }
+    }
+    info.word_unk_index = dict.word_dict.get_unk_idx();
+    return std::make_shared<WordFeatInfo>(info);
 }
 
 

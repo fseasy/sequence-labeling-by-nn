@@ -63,6 +63,8 @@ struct AnnotatedInstance: public UnannotatedInstance
 
 struct TokenDict
 {
+    friend boost::serialization::access;
+
     slnn::trivial::LookupTable<Str> word_dict;
     slnn::trivial::LookupTable<Str> pos_tag_dict;
     slnn::trivial::LookupTable<Str> ner_tag_dict;
@@ -76,7 +78,11 @@ struct TokenDict
     std::size_t word_num_with_unk() const { return word_dict.size(); }
     std::size_t pos_tag_num() const { return pos_tag_dict.size(); }
     std::size_t ner_tag_num() const { return ner_tag_dict.size(); }
+
+    template<class Archive>
+    void serialize(Archive& ar, const unsigned int);
 };
+
 
 /******
  * will-copy, change partially( replace low-freq feature to )
@@ -97,6 +103,14 @@ struct InstanceFeature
 using NerTagIndex = int;
 using NerTagIndexSeq = std::vector<NerTagIndex>;
 
+struct WordFeatInfo
+{
+    std::vector<std::size_t> word_cnt_lookup;
+    InstanceFeature::FeatIndex word_unk_index;
+    std::size_t count(InstanceFeature::FeatIndex word_index) const { return word_cnt_lookup.at(word_index); }
+    InstanceFeature::FeatIndex get_unk_index() const noexcept{ return word_unk_index; }
+};
+
 /*****
  * interface.
  ******/
@@ -115,7 +129,9 @@ annotated_dataset2instance_list(std::ifstream &is);
 std::vector<UnannotatedInstance>
 unannotated_dataset2instance_list(std::ifstream &is);
 
-TokenDict build_token_dict(const std::vector<AnnotatedInstance>&);
+std::shared_ptr<TokenDict> build_token_dict(const std::vector<AnnotatedInstance>&);
+
+std::shared_ptr<WordFeatInfo> build_word_feat_info(const TokenDict&, const std::vector<InstanceFeature>&);
 
 /**********
  *  feature, including word, pos-tag
@@ -130,6 +146,13 @@ StrSeq ner_index_seq2ner_seq(const NerTagIndexSeq& ner_index_seq, const TokenDic
 /***************************
  * Inline Implementation
  ***************************/
+
+template <class Archive>
+void TokenDict::serialize(Archive& ar, const unsigned int)
+{
+    ar &word_dict &pos_tag_dict &ner_tag_dict;
+}
+
 
 template<typename InstanceType>
 std::vector<InstanceType>

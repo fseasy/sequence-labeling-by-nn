@@ -1,6 +1,8 @@
-FILE(GLOB dep_token_module token_module.*)
-FILE(GLOB dep_structure_param_module structure_param_module*)
-FILE(GLOB dep_nn_module nn_module4cl*)
+FILE(GLOB dep_token_module ${ner_module}/token_module.*)
+FILE(GLOB dep_structure_param_module ${ner_module}/structure_param_module*)
+FILE(GLOB dep_nn_module ${ner_module}/nn_module*)
+FILE(GLOB model_utility ${ner_module}/model_utility*)
+FILE(GLOB model_handler ${ner_module}/model_handler*)
 
 FILE(GLOB dep_io ${ner_module}/ner_reader.* 
 				 ${source_directory}/utils/reader.* 
@@ -13,6 +15,8 @@ ADD_EXECUTABLE( ${program_name}
 				${dep_token_module}
 				${dep_structure_param_module}
 				${dep_nn_module}
+				${model_utility}
+				${model_handler}
 				${dep_io}
 				)
 

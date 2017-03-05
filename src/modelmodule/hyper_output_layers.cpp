@@ -376,6 +376,29 @@ CrfBareOutput::build_output(const std::vector<dynet::expr::Expression>& input_ex
     swap(tmp_pred_tagseq, pred_tagseq);
 }
 
+std::shared_ptr<BareOutputBase>
+create_output_layer(const std::string& layer_type, dynet::Model *dynet_model, unsigned input_dim, unsigned output_dim)
+{
+    std::string name(layer_type);
+    for( char &c : name ){ c = ::tolower(c); }
+    if( name == "classification" || name == "cl" )
+    {
+        return std::shared_ptr<BareOutputBase>(new SimpleBareOutput(dynet_model, input_dim, output_dim));
+    }
+    else if( name == "pretag" )
+    {
+        throw std::logic_error("havn't implemented.");
+    }
+    else if( name == "crf" )
+    {
+        return std::shared_ptr<BareOutputBase>(new CrfBareOutput(dynet_model, input_dim, output_dim));
+    }
+    else
+    {
+        throw std::invalid_argument("un-spport output layer type: '" + layer_type + "'\n"
+            "supported including cl, pretag, crf.\n");
+    }
+}
 
 /************* SoftmaxLayer ***********/
 

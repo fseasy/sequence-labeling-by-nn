@@ -2,6 +2,7 @@
 #define MODELMODULE_HYPER_OUTPUT_LAYERS_H_
 
 #include <initializer_list>
+#include <memory>
 #include "layers.h"
 #include "utils/typedeclaration.h"
 
@@ -171,6 +172,11 @@ protected:
     dynet::LookupParameter transition_score_lookup_param;
     dynet::ComputationGraph *pcg;
 };
+
+
+std::shared_ptr<BareOutputBase>
+create_output_layer(const std::string& layer_type, dynet::Model* dynet_model, unsigned input_dim, unsigned output_dim);
+
 
 // softmax layer
 

@@ -88,6 +88,8 @@ public:
      */
     const TokenType& convert_ban_unk(Index idx) const; // if idx=unk, domain_error exception will be throw
 
+    const TokenType& convert(Index idx) const; // for compatibility
+
     void set_unk();
 
     /** 
@@ -288,6 +290,33 @@ LookupTable<TokenType, Hash, KeyEqual>::convert_ban_unk(Index idx) const
         else{ return idx2token[idx]; }
     }
 }
+
+template <typename TokenType, typename Hash,  typename KeyEqual>
+const TokenType&
+LookupTable<TokenType, Hash, KeyEqual>::convert(Index idx) const
+{
+    return convert_ban_unk(idx);
+}
+
+template <typename Hash,  typename KeyEqual>
+const std::u32string&
+LookupTable<std::u32string, Hash, KeyEqual>::convert(Index idx) const
+{
+    if(idx == get_unk_idx_without_throw() && has_set_unk() )
+    { 
+        return U"_UNK_";
+    }
+    else
+    {
+        if( idx >= static_cast<Index>(size()) || idx < 0 )
+        {
+            throw std::out_of_range("index '" + std::to_string(idx) + "' was out of range( size = " +
+                std::to_string(size()) + ")");
+        }
+        else{ return idx2token[idx]; }
+    }
+}
+
 
 template <typename TokenType, typename Hash, typename KeyEqual>
 void LookupTable<TokenType, Hash, KeyEqual>::set_unk()
