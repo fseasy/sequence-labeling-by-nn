@@ -1,3 +1,7 @@
 build
 bin
 run
+.vs
+.vscode
+CMakeSettings.json
+cmakebuild
