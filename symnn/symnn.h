@@ -52,9 +52,13 @@ public:
     const Tensor& forward(const expr::Expression& last);
     void backward(const expr::Expression& last);
 
+    const Tensor& get_value(const expr::Expression& e);
+    const Tensor& get_gradient(const expr::Expression& e);
+
     const Dim& get_dimention(node_id_t i) const;
 
     void clear();
+    void invalidate() { engine->invalidate(); };
 
 protected:
     /**
@@ -63,6 +67,9 @@ protected:
 
     const Tensor& forward(node_id_t i);
     void backward(const node_id_t i);
+
+    const Tensor& get_value(node_id_t i);
+    const Tensor& get_gradient(node_id_t i);
 
     // inputs
     node_id_t add_input(real_t i);
@@ -119,7 +126,7 @@ class Node
 public:
     virtual ~Node() {};
     
-    virtual const Dim& dim_forward(const std::vector<const Dim*>& xs) const = 0;
+    virtual Dim dim_forward(const std::vector<const Dim*>& xs) const = 0;
 
     virtual void forward_impl(const std::vector<const Tensor*>& xs,
                               Tensor& fx) const = 0;
@@ -139,6 +146,8 @@ public:
 
     const Dim& get_dimention() const { return dim; }
     std::size_t arity() const { return args.size(); }
+
+    virtual std::string as_string() const = 0;
 protected:
     Node() : args() {}
     explicit Node(std::initializer_list<node_id_t>& args) : args(args) {}
@@ -170,6 +179,17 @@ inline
 void ComputationGraph::backward(node_id_t i)
 {
     return engine->backward(i);
+}
+
+inline
+const Tensor& ComputationGraph::get_value(node_id_t i)
+{
+    return engine->get_value(i);
+}
+inline
+const Tensor& ComputationGraph::get_gradient(node_id_t i)
+{
+    return engine->get_gradient(i);
 }
 
 

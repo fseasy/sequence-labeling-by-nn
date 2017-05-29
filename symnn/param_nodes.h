@@ -57,7 +57,6 @@ public:
     explicit ScalarInputNode(const real_t* ps);
     NODE_DEFINE_FLOW_IMPL()
 private:
-    Dim dim;
     const real_t data;
     const real_t* pdata;
 };
@@ -84,44 +83,54 @@ private:
  * inline implementation
  **/
 
+inline
 ParameterNode::ParameterNode(const LookupParameter& lp)
-    : dim(lp.get()->get_all_dimension()),
+    : dim(lp.get()->get_all_dimension()), params()
     lparams(lp) {}
+inline
 ParameterNode::ParameterNode(const Parameter& p) 
     : dim(p.get()->get_dimension()), 
-    params(p) {}
+    params(p), lparams() {}
 
 
+inline
 ConstParameterNode::ConstParameterNode(const Parameter& p) 
     : dim(p.get()->get_dimension()), 
-    params(p) {}
-ConstParameterNode::ConstParameterNode(const LookupParameter& lp) 
-    : dim(lp.get()->get_all_dimension()), 
-    lparams(lp) {}
+    params(p), lparams() {}
+inline
+ConstParameterNode::ConstParameterNode(const LookupParameter& lp)
+    : dim(lp.get()->get_all_dimension()),
+    params(), lparams(lp) {}
 
-
+inline
 InputNode::InputNode(const Dim& d, const std::vector<real_t>& data)
     :dim(d), data(data),
     pdata(&data) {}
+inline
 InputNode::InputNode(const Dim& d, const std::vector<real_t>* pdata)
     : dim(d), data(),
     pdata(pdata) {}
 
+inline
 ScalarInputNode::ScalarInputNode(real_t s)
     : data(s),
     pdata(&data) {}
+inline
 ScalarInputNode::ScalarInputNode(const real_t* ps)
     : data(),
     pdata(ps) {}
 
+inline
 LookupNode::LookupNode(LookupParameter p, unsigned i)
     : dim(p.get()->get_dimension()),
-    index(i), pindex(&i), indices(),
+    index(i), pindex(&this->index), indices(),
     pindices(), params(p) {}
+inline
 LookupNode::LookupNode(LookupParameter p, const unsigned* pi)
     : dim(p.get()->get_dimension()), index(),
     pindex(pi), indices(), pindices(),
     params(p) {}
+inline
 LookupNode::LookupNode(LookupParameter p, const std::vector<unsigned>& indices)
     : dim(p.get()->get_dimension()),
     index(), pindex(), indices(indices),
@@ -130,6 +139,7 @@ LookupNode::LookupNode(LookupParameter p, const std::vector<unsigned>& indices)
 {
     dim.bd = indices.size();
 }
+inline
 LookupNode::LookupNode(LookupParameter p, const std::vector<unsigned>* pindices)
     : dim(p.get()->get_dimension()),
     index(), pindex(),

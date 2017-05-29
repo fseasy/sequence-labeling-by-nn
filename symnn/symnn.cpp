@@ -51,6 +51,16 @@ void ComputationGraph::backward(const expr::Expression& last)
     return backward(last.node_id);
 }
 
+const Tensor& ComputationGraph::get_value(const expr::Expression& e)
+{
+    return get_value(e.node_id);
+}
+
+const Tensor& ComputationGraph::get_gradient(const expr::Expression& e)
+{
+    return get_gradient(e.node_id);
+}
+
 
 
 } // end of namespace symnn

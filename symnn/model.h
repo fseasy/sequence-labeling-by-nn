@@ -78,6 +78,7 @@ public:
 
     void copy(const LookupParameterStorage& val);
 
+    void accumulate_grad(const Tensor& g);
     void accumulate_grad(unsigned index, const Tensor& g);
 
     void clear();
@@ -114,6 +115,8 @@ public:
 
     const Dim& get_dimension() { return get()->get_dimension(); }
     Tensor* get_value() { return get()->get_value(); }
+    Model* get_model() const { return pm; }
+    
     void set_updated(bool b);
     void scale(float s) { get()->scale_parameter(s); }
     void scale_gradient(float s) { get()->scale_gradient(s); }
@@ -144,7 +147,7 @@ public:
 
     const Dim& get_dimension() const { return get()->get_dimension(); }
     std::vector<Tensor>* get_values() { return get()->get_values(); }
-
+    Model* get_model() const { return pm; }
     const Dim& get_all_dimension() const { return get()->get_all_dimension(); }
 
     void scale(float s) { get()->scale_parameter(s); }
