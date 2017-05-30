@@ -30,6 +30,7 @@ public:
     unsigned& operator[](unsigned i);
     const unsigned& operator[](unsigned i) const;
     const std::vector<unsigned>& get_dim() const { return dim; }
+    std::vector<unsigned>& get_dim() { return dim; }
     unsigned get_batch_num() const { return batch_num; }
 private:
     std::vector<unsigned> dim;

@@ -12,6 +12,8 @@ class ExecutionEngine
 public:
     virtual ~ExecutionEngine();
     virtual const Tensor& forward(node_id_t i) = 0;
+    virtual const Tensor& incremental_forward() = 0;
+    virtual const Tensor& incremental_forward(node_id_t i) = 0;
     virtual void backward(node_id_t i) = 0;
     virtual void invalidate() = 0;
     virtual void invalidate(unsigned) = 0;
@@ -29,6 +31,8 @@ public:
     
 
     const Tensor& forward(node_id_t i) override;
+    const Tensor& incremental_forward() override;
+    const Tensor& incremental_forward(node_id_t i) override;
     void backward(node_id_t i) override;
 
     virtual void invalidate() override;

@@ -46,6 +46,12 @@ const Tensor& ComputationGraph::forward(const expr::Expression& last)
 {
     return forward(last.node_id);
 }
+
+const Tensor& ComputationGraph::incremental_forward(const expr::Expression& last)
+{
+    return incremental_forward(last.node_id);
+}
+
 void ComputationGraph::backward(const expr::Expression& last)
 {
     return backward(last.node_id);

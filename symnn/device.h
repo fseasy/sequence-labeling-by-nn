@@ -22,16 +22,23 @@ constexpr unsigned NrMemPoolType = 3U;
 class ComputationGraph;
 class Tensor;
 
-struct DeviceMemPoolSizes
+class DeviceMemPoolSizes
 {
+public:
     DeviceMemPoolSizes() = default;
     DeviceMemPoolSizes(std::size_t total_sz);
-    DeviceMemPoolSizes(std::size_t fsx_sz,
-                        std::size_t dEdfs_sz,
-                        std::size_t ps_sz);
+    DeviceMemPoolSizes(std::size_t fxs_sz,
+                       std::size_t dEdfs_sz,
+                       std::size_t ps_sz);
     DeviceMemPoolSizes(const std::string& descriptor);
-    
-    std::size_t used[NrMemPoolType];
+    std::size_t get_fxs_sz() const { return capacity[static_cast<int>(MemPoolType::FXS)]; }
+    std::size_t get_dedfs_sz() const { return capacity[static_cast<int>(MemPoolType::DEDFS)]; }
+    std::size_t get_ps_sz() const { return capacity[static_cast<int>(MemPoolType::PS)]; }
+private:
+    void set_value(std::size_t fxs_sz,
+                   std::size_t dEdfs_sz,
+                   std::size_t ps_sz);
+    std::size_t capacity[NrMemPoolType];
 };
 
 class Device
@@ -43,15 +50,24 @@ public:
     virtual ~Device() {};
 
     virtual DeviceMemPoolSizes mark(ComputationGraph* pcg);
-    virtual void revert(const DeviceMemPoolSizes& ps);
-    void allocate_tensor(MemPoolType mem_pool, Tensor& t);
+    //virtual void revert(const DeviceMemPoolSizes& ps);
+    void allocate_tensor(MemPoolType mpt, Tensor& t);
+    real_t* allocate_space4tensor(MemPoolType mpt, const Dim& d);
 protected:
     DeviceType type;
-    MemAllocator* allocator;
+    MemAllocator* pallocator;
     std::string name;
     std::vector<AlignedMemoryPool*> pools;
 };
 
+class DeviceCPU : public Device
+{
+public:
+    explicit DeviceCPU(const DeviceMemPoolSizes& mpsz);
+    ~DeviceCPU() {};
+
+    CPUAllocator allocator;
+};
 
 /**
  * inline implementation
@@ -59,7 +75,7 @@ protected:
 
 inline
 Device::Device(DeviceType t, MemAllocator* allocator_)
-    :type(t), allocator(allocator_),
+    :type(t), pallocator(allocator_),
     pools(NrMemPoolType, nullptr){}
 
 

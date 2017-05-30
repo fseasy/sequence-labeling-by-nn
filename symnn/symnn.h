@@ -50,6 +50,7 @@ public:
 
     // flow
     const Tensor& forward(const expr::Expression& last);
+    const Tensor& incremental_forward(const expr::Expression& last);
     void backward(const expr::Expression& last);
 
     const Tensor& get_value(const expr::Expression& e);
@@ -60,12 +61,15 @@ public:
     void clear();
     void invalidate() { engine->invalidate(); };
 
+    std::size_t get_node_num() { return nodes.size(); }
+
 protected:
     /**
      * interface to inner.
      **/
 
     const Tensor& forward(node_id_t i);
+    const Tensor& incremental_forward(node_id_t i);
     void backward(const node_id_t i);
 
     const Tensor& get_value(node_id_t i);
@@ -175,6 +179,14 @@ const Tensor& ComputationGraph::forward(node_id_t i)
 {
     return engine->forward(i);
 }
+
+inline
+const Tensor& ComputationGraph::incremental_forward(node_id_t i)
+{
+    return engine->incremental_forward(i);
+}
+
+
 inline
 void ComputationGraph::backward(node_id_t i)
 {

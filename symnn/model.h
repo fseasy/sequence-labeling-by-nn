@@ -31,32 +31,33 @@ public:
 
     virtual std::size_t size() const = 0;
 
-    virtual ~ParameterStorageBase();
+    virtual ~ParameterStorageBase() {};
 };
 
 class ParameterStorage : public ParameterStorageBase
 {
     friend class Model;
 public:
-    void scale_parameter(float a) override;
-    void scale_gradient(float a) override;
-    void squared_l2norm(float* sqnorm) const override;
-    void g_squared_l2norm(float* sqnorm) const override;
+    void scale_parameter(real_t a) override;
+    void scale_gradient(real_t a) override;
+    void squared_l2norm(real_t* sqnorm) const override;
+    void g_squared_l2norm(real_t* sqnorm) const override;
     std::size_t size() const override;
-
+    void zero() override;
     void copy(const ParameterStorage& val);
 
     void accumulate_grad(const Tensor& g);
 
     void clear();
 
-    void clip(float left, float right);
+    void clip(real_t left, real_t right);
 
     const Dim& get_dimension() const { return dim; }
-    Tensor* get_value() { return &value; }
+    Tensor& get_value() { return value; }
+    const Tensor& get_value() const { return value; }
 private:
     ParameterStorage() {}
-    explicit ParameterStorage(const Dim& d, float minmax);
+    explicit ParameterStorage(const Dim& d, real_t minmax);
     explicit ParameterStorage(const Dim& d, const ParameterInit& init);
 private:
     Dim dim;
@@ -76,6 +77,8 @@ public:
 
     void initialize(unsigned index, const std::vector<real_t> val);
 
+    void zero() override;
+
     void copy(const LookupParameterStorage& val);
 
     void accumulate_grad(const Tensor& g);
@@ -85,9 +88,11 @@ public:
     void initialize_lookups();
 
     const Dim& get_dimension() const { return dim; }
-    std::vector<Tensor>* get_values() { return &values; }
-
+    std::vector<Tensor>& get_values() { return values; }
+    
     const Dim& get_all_dimension() const { return all_dim; }
+    Tensor& get_all_values() { return all_values; }
+    const Tensor& get_all_values() const { return all_values; }
 private:
     LookupParameterStorage() :all_updated(false) {};
     LookupParameterStorage(unsigned n, const Dim& d);

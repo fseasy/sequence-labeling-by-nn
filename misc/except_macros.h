@@ -31,8 +31,28 @@ namespace misc {
 } while(0);
 
 
+#ifdef SLNN_SKIP_ARG_CHECK
+#define SLNN_INVALID_ARG(module_name, arg)
+#define SLNN_ARG_CHECK(cond, module_name, msg)
+#else
 
-}
+#define SLNN_INVALID_ARG(module_name, arg) do {     \
+    std::ostringstream oss;                         \
+    oss << "[" << module_name << "]"                \
+    << msg;                                         \
+    throw std::invalid_argument(oss.str());         \
+} while(0);
+
+#define SLNN_ARG_CHECK(cond, module_name, arg) do { \
+    if(!(cond))                                     \
+    {                                               \
+        std::ostringstream oss;                     \
+            oss << "[" << module_name << "]"        \
+            << msg;                                 \
+            throw std::invalid_argument(oss.str()); \
+    }                                               \
+} while (0);
+#endif
 
 
 
