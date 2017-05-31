@@ -43,7 +43,7 @@ namespace misc {
     throw std::invalid_argument(oss.str());         \
 } while(0);
 
-#define SLNN_ARG_CHECK(cond, module_name, arg) do { \
+#define SLNN_ARG_CHECK(cond, module_name, msg) do { \
     if(!(cond))                                     \
     {                                               \
         std::ostringstream oss;                     \

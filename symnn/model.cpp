@@ -159,7 +159,30 @@ void LookupParameterStorage::clear()
     all_updated = false;
 }
 
+void ParameterInitNormal::initialize_params(Tensor& value) const
+{
+    TensorTools::randomize_normal(value, mean, sqrt(var));
+}
 
+void ParameterInitUniform::initialize_params(Tensor& val) const
+{
+    TensorTools::randomize_uniform(val, left, right);
+}
+
+void ParameterInitConst::initialize_params(Tensor& val) const
+{
+    TensorTools::constant(val, cnst);
+}
+
+void ParameterInitIdentity::initialize_params(Tensor& val) const
+{
+    TensorTools::identity(val);
+}
+
+void ParameterInitGlorot::initialize_params(Tensor& val) const
+{
+
+}
 
 
 } // end of namespace symnn

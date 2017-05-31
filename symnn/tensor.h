@@ -83,7 +83,16 @@ struct TensorTools
 
     static void zero(Tensor& d);
     
+    static void identity(Tensor& d);
+
     static void copy_elements(Tensor& target, const Tensor& source);
+
+    static void randomize_normal(Tensor& val,
+                                 Tensor::REAL_TYPE mean = 0.f,
+                                 Tensor::REAL_TYPE stddev = 1.f);
+    static void randomize_uniform(Tensor& val,
+                                  Tensor::REAL_TYPE left = 0.f,
+                                  Tensor::REAL_TYPE right = 0.f);
 
 };
 

@@ -3,7 +3,7 @@
 namespace symnn {
 
 Device* global_device = nullptr;
-
+std::mt19937* global_rng = nullptr;
 
 
 
