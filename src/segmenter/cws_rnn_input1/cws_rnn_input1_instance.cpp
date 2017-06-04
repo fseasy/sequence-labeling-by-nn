@@ -13,6 +13,11 @@ template class SegmenterRnnInput1Template<
     structure_param_module::SegmenterRnnInput1Param,
     nn_module::NnSegmenterRnnInput1Abstract>;
 
+template class SegmenterRnnInput1Template<
+    token_module::TokenSegmenterInput1All,
+    structure_param_module::SegmenterRnnAll,
+    nn_module::NnSegmenterRnnAll >;
+
 } // enf of namespace rnn-input1
 } // enf of namespace segmenter
-} // end 
+} // end  of slnn
