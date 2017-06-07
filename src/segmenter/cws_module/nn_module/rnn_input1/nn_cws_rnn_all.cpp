@@ -97,8 +97,8 @@ dynet::expr::Expression NnSegmenterRnnAll::build_training_graph_impl(const std::
     birnn_layer->build_graph(all_feature_concat_expr_list, l2r_output_exprs, r2l_output_exprs);
     
     // concatenate & build loss
-    std::vector<dynet::expr::Expression> concated_exprs(sent_len);
-    for( unsigned i = 0; i < sent_len; ++i )
+    std::vector<dynet::expr::Expression> concated_exprs(seq_len);
+    for( unsigned i = 0; i < seq_len; ++i )
     { 
         concated_exprs[i] = dynet::expr::concatenate({ l2r_output_exprs[i], r2l_output_exprs[i] }); 
     }
@@ -127,13 +127,13 @@ std::vector<Index> NnSegmenterRnnAll::predict_impl(const std::shared_ptr<std::ve
     birnn_layer->build_graph(all_feature_concat_expr_list, l2r_output_exprs, r2l_output_exprs);
     
     // concatenate & build loss
-    std::vector<dynet::expr::Expression> concated_exprs(sent_len);
-    for( unsigned i = 0; i < sent_len; ++i )
+    std::vector<dynet::expr::Expression> concated_exprs(seq_len);
+    for( unsigned i = 0; i < seq_len; ++i )
     { 
         concated_exprs[i] = dynet::expr::concatenate({ l2r_output_exprs[i], r2l_output_exprs[i] }); 
     }
     std::vector<Index> pred_tagseq;
-    output_layer->build_output(output_exprs, pred_tagseq);
+    output_layer->build_output(concated_exprs, pred_tagseq);
     return pred_tagseq;
 }
 

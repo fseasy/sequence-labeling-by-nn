@@ -34,12 +34,12 @@ using RnnInput1Bigram = SegmenterRnnInput1Template<
 
 extern template class SegmenterRnnInput1Template<
     token_module::TokenSegmenterInput1All,
-    structure_param_module::SegmenterRnnAll,
+    structure_param_module::ParamSegmenterRnnAll,
     nn_module::NnSegmenterRnnAll >;
 
 using RnnAll = SegmenterRnnInput1Template<
     token_module::TokenSegmenterInput1All,
-    structure_param_module::SegmenterRnnAll,
+    structure_param_module::ParamSegmenterRnnAll,
     nn_module::NnSegmenterRnnAll >;
 
 

@@ -36,6 +36,20 @@ template<typename TokenType>
 inline
 std::string token2str(const TokenType &token){ return "un-specified token2str"; }
 
+/***
+ * below give the unk-repr when call convert
+ */
+
+template <typename TokenType>
+inline
+TokenType get_unk_repr() { return TokenType(); }
+template <>
+inline
+std::u32string get_unk_repr(){ return U"_UNK_"; }
+template <>
+inline
+std::string get_unk_repr(){ return "_UNK_"; }
+
 } // end of inner
 
 /**
@@ -86,9 +100,9 @@ public:
      *  @return: 1. corresponding index, if : index is valid
      *           2. un-excepted(exception throw)
      */
-    const TokenType& convert_ban_unk(Index idx) const; // if idx=unk, domain_error exception will be throw
+    TokenType convert_ban_unk(Index idx) const; // if idx=unk, domain_error exception will be throw
 
-    const TokenType& convert(Index idx) const; // for compatibility
+    TokenType convert(Index idx) const; // for compatibility
 
     void set_unk();
 
@@ -135,6 +149,8 @@ protected:
     /* dirived class may need query token2idx directly */
     const std::unordered_map<TokenType, Index>& get_token2idx_dict() const noexcept{ return token2idx; }
     std::string token2str(const TokenType &token) const noexcept{ return token2str_func(token); }
+private:
+    TokenType convert_no_unk_check(Index id) const;
 
 protected:
     template<class Archive>
@@ -272,51 +288,40 @@ LookupTable<TokenType, Hash, KeyEqual>::convert(const TokenType &token) const
     }
 }
 
+template <typename TokenType, typename Hash, typename KeyEqual>
+inline
+TokenType
+LookupTable<TokenType, Hash, KeyEqual>::convert_no_unk_check(Index idx) const
+{
+    if( idx >= static_cast<Index>(size()) || idx < 0 )
+    {
+        throw std::out_of_range("index '" + std::to_string(idx) + "' was out of range( size = " +
+            std::to_string(size()) + ")");
+    }
+    else{ return idx2token[idx]; }
+}
+
 template <typename TokenType, typename Hash,  typename KeyEqual>
-const TokenType&
+TokenType
 LookupTable<TokenType, Hash, KeyEqual>::convert_ban_unk(Index idx) const
 {
     if(idx == get_unk_idx_without_throw() && has_set_unk() )
     { 
         throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); 
     }
-    else
-    {
-        if( idx >= static_cast<Index>(size()) || idx < 0 )
-        {
-            throw std::out_of_range("index '" + std::to_string(idx) + "' was out of range( size = " +
-                std::to_string(size()) + ")");
-        }
-        else{ return idx2token[idx]; }
-    }
+    else { return convert_no_unk_check(idx); }
 }
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
-const TokenType&
+TokenType
 LookupTable<TokenType, Hash, KeyEqual>::convert(Index idx) const
-{
-    return convert_ban_unk(idx);
-}
-
-template <typename Hash,  typename KeyEqual>
-const std::u32string&
-LookupTable<std::u32string, Hash, KeyEqual>::convert(Index idx) const
 {
     if(idx == get_unk_idx_without_throw() && has_set_unk() )
     { 
-        return U"_UNK_";
+        return inner::get_unk_repr<TokenType>();
     }
-    else
-    {
-        if( idx >= static_cast<Index>(size()) || idx < 0 )
-        {
-            throw std::out_of_range("index '" + std::to_string(idx) + "' was out of range( size = " +
-                std::to_string(size()) + ")");
-        }
-        else{ return idx2token[idx]; }
-    }
+    else { return convert_no_unk_check(idx); };
 }
-
 
 template <typename TokenType, typename Hash, typename KeyEqual>
 void LookupTable<TokenType, Hash, KeyEqual>::set_unk()

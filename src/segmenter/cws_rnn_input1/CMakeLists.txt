@@ -1,10 +1,14 @@
 FILE(GLOB dep_token_module "${cws_module_token_dir}/input1/*"
                            "${cws_module_token_dir}/cws_tag_definition.h"
-                           "${cws_module_token_dir}/cws_tag_utility.h")
-FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/rnn_input1_param.*")
+                           "${cws_module_token_dir}/cws_tag_utility.h"
+                           "${cws_module_token_dir}/token_lexicon.*"
+                           "${cws_module_token_dir}/token_chartype.*")
+FILE(GLOB dep_structure_param_module "${cws_module_structure_param_dir}/rnn_input1_param.*"
+                                     "${cws_module_structure_param_dir}/param_rnn_all.*")
 FILE(GLOB dep_nn_general_module "${cws_module_nn_dir}/nn_common_interface.*"
                                 "${cws_module_nn_dir}/nn_common_interface_dynet_impl.*"
-                                "${cws_module_nn_dir}/rnn_input1/nn_cws_rnn_input1_abstract.*")
+                                "${cws_module_nn_dir}/rnn_input1/nn_cws_rnn_input1_abstract.*"
+                                "${cws_module_nn_dir}/rnn_input1/nn_cws_rnn_all.*")
 FILE(GLOB dep_nn_experiment_module "${cws_module_nn_dir}/experiment_layer/*")
      
 FILE(GLOB dep_modelhandler "${cws_module_dir}/cws_general_modelhandler.*")
@@ -37,7 +41,7 @@ ADD_LIBRARY(${lib_name}
 )
 TARGET_LINK_LIBRARIES(${lib_name} layers) 
 
-foreach(exe_name "cws_rnn_input1_unigram" "cws_rnn_input1_bigram")
+foreach(exe_name "cws_rnn_input1_unigram" "cws_rnn_input1_bigram" "cws_rnn_all")
     add_executable(${exe_name}
                    "${exe_name}.cpp"
                    ${dep_modelhandler}

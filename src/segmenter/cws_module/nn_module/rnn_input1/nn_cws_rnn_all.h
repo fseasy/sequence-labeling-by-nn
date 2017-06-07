@@ -90,7 +90,7 @@ void NnSegmenterRnnAll::build_model_structure(const StructureParamT& param)
     //    param.mlp_hidden_dim_list, param.mlp_dropout_rate, 
     //    utils::get_nonlinear_function_from_name(param.mlp_nonlinear_function_str)));
     output_layer = experiment::create_segmenter_output_layer(param.output_layer_type, this->get_dynet_model(),
-        param.rnn_h_dim * 2, param.output_dim); // concatenate hidden layer
+        param.rnn_h_dim * 2, param.tag_dict_sz); // concatenate hidden layer
 }
 
 template <typename AnnotatedDataProcessedT>
