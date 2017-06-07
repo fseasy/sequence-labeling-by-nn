@@ -26,6 +26,7 @@ void ParamSegmenterRnnAll::set_param_from_user_defined(const boost::program_opti
     rnn_dropout_rate = args["dropout_rate"].as<slnn::type::real>() ;
     // Output
     output_layer_type = args["output_layer_type"].as<std::string>();
+    tag_embedding_dim = args["tag_embedding_dim"].as<unsigned>();
     // Others
     replace_freq_threshold = args["replace_freq_threshold"].as<unsigned>();
     replace_prob_threshold = args["replace_prob_threshold"].as<float>();
