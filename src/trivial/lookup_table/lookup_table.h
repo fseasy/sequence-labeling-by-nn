@@ -80,7 +80,7 @@ public:
      *            3. un-excepted(exception will be throw), if: the other condition
      *  
      */
-    Index convert(const TokenType &token);
+    Index token2id(const TokenType &token);
 
     /**
      * convert str to index(const).
@@ -91,7 +91,7 @@ public:
      *           2. unk_idx, if: str not in dict && has_set_unk
      *           3. un-excepted
      */
-    Index convert(const TokenType &token) const; // convert str to idx(never add)
+    Index token2id(const TokenType &token) const; // convert str to idx(never add)
 
     /** convert index to str (ban unk-index).
      *  @param idx Index
@@ -100,9 +100,9 @@ public:
      *  @return: 1. corresponding index, if : index is valid
      *           2. un-excepted(exception throw)
      */
-    TokenType convert_ban_unk(Index idx) const; // if idx=unk, domain_error exception will be throw
+    TokenType id2token_ban_unk(Index idx) const; // if idx=unk, domain_error exception will be throw
 
-    TokenType convert(Index idx) const; // for compatibility
+    TokenType id2token(Index idx) const; // for compatibility
 
     void set_unk();
 
@@ -150,7 +150,7 @@ protected:
     const std::unordered_map<TokenType, Index>& get_token2idx_dict() const noexcept{ return token2idx; }
     std::string token2str(const TokenType &token) const noexcept{ return token2str_func(token); }
 private:
-    TokenType convert_no_unk_check(Index id) const;
+    TokenType id2token_no_unk_check(Index id) const;
 
 protected:
     template<class Archive>
@@ -181,8 +181,8 @@ public:
         ::std::function<::std::string(const TokenType &)> token2str_func
         =static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
     // hidden the base class function with the same name
-    Index convert(const TokenType &token);
-    using LookupTable<TokenType, Hash, KeyEqual>::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
+    Index token2id(const TokenType &token);
+    using LookupTable<TokenType, Hash, KeyEqual>::token2id; // look at C++ Primer (Chinese Version) P551. to make other `token2id` is visitable
 
     /** 
      *  count str occurrence times (N).
@@ -248,7 +248,7 @@ LookupTable<TokenType, Hash, KeyEqual>::LookupTable(
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 typename LookupTable<TokenType, Hash, KeyEqual>::Index
-LookupTable<TokenType, Hash, KeyEqual>::convert(const TokenType &token)
+LookupTable<TokenType, Hash, KeyEqual>::token2id(const TokenType &token)
 {
     auto iter = token2idx.find(token);
     if( iter != token2idx.cend() )
@@ -276,7 +276,7 @@ LookupTable<TokenType, Hash, KeyEqual>::convert(const TokenType &token)
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 typename LookupTable<TokenType, Hash, KeyEqual>::Index
-LookupTable<TokenType, Hash, KeyEqual>::convert(const TokenType &token) const
+LookupTable<TokenType, Hash, KeyEqual>::token2id(const TokenType &token) const
 {
     // only read, no write(add)
     auto iter = token2idx.find(token);
@@ -291,7 +291,7 @@ LookupTable<TokenType, Hash, KeyEqual>::convert(const TokenType &token) const
 template <typename TokenType, typename Hash, typename KeyEqual>
 inline
 TokenType
-LookupTable<TokenType, Hash, KeyEqual>::convert_no_unk_check(Index idx) const
+LookupTable<TokenType, Hash, KeyEqual>::id2token_no_unk_check(Index idx) const
 {
     if( idx >= static_cast<Index>(size()) || idx < 0 )
     {
@@ -303,24 +303,24 @@ LookupTable<TokenType, Hash, KeyEqual>::convert_no_unk_check(Index idx) const
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 TokenType
-LookupTable<TokenType, Hash, KeyEqual>::convert_ban_unk(Index idx) const
+LookupTable<TokenType, Hash, KeyEqual>::id2token_ban_unk(Index idx) const
 {
     if(idx == get_unk_idx_without_throw() && has_set_unk() )
     { 
         throw std::domain_error("unk index('" + std::to_string(idx) + "') was banned."); 
     }
-    else { return convert_no_unk_check(idx); }
+    else { return id2token_no_unk_check(idx); }
 }
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 TokenType
-LookupTable<TokenType, Hash, KeyEqual>::convert(Index idx) const
+LookupTable<TokenType, Hash, KeyEqual>::id2token(Index idx) const
 {
     if(idx == get_unk_idx_without_throw() && has_set_unk() )
     { 
         return inner::get_unk_repr<TokenType>();
     }
-    else { return convert_no_unk_check(idx); };
+    else { return id2token_no_unk_check(idx); };
 }
 
 template <typename TokenType, typename Hash, typename KeyEqual>
@@ -543,9 +543,9 @@ LookupTableWithCnt<TokenType, Hash, KeyEqual>::LookupTableWithCnt(
 
 template <typename TokenType, typename Hash,  typename KeyEqual>
 typename LookupTableWithCnt<TokenType, Hash, KeyEqual>::Index
-LookupTableWithCnt<TokenType, Hash, KeyEqual>::convert(const TokenType &token)
+LookupTableWithCnt<TokenType, Hash, KeyEqual>::token2id(const TokenType &token)
 {
-    Index idx = LookupTable<TokenType, Hash, KeyEqual>::convert(token);
+    Index idx = LookupTable<TokenType, Hash, KeyEqual>::token2id(token);
     if( !this->has_frozen() )
     {
         if( idx == static_cast<Index>(cnt.size()) )

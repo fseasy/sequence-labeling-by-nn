@@ -239,7 +239,7 @@ TokenSegmenterInput1All::process_non_annotated_part(const std::u32string& charse
         puni_seq.reset(new std::vector<Index>(charseq_len));
         for (unsigned pos = 0; pos < charseq_len; ++pos)
         {
-            (*puni_seq)[pos] = unigram_dict.convert(charseq[pos]);
+            (*puni_seq)[pos] = unigram_dict.token2id(charseq[pos]);
         }
     }
     // bigram seq
@@ -249,9 +249,9 @@ TokenSegmenterInput1All::process_non_annotated_part(const std::u32string& charse
         pbi_seq.reset(new std::vector<Index>(charseq_len));
         for (unsigned pos = 0; pos < charseq_len - 1; ++pos)
         {
-            (*pbi_seq)[pos] = bigram_dict.convert(charseq.substr(pos, 2));
+            (*pbi_seq)[pos] = bigram_dict.token2id(charseq.substr(pos, 2));
         }
-        pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
+        pbi_seq->back() = bigram_dict.token2id(charseq.back() + EOS_REPR);
     }
     // lexicon seq
     if (state.enable_lexicon)

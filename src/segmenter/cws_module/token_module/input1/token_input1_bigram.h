@@ -104,7 +104,7 @@ private:
 inline
 Index TokenSegmenterInput1Bigram::token2index(std::u32string &token) const
 {
-    return token_dict.convert(token);
+    return token_dict.token2id(token);
 }
 
 /**
@@ -185,7 +185,7 @@ TokenSegmenterInput1Bigram::process_annotated_data(const std::vector<std::u32str
         for( unsigned i = 0; i < word_len - 1; ++i )
         {
             std::u32string bigram = word.substr(i, 2);
-            (*charindex_seq)[offset++] = token_dict.convert(bigram);
+            (*charindex_seq)[offset++] = token_dict.token2id(bigram);
         }
         // look next word for generate the last bigram of current word
         std::u32string next_char = EOS_REPR;
@@ -198,7 +198,7 @@ TokenSegmenterInput1Bigram::process_annotated_data(const std::vector<std::u32str
             }
         }
         std::u32string last_bigram = word.back() + next_char;
-        (*charindex_seq)[offset++] = token_dict.convert(last_bigram);
+        (*charindex_seq)[offset++] = token_dict.token2id(last_bigram);
     }
     // char text seq -> tag index seq
     generate_tagseq_from_wordseq2preallocated_space(wordseq, *tagindex_seq);
@@ -250,8 +250,8 @@ TokenSegmenterInput1Bigram::process_unannotated_data(const std::u32string &token
     size_t token_cnt = tokenseq.size();
     charseq.reset(new std::vector<Index>(token_cnt));
     size_t offset = 0;
-    for( unsigned i = 0; i + 1 < tokenseq.size(); ++i ){ (*charseq)[offset++] = token_dict.convert(tokenseq.substr(i, 2)); }
-    (*charseq)[offset] = token_dict.convert(tokenseq.back() + EOS_REPR);
+    for( unsigned i = 0; i + 1 < tokenseq.size(); ++i ){ (*charseq)[offset++] = token_dict.token2id(tokenseq.substr(i, 2)); }
+    (*charseq)[offset] = token_dict.token2id(tokenseq.back() + EOS_REPR);
 }
 
 

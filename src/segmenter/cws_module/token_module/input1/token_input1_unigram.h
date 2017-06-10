@@ -107,7 +107,7 @@ private:
 inline
 Index TokenSegmenterInput1Unigram::token2index(char32_t token) const
 {
-    return token_dict.convert(token);
+    return token_dict.token2id(token);
 }
 
 /**
@@ -182,7 +182,8 @@ TokenSegmenterInput1Unigram::process_annotated_data(const std::vector<std::u32st
     // char text seq -> char index seq
     for( const std::u32string &word : wordseq )
     {
-        for(const char32_t& uc : word ){ (*charindex_seq)[offset++] = token_dict.convert(uc); }
+        for(const char32_t& uc : word ){ (*charindex_seq)[offset++] = token_dict.token2id(
+            static_cast<const char32_t&>(uc)); }
     }
     // char text seq -> tag index seq
     generate_tagseq_from_wordseq2preallocated_space(wordseq, *tagindex_seq);
@@ -230,7 +231,7 @@ TokenSegmenterInput1Unigram::process_unannotated_data(const std::u32string &toke
     size_t token_cnt = tokenseq.size();
     charseq.reset(new std::vector<Index>(token_cnt));
     size_t offset = 0;
-    for( char32_t token : tokenseq ){ (*charseq)[offset++] = token_dict.convert(token); }
+    for( char32_t token : tokenseq ){ (*charseq)[offset++] = token_dict.token2id(token); }
 }
 
 
