@@ -182,7 +182,7 @@ TokenSegmenterInput1Unigram::process_annotated_data(const std::vector<std::u32st
     // char text seq -> char index seq
     for( const std::u32string &word : wordseq )
     {
-        for( char32_t uc : word ){ (*charindex_seq)[offset++] = token_dict.convert(uc); }
+        for(const char32_t& uc : word ){ (*charindex_seq)[offset++] = token_dict.convert(uc); }
     }
     // char text seq -> tag index seq
     generate_tagseq_from_wordseq2preallocated_space(wordseq, *tagindex_seq);
@@ -213,7 +213,7 @@ TokenSegmenterInput1Unigram::process_unannotated_data(const std::u32string &toke
     std::shared_ptr<std::vector<Index>> &charindex_seq = processed_out.charindex_seq;
     charindex_seq.reset(new std::vector<Index>(token_cnt));
     size_t offset = 0;
-    for( char32_t token : tokenseq ){ (*charindex_seq)[offset++] = token_dict.convert(token); }
+    for(const char32_t& token : tokenseq ){ (*charindex_seq)[offset++] = token_dict.convert(token); }
 }
 
 

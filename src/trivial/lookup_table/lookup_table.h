@@ -91,7 +91,7 @@ public:
      *           2. unk_idx, if: str not in dict && has_set_unk
      *           3. un-excepted
      */
-    Index convert(const TokenType &token) const; // convert str to idx(never add(no ))
+    Index convert(const TokenType &token) const; // convert str to idx(never add)
 
     /** convert index to str (ban unk-index).
      *  @param idx Index
@@ -181,7 +181,7 @@ public:
         ::std::function<::std::string(const TokenType &)> token2str_func
         =static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
     // hidden the base class function with the same name
-    Index convert(const TokenType &token);
+    LookupTable<TokenType, Hash, KeyEqual>::Index convert(const TokenType &token);
     using LookupTable<TokenType, Hash, KeyEqual>::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
 
     /** 

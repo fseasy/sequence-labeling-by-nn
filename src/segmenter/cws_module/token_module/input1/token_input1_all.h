@@ -110,6 +110,7 @@ public:
         extract_unannotated_data_from_annotated_data(const AnnotatedDataProcessedT &ann_data) const;
     // WE DO NOT use current class-defined data structure. 
     // ideally, we'll process the derived class-defined data.
+    // at least, we can call process_unannotated_data at process_annotaed_data.
     template <typename ProcessedAnnotatedDataT> 
     ProcessedAnnotatedDataT replace_low_freq_token2unk(const ProcessedAnnotatedDataT & in_data) const;
     template <typename ProcessedAnnotatedDataT>
@@ -129,6 +130,12 @@ public:
 
 protected:
     void set_unk_replace_threshold(unsigned cnt_threshold, float prob_threshold) noexcept;
+
+private:
+    template<typename ProcessedDataT>
+    void process_non_annotated_part(const std::u32string& raw_in, ProcessedDataT& out);
+    template<typename ProcessedDataT>
+    void process_non_annotated_part(const std::u32string& raw_in, ProcessedDataT& out) const;
 
 private:
     template<class Archive>
@@ -204,37 +211,8 @@ TokenSegmenterInput1All::process_annotated_data(const std::vector<std::u32string
     {
         for( char32_t uc : word ){ charseq[pos++] = uc; }
     }
-    // unigram seq
-    if( state.enable_unigram )
-    {
-        std::shared_ptr<std::vector<Index>> &puni_seq = ann_data.punigramseq;
-        puni_seq.reset(new std::vector<Index>(charseq_len));
-        for( pos = 0; pos < charseq_len; ++pos )
-        {
-            (*puni_seq)[pos] = unigram_dict.convert(charseq[pos]);
-        }
-    }
-    // bigram seq
-    if( state.enable_bigram )
-    {
-        std::shared_ptr<std::vector<Index>> &pbi_seq = ann_data.pbigramseq;
-        pbi_seq.reset(new std::vector<Index>(charseq_len));
-        for( pos = 0; pos < charseq_len - 1; ++pos )
-        {
-            (*pbi_seq)[pos] = bigram_dict.convert(charseq.substr(pos, 2));
-        }
-        pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
-    }
-    // lexicon seq
-    if( state.enable_lexicon )
-    {
-        ann_data.plexiconseq = lexicon_feat.extract(charseq);
-    }
-    // type seq
-    if( state.enable_type )
-    {
-        ann_data.ptypeseq = TokenChartype::extract(charseq);
-    }
+    // process unannotated part
+    process_non_annotated_part(charseq, ann_data);
     // tag seq
     ann_data.ptagseq.reset(new std::vector<Index>(charseq_len));
     generate_tagseq_from_wordseq2preallocated_space(wordseq, *ann_data.ptagseq);
@@ -242,41 +220,71 @@ TokenSegmenterInput1All::process_annotated_data(const std::vector<std::u32string
 
 
 template <typename ProcessedUnannotatedDataT>
+inline
 void 
 TokenSegmenterInput1All::process_unannotated_data(const std::u32string &charseq, ProcessedUnannotatedDataT &unann_data) const
 {
+    process_non_annotated_part(charseq, unann_data);
+}
+
+template<typename ProcessedDataT>
+void 
+TokenSegmenterInput1All::process_non_annotated_part(const std::u32string& charseq, ProcessedDataT& out)
+{
     unsigned charseq_len = charseq.length();
     // unigram seq
-    if( state.enable_unigram )
+    if (state.enable_unigram)
     {
-        std::shared_ptr<std::vector<Index>> &puni_seq = unann_data.punigramseq;
+        std::shared_ptr<std::vector<Index>> &puni_seq = out.punigramseq;
         puni_seq.reset(new std::vector<Index>(charseq_len));
-        for(unsigned pos = 0; pos < charseq_len; ++pos )
+        for (unsigned pos = 0; pos < charseq_len; ++pos)
         {
             (*puni_seq)[pos] = unigram_dict.convert(charseq[pos]);
         }
     }
     // bigram seq
-    if( state.enable_bigram )
+    if (state.enable_bigram)
     {
-        std::shared_ptr<std::vector<Index>> &pbi_seq = unann_data.pbigramseq;
+        std::shared_ptr<std::vector<Index>> &pbi_seq = out.pbigramseq;
         pbi_seq.reset(new std::vector<Index>(charseq_len));
-        for(unsigned pos = 0; pos < charseq_len - 1; ++pos )
+        for (unsigned pos = 0; pos < charseq_len - 1; ++pos)
         {
             (*pbi_seq)[pos] = bigram_dict.convert(charseq.substr(pos, 2));
         }
         pbi_seq->back() = bigram_dict.convert(charseq.back() + EOS_REPR);
     }
     // lexicon seq
-    if( state.enable_lexicon )
+    if (state.enable_lexicon)
     {
-        unann_data.plexiconseq = lexicon_feat.extract(charseq);
+        out.plexiconseq = lexicon_feat.extract(charseq);
     }
     // type seq
-    if( state.enable_type )
+    if (state.enable_type)
     {
-        unann_data.ptypeseq = TokenChartype::extract(charseq);
+        out.ptypeseq = TokenChartype::extract(charseq);
     }
+}
+
+template<typename ProcessedDataT>
+inline
+void 
+TokenSegmenterInput1All::process_non_annotated_part(const std::u32string& charseq, ProcessedDataT& out) const
+{
+    // ATTENTION!
+    // commonly, if we have const and non-const function member,
+    // according to Effective C++, we should use non-const to call const, with const_cast<T>(static_cast<const T>)
+    // BUT, this should be work only when we have totally same logic(including inner logic).
+    // HERE, WE have the non-const and const function, they have same code in TEXT, but 
+    // because under the text, the state of the member variable is not same, so it's logical 
+    // is NOT SAME.
+    // Concretely, non-const will never add words to LookupTable, but const will do.
+    // add or not add, it is determined by ( CONST tag && LookupTable inner is_frezen state)
+    // so we'll do a dangerous ACTION >> const call non-const,
+    // because we have set the LookupTable inner is_frezen state, so it is SAFE.
+    // BUT, it still looks bad. All are for reduce the duplicated code!!
+    
+    // remove const qualifier
+    const_cast<TokenSegmenterInput1All *>(this)->process_non_annotated_part(charseq, out);
 }
 
 inline
