@@ -181,7 +181,7 @@ public:
         ::std::function<::std::string(const TokenType &)> token2str_func
         =static_cast<::std::string(*)(const TokenType&)>(&inner::token2str)) noexcept;
     // hidden the base class function with the same name
-    LookupTable<TokenType, Hash, KeyEqual>::Index convert(const TokenType &token);
+    Index convert(const TokenType &token);
     using LookupTable<TokenType, Hash, KeyEqual>::convert; // look at C++ Primer (Chinese Version) P551. to make other `convert` is visitable
 
     /** 
